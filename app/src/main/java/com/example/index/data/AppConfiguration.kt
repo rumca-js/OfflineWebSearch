@@ -18,5 +18,6 @@ data class AppConfiguration(
     val databases: List<String> = emptyList(),
     val activeDatabase: String? = null,
     val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
-    val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE
+    val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
+    val userAge: Int = 0
 )

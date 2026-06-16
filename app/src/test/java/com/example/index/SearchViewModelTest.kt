@@ -1,7 +1,7 @@
 package com.example.index
 
 import com.example.index.ui.SearchViewModel
-import com.example.index.ui.screens.Place
+import com.example.index.data.Place
 import org.junit.Assert.*
 import org.junit.Test
 

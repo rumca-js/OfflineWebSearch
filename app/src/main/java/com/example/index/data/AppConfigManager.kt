@@ -33,6 +33,10 @@ object AppConfigManager {
         updateConfig { it.copy(viewStyle = viewStyle) }
     }
 
+    fun setUserAge(age: Int) {
+        updateConfig { it.copy(userAge = age) }
+    }
+
     fun addDatabase(url: String) {
         updateConfig { it.copy(databases = it.databases + url) }
     }

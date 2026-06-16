@@ -1,14 +1,17 @@
 package com.example.index.ui.screens
 
+import com.example.index.data.Place
+import com.example.index.util.EntryUtils
+import com.example.index.data.AppConfigManager
+import com.example.index.ui.components.RemoteImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -16,12 +19,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
     val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val config by AppConfigManager.config.collectAsState()
 
     Scaffold(
         topBar = {
@@ -43,19 +54,26 @@ fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
                 .padding(16.dp)
         ) {
             if (place.thumbnail != null) {
-                AsyncImage(
-                    model = place.thumbnail,
-                    contentDescription = null,
+                RemoteImage(
+                    url = place.thumbnail,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .padding(bottom = 16.dp),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                        .heightIn(min = 100.dp, max = 300.dp)
+                        .padding(bottom = 16.dp)
+                        .pointerInput(place.link) {
+                            detectTapGestures(
+                                onTap = {
+                                    place.link?.let { uriHandler.openUri(it) }
+                                }
+                            )
+                        },
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    isRestricted = EntryUtils.isRestricted(place, config.userAge)
                 )
             }
 
             Text(
-                text = place.title ?: "No Title",
+                text = EntryUtils.getDisplayTitle(place, config.userAge),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 30.sp,
@@ -70,7 +88,7 @@ fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            place.description?.let {
+            EntryUtils.getDisplayDescription(place, config.userAge)?.let {
                 Text(
                     text = it,
                     fontSize = 16.sp,
@@ -79,14 +97,41 @@ fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // Entry detail properties
             // Metadata
-            DetailRow(label = "Rating", value = "${place.page_rating ?: 0}")
-            DetailRow(label = "Votes", value = "${place.page_rating_votes ?: 0}")
-            DetailRow(label = "Created", value = place.date_created ?: "N/A")
-            DetailRow(label = "Published", value = place.date_published ?: "N/A")
+            DetailRow(label = "Rating", value = EntryUtils.getFormattedRating(place))
+            DetailRow(label = "Votes", value = EntryUtils.getFormattedVotes(place))
+            DetailRow(label = "Created", value = EntryUtils.getFormattedDate(place.date_created))
+            DetailRow(label = "Published", value = EntryUtils.getFormattedDate(place.date_published))
+            place.thumbnail?.let { thumbUrl ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .pointerInput(thumbUrl) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    clipboardManager.setText(AnnotatedString(thumbUrl))
+                                    Toast.makeText(context, "Thumbnail link copied", Toast.LENGTH_SHORT).show()
+                                },
+                                onTap = {
+                                    uriHandler.openUri(thumbUrl)
+                                }
+                            )
+                        },
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = "Thumbnail", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
+                    Text(
+                        text = "Link (Long press to copy)",
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline,
+                        fontSize = 14.sp
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
-
             place.tags?.let { tags ->
                 if (tags.isNotEmpty()) {
                     Text(

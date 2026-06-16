@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.index.data.AppConfigManager
 import com.example.index.data.ViewStyle
+import com.example.index.data.Place
+import com.example.index.ui.components.RemoteImage
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
@@ -24,32 +26,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.index.ui.SearchViewModel
-import coil.compose.AsyncImage
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
-
-import android.database.sqlite.SQLiteDatabase
-
-@Serializable
-data class Place(
-    val title: String? = null,
-    val description: String? = null,
-    val link: String? = null,
-    val tags: List<String>? = null,
-    val page_rating_votes: Int? = 0,
-    val page_rating: Int? = 0,
-    val thumbnail: String? = null,
-    val date_created: String? = null,
-    val date_published: String? = null
-)
-
-private val jsonConfig = Json { 
-    ignoreUnknownKeys = true 
-    coerceInputValues = true
-}
+import com.example.index.util.EntryUtils
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -79,14 +56,13 @@ fun HomeScreen(
                 viewModel.searchQuery = it
                 viewModel.showSuggestions = true
             },
-            label = { Text("Search") },
+            label = { Text("Input search text...") },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Input search text...") },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { 
-                        viewModel.searchQuery = "" 
-                        viewModel.activeSearchQuery = ""
+                        viewModel.clearSearch()
                     }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
@@ -99,19 +75,20 @@ fun HomeScreen(
                 imeAction = ImeAction.Search
             ),
             keyboardActions = KeyboardActions(
-                onSearch = { viewModel.performSearch() }
+                onSearch = {
+                    viewModel.performSearch()
+                }
             )
         )
 
-        val suggestions = viewModel.suggestions
-        if (suggestions.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Card(
+        if (viewModel.showSuggestions && viewModel.suggestions.isNotEmpty()) {
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                tonalElevation = 4.dp
             ) {
                 Column {
-                    suggestions.take(5).forEach { suggestion ->
+                    viewModel.suggestions.forEach { suggestion ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -119,25 +96,20 @@ fun HomeScreen(
                                     viewModel.searchQuery = suggestion
                                     viewModel.performSearch()
                                 }
-                                .padding(12.dp),
+                                .padding(16.dp),
                             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = suggestion)
+                            Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(suggestion)
                         }
                     }
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
             onClick = { viewModel.performSearch() },
             modifier = Modifier.fillMaxWidth(),
@@ -145,7 +117,33 @@ fun HomeScreen(
         ) {
             Text("Search")
         }
-        
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Pagination Controls
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = { viewModel.previousPage() },
+                enabled = viewModel.currentPage > 0
+            ) {
+                Text("Previous")
+            }
+            Text(
+                text = "Page ${viewModel.currentPage + 1} of ${viewModel.totalPages}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            TextButton(
+                onClick = { viewModel.nextPage() },
+                enabled = (viewModel.currentPage + 1) < viewModel.totalPages
+            ) {
+                Text("Next")
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
         
         if (isLoading) {
@@ -154,7 +152,17 @@ fun HomeScreen(
             }
         } else {
             val activeSearchQuery = viewModel.activeSearchQuery
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            
+            // Reset scroll position when page changes
+            LaunchedEffect(viewModel.currentPage) {
+                listState.scrollToItem(0)
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState
+            ) {
                 items(filteredData) { place ->
                     PlaceItem(place, onNavigateToDetail)
                 }
@@ -189,13 +197,14 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
     ) {
         Column {
             if (config.viewStyle == ViewStyle.GALLERY && config.showIcons && place.thumbnail != null) {
-                AsyncImage(
-                    model = place.thumbnail,
-                    contentDescription = null,
+                RemoteImage(
+                    url = place.thumbnail,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp), // Set a fixed height or use contentScale
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        .height(200.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    showErrorText = false,
+                    isRestricted = EntryUtils.isRestricted(place, config.userAge)
                 )
             }
 
@@ -211,12 +220,13 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
                     ) {
                         if (config.showIcons && (config.viewStyle != ViewStyle.GALLERY || place.thumbnail == null)) {
                             if (place.thumbnail != null) {
-                                AsyncImage(
-                                    model = place.thumbnail,
-                                    contentDescription = null,
+                                RemoteImage(
+                                    url = place.thumbnail,
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .padding(end = 8.dp)
+                                        .padding(end = 8.dp),
+                                    showErrorText = false,
+                                    isRestricted = EntryUtils.isRestricted(place, config.userAge)
                                 )
                             } else if (place.link != null) {
                                 Icon(
@@ -230,7 +240,7 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
                             }
                         }
                         Text(
-                            text = place.title ?: "No Title",
+                            text = EntryUtils.getDisplayTitle(place, config.userAge),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
@@ -249,7 +259,7 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
                         }
                     }
                 }
-                place.description?.let {
+                EntryUtils.getDisplayDescription(place, config.userAge)?.let {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = it,
@@ -298,80 +308,3 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
         }
     }
 }
-
-suspend fun loadAllPlaces(context: Context, activeDatabaseUrl: String? = null): List<Place> = withContext(Dispatchers.IO) {
-    val assets = listOf("places_0.json",
-        "places_1.json",
-        "places_2.json",
-        "places_3.json",
-        "places_4.json",
-        "places_5.json",
-        "places_6.json",
-        "places_7.json",
-        "places_8.json",
-        "places_9.json",
-        "places_10.json",
-        )
-    val allPlaces = mutableListOf<Place>()
-    
-    if (activeDatabaseUrl == null) {
-        // Load from assets if no external database is active
-        assets.forEach { fileName ->
-            try {
-                context.assets.open(fileName).bufferedReader().use { reader ->
-                    val jsonString = reader.readText()
-                    val places: List<Place> = jsonConfig.decodeFromString(jsonString)
-                    allPlaces.addAll(places)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    } else {
-        // Load ONLY the active database from local storage
-        val isSqlite = activeDatabaseUrl.endsWith(".db")
-        val extension = if (isSqlite) ".db" else ".json"
-        val fileName = "db_${activeDatabaseUrl.hashCode()}$extension"
-        val file = File(context.filesDir, fileName)
-        if (file.exists()) {
-            if (isSqlite) {
-                try {
-                    val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-                    val cursor = db.rawQuery("SELECT title, description, thumbnail, link, page_rating_votes FROM linkdatamodel", null)
-                    cursor.use {
-                        while (it.moveToNext()) {
-                            val title = it.getString(it.getColumnIndexOrThrow("title"))
-                            val description = it.getString(it.getColumnIndexOrThrow("description"))
-                            val thumbnail = it.getString(it.getColumnIndexOrThrow("thumbnail"))
-                            val link = it.getString(it.getColumnIndexOrThrow("link"))
-                            val votes = it.getInt(it.getColumnIndexOrThrow("page_rating_votes"))
-                            allPlaces.add(Place(
-                                title = title,
-                                description = description,
-                                thumbnail = thumbnail,
-                                link = link,
-                                page_rating_votes = votes
-                            ))
-                        }
-                    }
-                    db.close()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            } else {
-                try {
-                    file.bufferedReader().use { reader ->
-                        val jsonString = reader.readText()
-                        val places: List<Place> = jsonConfig.decodeFromString(jsonString)
-                        allPlaces.addAll(places)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
-
-    allPlaces
-}
-

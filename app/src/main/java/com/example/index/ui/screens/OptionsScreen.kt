@@ -32,6 +32,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.content.Context
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +86,24 @@ fun OptionsScreen() {
             label = "Show icons",
             checked = config.showIcons,
             onCheckedChange = { AppConfigManager.setShowIcons(it) }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "User Age", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = if (config.userAge == 0) "" else config.userAge.toString(),
+            onValueChange = {
+                val newAge = it.toIntOrNull() ?: 0
+                AppConfigManager.setUserAge(newAge)
+            },
+            label = { Text("Your Age") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            placeholder = { Text("0") }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
