@@ -1,12 +1,13 @@
 package com.example.index.ui.screens
 
-import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -15,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.index.data.AppConfigManager
 import com.example.index.data.ViewStyle
-import com.example.index.data.Place
+import com.example.index.data.Entry
 import com.example.index.ui.components.RemoteImage
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,15 +31,22 @@ import com.example.index.util.EntryUtils
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun HomeScreen(
+fun BrowseScreen(
     viewModel: SearchViewModel = viewModel(),
-    onNavigateToDetail: (Place) -> Unit = {}
+    onNavigateToDetail: (Entry) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     // Load data once
     LaunchedEffect(Unit) {
         viewModel.loadDataIfNeeded(context)
+    }
+
+    // Reset scroll position when page or search query changes
+    LaunchedEffect(viewModel.currentPage, viewModel.activeSearchQuery) {
+        listState.scrollToItem(0)
     }
 
     val searchQuery = viewModel.searchQuery
@@ -95,6 +103,9 @@ fun HomeScreen(
                                 .clickable {
                                     viewModel.searchQuery = suggestion
                                     viewModel.performSearch()
+                                    coroutineScope.launch {
+                                        listState.scrollToItem(0)
+                                    }
                                 }
                                 .padding(16.dp),
                             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
@@ -152,19 +163,13 @@ fun HomeScreen(
             }
         } else {
             val activeSearchQuery = viewModel.activeSearchQuery
-            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             
-            // Reset scroll position when page changes
-            LaunchedEffect(viewModel.currentPage) {
-                listState.scrollToItem(0)
-            }
-
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState
             ) {
-                items(filteredData) { place ->
-                    PlaceItem(place, onNavigateToDetail)
+                items(filteredData) { entry ->
+                    EntryItem(entry, onNavigateToDetail)
                 }
                 if (activeSearchQuery.isNotEmpty() && filteredData.isEmpty()) {
                     item {
@@ -178,7 +183,7 @@ fun HomeScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
+fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
     val uriHandler = LocalUriHandler.current
     val config by AppConfigManager.config.collectAsState()
 
@@ -186,25 +191,25 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable(enabled = place.link != null || !config.directLinks) {
+            .clickable(enabled = entry.link != null || !config.directLinks) {
                 if (config.directLinks) {
-                    place.link?.let { uriHandler.openUri(it) }
+                    entry.link?.let { uriHandler.openUri(it) }
                 } else {
-                    onClick(place)
+                    onClick(entry)
                 }
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            if (config.viewStyle == ViewStyle.GALLERY && config.showIcons && place.thumbnail != null) {
+            if (config.viewStyle == ViewStyle.GALLERY && config.showIcons && entry.thumbnail != null) {
                 RemoteImage(
-                    url = place.thumbnail,
+                    url = entry.thumbnail,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     showErrorText = false,
-                    isRestricted = EntryUtils.isRestricted(place, config.userAge)
+                    isRestricted = EntryUtils.isRestricted(entry, config.userAge)
                 )
             }
 
@@ -218,17 +223,17 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
                         modifier = Modifier.weight(1f),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
-                        if (config.showIcons && (config.viewStyle != ViewStyle.GALLERY || place.thumbnail == null)) {
-                            if (place.thumbnail != null) {
+                        if (config.showIcons && (config.viewStyle != ViewStyle.GALLERY || entry.thumbnail == null)) {
+                            if (entry.thumbnail != null) {
                                 RemoteImage(
-                                    url = place.thumbnail,
+                                    url = entry.thumbnail,
                                     modifier = Modifier
                                         .size(24.dp)
                                         .padding(end = 8.dp),
                                     showErrorText = false,
-                                    isRestricted = EntryUtils.isRestricted(place, config.userAge)
+                                    isRestricted = EntryUtils.isRestricted(entry, config.userAge)
                                 )
-                            } else if (place.link != null) {
+                            } else if (entry.link != null) {
                                 Icon(
                                     imageVector = Icons.Default.Link,
                                     contentDescription = null,
@@ -240,12 +245,12 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
                             }
                         }
                         Text(
-                            text = EntryUtils.getDisplayTitle(place, config.userAge),
+                            text = EntryUtils.getDisplayTitle(entry, config.userAge),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                     }
-                    place.page_rating_votes?.let { votes ->
+                    entry.page_rating_votes?.let { votes ->
                         Surface(
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             shape = androidx.compose.foundation.shape.CircleShape
@@ -259,28 +264,57 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
                         }
                     }
                 }
-                EntryUtils.getDisplayDescription(place, config.userAge)?.let {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = it,
-                        fontSize = 14.sp,
-                        maxLines = if (config.viewStyle == ViewStyle.RSS) 2 else 3,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                }
                 
-                if (config.viewStyle != ViewStyle.RSS) {
-                    place.link?.let {
+                val isRestricted = EntryUtils.isRestricted(entry, config.userAge)
+                
+                if (config.viewStyle == ViewStyle.SEARCH_ENGINE) {
+                    entry.link?.let {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = it,
+                            text = if (isRestricted) "xXx" else it,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
+
+                if (config.viewStyle == ViewStyle.STANDARD || config.viewStyle == ViewStyle.GALLERY) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        entry.date_published?.let {
+                            Text(
+                                text = if (isRestricted) "xXx" else EntryUtils.getFormattedDate(it),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        entry.author?.let {
+                            Text(
+                                text = if (isRestricted) "xXx" else it,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.outline,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
                 
-                place.tags?.let { tags ->
+                entry.language?.let { lang ->
+                    if (lang.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (isRestricted) "xXx" else lang,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                entry.tags?.let { tags ->
                     if (tags.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         FlowRow(
@@ -294,7 +328,7 @@ fun PlaceItem(place: Place, onClick: (Place) -> Unit) {
                                     shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
-                                        text = tag,
+                                        text = if (isRestricted) "xXx" else tag,
                                         fontSize = 10.sp,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         color = MaterialTheme.colorScheme.onTertiaryContainer

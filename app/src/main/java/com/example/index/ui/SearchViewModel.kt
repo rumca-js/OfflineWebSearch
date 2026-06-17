@@ -7,8 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.index.data.Place
-import com.example.index.data.PlaceRepository.loadAllPlaces
+import com.example.index.data.Entry
+import com.example.index.data.EntryListRepository.loadAllEntries
 import kotlinx.coroutines.launch
 
 class SearchViewModel : ViewModel() {
@@ -16,11 +16,11 @@ class SearchViewModel : ViewModel() {
     var showSuggestions by mutableStateOf(false)
     var activeSearchQuery by mutableStateOf("")
     var searchHistory by mutableStateOf<List<String>>(emptyList())
-    var allPlaces by mutableStateOf<List<Place>>(emptyList())
+    var allEntries by mutableStateOf<List<Entry>>(emptyList())
     var isLoading by mutableStateOf(true)
         private set
 
-    var selectedPlace by mutableStateOf<Place?>(null)
+    var selectedEntry by mutableStateOf<Entry?>(null)
 
     var currentPage by mutableStateOf(0)
     private val pageSize = 20
@@ -35,13 +35,13 @@ class SearchViewModel : ViewModel() {
     fun loadDataIfNeeded(context: Context) {
         viewModelScope.launch {
             com.example.index.data.AppConfigManager.config.collect { config ->
-                if (config.activeDatabase != currentActiveDatabase || config.orderBy != currentOrderBy || allPlaces.isEmpty()) {
+                if (config.activeDatabase != currentActiveDatabase || config.orderBy != currentOrderBy || allEntries.isEmpty()) {
                     currentActiveDatabase = config.activeDatabase
                     currentOrderBy = config.orderBy
                     isLoading = true
                     currentPage = 0
-                    val unsortedPlaces = loadAllPlaces(context, config.activeDatabase)
-                    allPlaces = when (config.orderBy) {
+                    val unsortedPlaces = loadAllEntries(context, config.activeDatabase)
+                    allEntries = when (config.orderBy) {
                         com.example.index.data.OrderBy.PAGE_RATING_VOTES -> unsortedPlaces.sortedByDescending { it.page_rating_votes ?: 0 }
                         com.example.index.data.OrderBy.DATE_CREATED -> unsortedPlaces.sortedByDescending { it.date_created ?: "" }
                         com.example.index.data.OrderBy.DATE_PUBLISHED -> unsortedPlaces.sortedByDescending { it.date_published ?: "" }
@@ -88,13 +88,13 @@ class SearchViewModel : ViewModel() {
 
     private val allSearchResults by derivedStateOf {
         if (activeSearchQuery.isBlank()) {
-            allPlaces
+            allEntries
         } else {
-            allPlaces.filter { place ->
-                place.title?.contains(activeSearchQuery, ignoreCase = true) == true ||
-                place.description?.contains(activeSearchQuery, ignoreCase = true) == true ||
-                place.link?.contains(activeSearchQuery, ignoreCase = true) == true ||
-                place.tags?.any { it.contains(activeSearchQuery, ignoreCase = true) } == true
+            allEntries.filter { entry ->
+                entry.title?.contains(activeSearchQuery, ignoreCase = true) == true ||
+                entry.description?.contains(activeSearchQuery, ignoreCase = true) == true ||
+                entry.link?.contains(activeSearchQuery, ignoreCase = true) == true ||
+                entry.tags?.any { it.contains(activeSearchQuery, ignoreCase = true) } == true
             }
         }
     }

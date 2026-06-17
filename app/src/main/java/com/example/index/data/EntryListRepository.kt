@@ -9,17 +9,23 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 @Serializable
-data class Place(
+data class Entry(
+    val link: String? = null,
     val title: String? = null,
     val description: String? = null,
-    val link: String? = null,
+    val author: String? = null,
+    val album: String? = null,
+    val language: String? = null,
     val tags: List<String>? = null,
     val page_rating_votes: Int? = 0,
     val page_rating: Int? = 0,
     val thumbnail: String? = null,
     val date_created: String? = null,
     val date_published: String? = null,
-    val age: Int? = 0
+    val date_dead_since: String? = null,
+    val age: Int? = 0,
+    val status_code: Int? = 0,
+    val manual_status_code: Int? = 0
 )
 
 private val jsonConfig = Json {
@@ -27,7 +33,7 @@ private val jsonConfig = Json {
     coerceInputValues = true
 }
 
-object PlaceRepository {
+object EntryListRepository {
     private val assets = listOf(
         "places_0.json",
         "places_1.json",
@@ -42,8 +48,8 @@ object PlaceRepository {
         "places_10.json",
     )
 
-    suspend fun loadAllPlaces(context: Context, activeDatabaseUrl: String? = null): List<Place> = withContext(Dispatchers.IO) {
-        val allPlaces = mutableListOf<Place>()
+    suspend fun loadAllEntries(context: Context, activeDatabaseUrl: String? = null): List<Entry> = withContext(Dispatchers.IO) {
+        val allPlaces = mutableListOf<Entry>()
 
         if (activeDatabaseUrl == null) {
             // Load from assets if no external database is active
@@ -51,7 +57,7 @@ object PlaceRepository {
                 try {
                     context.assets.open(fileName).bufferedReader().use { reader ->
                         val jsonString = reader.readText()
-                        val places: List<Place> = jsonConfig.decodeFromString(jsonString)
+                        val places: List<Entry> = jsonConfig.decodeFromString(jsonString)
                         allPlaces.addAll(places)
                     }
                 } catch (e: Exception) {
@@ -68,7 +74,14 @@ object PlaceRepository {
                 if (isSqlite) {
                     try {
                         val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-                        val cursor = db.rawQuery("SELECT title, description, thumbnail, link, page_rating_votes, page_rating, date_created, date_published, age FROM linkdatamodel", null)
+                        val cursor = db.rawQuery("""
+                            SELECT 
+                                l.title, l.description, l.thumbnail, l.link, l.page_rating_votes, l.page_rating, l.date_created, l.date_published, l.date_dead_since,
+                                l.age, l.author, l.album, l.language, l.status_code, l.manual_status_code,
+                                t.tag 
+                            FROM linkdatamodel l 
+                            LEFT JOIN entrycompactedtags t ON l.id = t.entry_id
+                        """.trimIndent(), null)
                         cursor.use {
                             while (it.moveToNext()) {
                                 val title = it.getString(it.getColumnIndexOrThrow("title"))
@@ -79,18 +92,34 @@ object PlaceRepository {
                                 val rating = it.getInt(it.getColumnIndexOrThrow("page_rating"))
                                 val dateCreated = it.getString(it.getColumnIndexOrThrow("date_created"))
                                 val datePublished = it.getString(it.getColumnIndexOrThrow("date_published"))
+                                val dateDeadSince = it.getString(it.getColumnIndexOrThrow("date_dead_since"))
+                                val author = it.getString(it.getColumnIndexOrThrow("author"))
+                                val album = it.getString(it.getColumnIndexOrThrow("album"))
+                                val language = it.getString(it.getColumnIndexOrThrow("language"))
                                 val age = it.getInt(it.getColumnIndexOrThrow("age"))
+                                val statusCode = it.getInt(it.getColumnIndexOrThrow("status_code"))
+                                val manualStatusCode = it.getInt(it.getColumnIndexOrThrow("manual_status_code"))
+                                val tagString = it.getString(it.getColumnIndexOrThrow("tag"))
+                                val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+
                                 allPlaces.add(
-                                    Place(
+                                    Entry(
+                                        link = link,
                                         title = title,
                                         description = description,
                                         thumbnail = thumbnail,
-                                        link = link,
+                                        author = author,
+                                        album = album,
+                                        language = language,
                                         page_rating_votes = votes,
                                         page_rating = rating,
                                         date_created = dateCreated,
                                         date_published = datePublished,
-                                        age = age
+                                        date_dead_since = dateDeadSince,
+                                        age = age,
+                                        status_code = statusCode,
+                                        manual_status_code = manualStatusCode,
+                                        tags = tags
                                     )
                                 )
                             }
@@ -103,8 +132,8 @@ object PlaceRepository {
                     try {
                         file.bufferedReader().use { reader ->
                             val jsonString = reader.readText()
-                            val places: List<Place> = jsonConfig.decodeFromString(jsonString)
-                            allPlaces.addAll(places)
+                            val entries: List<Entry> = jsonConfig.decodeFromString(jsonString)
+                            allPlaces.addAll(entries)
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()

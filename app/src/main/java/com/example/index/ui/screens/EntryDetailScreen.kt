@@ -1,6 +1,6 @@
 package com.example.index.ui.screens
 
-import com.example.index.data.Place
+import com.example.index.data.Entry
 import com.example.index.util.EntryUtils
 import com.example.index.data.AppConfigManager
 import com.example.index.ui.components.RemoteImage
@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +27,7 @@ import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
+fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -53,42 +52,110 @@ fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            if (place.thumbnail != null) {
+            val isRestricted = EntryUtils.isRestricted(entry, config.userAge)
+            val copyLink = {
+                entry.link?.let { link ->
+                    clipboardManager.setText(AnnotatedString(link))
+                    Toast.makeText(context, "Link copied to clipboard", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            if (entry.thumbnail != null) {
                 RemoteImage(
-                    url = place.thumbnail,
+                    url = entry.thumbnail,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 100.dp, max = 300.dp)
                         .padding(bottom = 16.dp)
-                        .pointerInput(place.link) {
+                        .pointerInput(entry.link) {
                             detectTapGestures(
                                 onTap = {
-                                    place.link?.let { uriHandler.openUri(it) }
+                                    entry.link?.let { uriHandler.openUri(it) }
+                                },
+                                onLongPress = {
+                                    if (!isRestricted) {
+                                        copyLink()
+                                    }
                                 }
                             )
                         },
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    isRestricted = EntryUtils.isRestricted(place, config.userAge)
+                    isRestricted = isRestricted
                 )
             }
 
             Text(
-                text = EntryUtils.getDisplayTitle(place, config.userAge),
+                text = EntryUtils.getDisplayTitle(entry, config.userAge),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 30.sp,
-                color = if (place.link != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                textDecoration = if (place.link != null) TextDecoration.Underline else TextDecoration.None,
-                modifier = if (place.link != null) {
-                    Modifier.clickable { uriHandler.openUri(place.link) }
-                } else {
-                    Modifier
+                color = if (entry.link != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                textDecoration = if (entry.link != null) TextDecoration.Underline else TextDecoration.None,
+                modifier = Modifier.pointerInput(entry.link) {
+                    detectTapGestures(
+                        onTap = {
+                            entry.link?.let { uriHandler.openUri(it) }
+                        },
+                        onLongPress = {
+                            if (!isRestricted) {
+                                copyLink()
+                            }
+                        }
+                    )
                 }
             )
 
+            entry.link?.let { link ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (isRestricted) "xXx" else link,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(link) {
+                            if (!isRestricted) {
+                                detectTapGestures(
+                                    onTap = { uriHandler.openUri(link) },
+                                    onLongPress = { copyLink() }
+                                )
+                            }
+                        }
+                )
+            }
+
+            entry.date_published?.let { date ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Published: ${if (isRestricted) "xXx" else EntryUtils.getFormattedDate(date)}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            entry.tags?.let { tags ->
+                if (tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        tags.forEach { tag ->
+                            Text(
+                                text = if (isRestricted) "#xXx" else "#$tag",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            EntryUtils.getDisplayDescription(place, config.userAge)?.let {
+            EntryUtils.getDisplayDescription(entry, config.userAge)?.let {
                 Text(
                     text = it,
                     fontSize = 16.sp,
@@ -99,11 +166,21 @@ fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
 
             // Entry detail properties
             // Metadata
-            DetailRow(label = "Rating", value = EntryUtils.getFormattedRating(place))
-            DetailRow(label = "Votes", value = EntryUtils.getFormattedVotes(place))
-            DetailRow(label = "Created", value = EntryUtils.getFormattedDate(place.date_created))
-            DetailRow(label = "Published", value = EntryUtils.getFormattedDate(place.date_published))
-            place.thumbnail?.let { thumbUrl ->
+
+            DetailRow(label = "Created", value = EntryUtils.getFormattedDate(entry.date_created))
+            DetailRow(label = "Dead", value = EntryUtils.getFormattedDate(entry.date_dead_since))
+
+            DetailRow(label = "Author", value = entry.author ?: "NA")
+            DetailRow(label = "Album", value = entry.album ?: "NA")
+            DetailRow(label = "Language", value = entry.language ?: "NA")
+
+            DetailRow(label = "Rating", value = EntryUtils.getFormattedRating(entry))
+            DetailRow(label = "Votes", value = EntryUtils.getFormattedVotes(entry))
+
+            DetailRow(label = "Status Code", value = (entry.status_code ?: 0).toString())
+            DetailRow(label = "Manual Status Code", value = (entry.manual_status_code ?: 0).toString())
+
+            entry.thumbnail?.let { thumbUrl ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -132,28 +209,6 @@ fun EntryDetailScreen(place: Place, onBack: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            place.tags?.let { tags ->
-                if (tags.isNotEmpty()) {
-                    Text(
-                        text = "Tags:",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        tags.forEach { tag ->
-                            SuggestionChip(
-                                onClick = { /* Search for tag? */ },
-                                label = { Text(tag) }
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }

@@ -1,6 +1,6 @@
 package com.example.index.util
 
-import com.example.index.data.Place
+import com.example.index.data.Entry
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -8,43 +8,43 @@ class EntryUtilsTest {
 
     @Test
     fun testDisplayTitleObfuscation() {
-        val placeWithAge = Place(title = "Adult Content", age = 18)
-        val placeWithoutAge = Place(title = "General Content", age = 0)
-        val placeNullAge = Place(title = "Unknown Age", age = null)
+        val entryWithAge = Entry(title = "Adult Content", age = 18)
+        val entryWithoutAge = Entry(title = "General Content", age = 0)
+        val entryNullAge = Entry(title = "Unknown Age", age = null)
 
         // Case 1: User is younger than requirement
-        assertEquals("xXx", EntryUtils.getDisplayTitle(placeWithAge, 10))
+        assertEquals("xXx", EntryUtils.getDisplayTitle(entryWithAge, 10))
         
         // Case 2: User meets requirement exactly
-        assertEquals("Adult Content", EntryUtils.getDisplayTitle(placeWithAge, 18))
+        assertEquals("Adult Content", EntryUtils.getDisplayTitle(entryWithAge, 18))
         
         // Case 3: User is older than requirement
-        assertEquals("Adult Content", EntryUtils.getDisplayTitle(placeWithAge, 21))
+        assertEquals("Adult Content", EntryUtils.getDisplayTitle(entryWithAge, 21))
 
         // Case 4: No age requirement
-        assertEquals("General Content", EntryUtils.getDisplayTitle(placeWithoutAge, 10))
-        assertEquals("Unknown Age", EntryUtils.getDisplayTitle(placeNullAge, 10))
+        assertEquals("General Content", EntryUtils.getDisplayTitle(entryWithoutAge, 10))
+        assertEquals("Unknown Age", EntryUtils.getDisplayTitle(entryNullAge, 10))
     }
 
     @Test
     fun testDescriptionObfuscation() {
-        val restrictedPlace = Place(description = "Secret content", age = 18)
-        val normalPlace = Place(description = "Public content", age = 0)
+        val restrictedEntry = Entry(description = "Secret content", age = 18)
+        val normalEntry = Entry(description = "Public content", age = 0)
 
         // Restricted
-        assertEquals("xXx", EntryUtils.getDisplayDescription(restrictedPlace, 10))
+        assertEquals("xXx", EntryUtils.getDisplayDescription(restrictedEntry, 10))
         
         // Allowed
-        assertEquals("Secret content", EntryUtils.getDisplayDescription(restrictedPlace, 20))
-        assertEquals("Public content", EntryUtils.getDisplayDescription(normalPlace, 10))
+        assertEquals("Secret content", EntryUtils.getDisplayDescription(restrictedEntry, 20))
+        assertEquals("Public content", EntryUtils.getDisplayDescription(normalEntry, 10))
         
         // Null handling
-        assertEquals(null, EntryUtils.getDisplayDescription(Place(description = null), 10))
+        assertEquals(null, EntryUtils.getDisplayDescription(Entry(description = null), 10))
     }
 
     @Test
     fun testMetadataFormatting() {
-        val place = Place(
+        val place = Entry(
             page_rating = 85,
             page_rating_votes = 120,
             date_created = "2023-01-01",

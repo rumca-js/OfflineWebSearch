@@ -9,7 +9,7 @@ enum class OrderBy(val displayName: String) {
 enum class ViewStyle(val displayName: String) {
     GALLERY("Gallery"),
     SEARCH_ENGINE("Search Engine"),
-    RSS("RSS")
+    STANDARD("Standard")
 }
 
 data class AppConfiguration(

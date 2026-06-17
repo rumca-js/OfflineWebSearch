@@ -1,7 +1,7 @@
 package com.example.index
 
 import com.example.index.ui.SearchViewModel
-import com.example.index.data.Place
+import com.example.index.data.Entry
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -11,10 +11,10 @@ class SearchViewModelTest {
     fun testFilteredData() {
         val viewModel = SearchViewModel()
         val places = listOf(
-            Place(title = "Test 1", description = "Desc 1", link = "http://test1.com", tags = listOf("tag1")),
-            Place(title = "Other", description = "Other desc", link = "http://other.com", tags = listOf("tag2"))
+            Entry(title = "Test 1", description = "Desc 1", link = "http://test1.com", tags = listOf("tag1")),
+            Entry(title = "Other", description = "Other desc", link = "http://other.com", tags = listOf("tag2"))
         )
-        viewModel.allPlaces = places
+        viewModel.allEntries = places
 
         // Initial state (empty query)
         assertTrue(viewModel.filteredData.size == 2)

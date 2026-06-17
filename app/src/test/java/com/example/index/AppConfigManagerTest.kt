@@ -46,9 +46,9 @@ class AppConfigManagerTest {
         var config = AppConfigManager.config.first()
         assertEquals(ViewStyle.GALLERY, config.viewStyle)
 
-        AppConfigManager.setViewStyle(ViewStyle.RSS)
+        AppConfigManager.setViewStyle(ViewStyle.STANDARD)
         config = AppConfigManager.config.first()
-        assertEquals(ViewStyle.RSS, config.viewStyle)
+        assertEquals(ViewStyle.STANDARD, config.viewStyle)
 
         // Reset
         AppConfigManager.setViewStyle(ViewStyle.SEARCH_ENGINE)

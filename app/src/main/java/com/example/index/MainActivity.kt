@@ -22,7 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.index.ui.screens.AboutScreen
-import com.example.index.ui.screens.HomeScreen
+import com.example.index.ui.screens.BrowseScreen
 import com.example.index.ui.screens.OptionsScreen
 import com.example.index.ui.theme.OfflineWebSearchTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -79,10 +79,10 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(Screen.Home.route) { 
-                            HomeScreen(
+                            BrowseScreen(
                                 viewModel = searchViewModel,
-                                onNavigateToDetail = { place ->
-                                    searchViewModel.selectedPlace = place
+                                onNavigateToDetail = { entry ->
+                                    searchViewModel.selectedEntry = entry
                                     navController.navigate(Screen.Detail.route)
                                 }
                             )
@@ -90,9 +90,9 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.About.route) { AboutScreen() }
                         composable(Screen.Options.route) { OptionsScreen() }
                         composable(Screen.Detail.route) {
-                            searchViewModel.selectedPlace?.let { place ->
+                            searchViewModel.selectedEntry?.let { place ->
                                 com.example.index.ui.screens.EntryDetailScreen(
-                                    place = place,
+                                    entry = place,
                                     onBack = { navController.popBackStack() }
                                 )
                             }
