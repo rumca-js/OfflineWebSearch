@@ -1,4 +1,4 @@
-A fast, lightweight Android application for searching a curated collection of:
+A fast, lightweight, private Android application for searching a curated collection of:
  - popular websites and domains
  - YouTube channels
  - X channels
