@@ -20,3 +20,7 @@ The app requires minimal permissions and does not rely on remote services for se
 # Open Source
 
 This project is open source and welcomes contributions, bug reports, and suggestions.
+
+# Screenshots
+
+[Screenshots](https://github.com/rumca-js/OfflineWebSearch/tree/main/screenshot)
