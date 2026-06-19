@@ -1,15 +1,16 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Divider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,18 @@ fun AboutScreen() {
     val uriHandler = LocalUriHandler.current
     val projectUrl = "https://github.com/rumca-js/OfflineWebSearch"
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val versionName = try {
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        }
+        packageInfo.versionName ?: "Unknown"
+    } catch (e: Exception) {
+        "1.0"
+    }
 
     Column(
         modifier = Modifier
@@ -30,6 +43,14 @@ fun AboutScreen() {
             text = "Offline Web Search",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
+        )
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = "Version $versionName",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -55,6 +76,34 @@ fun AboutScreen() {
             style = MaterialTheme.typography.bodyMedium
         )
         
+        Spacer(modifier = Modifier.height(24.dp))
+
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SectionTitle("Ready Databases")
+        Text(
+            text = "Explore and import pre-compiled offline databases to expand your search options. You can add them in the Options tab.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+            name = "Awesome Database Top",
+            description = "Curated databases of top websites and web locations.",
+            url = "https://github.com/rumca-js/awesome-database-top"
+        )
+        
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+            name = "Awesome Database Feeds",
+            description = "Pre-compiled databases mapping sites to their RSS feeds.",
+            url = "https://github.com/rumca-js/awesome-database-feeds"
+        )
+        
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+            name = "Awesome Database AwesomeLists",
+            description = "Offline search databases built from community-curated awesome lists.",
+            url = "https://github.com/rumca-js/awesome-database-awesomelists"
+        )
+
         Spacer(modifier = Modifier.height(24.dp))
 
         _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SectionTitle("Permissions")
@@ -94,7 +143,7 @@ private fun SectionTitle(title: String) {
         color = MaterialTheme.colorScheme.primary
     )
     Spacer(modifier = Modifier.height(4.dp))
-    Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
     Spacer(modifier = Modifier.height(8.dp))
 }
 
@@ -108,5 +157,45 @@ private fun FeatureItem(feature: String) {
     ) {
         Text(text = "• ", style = MaterialTheme.typography.bodyMedium)
         Text(text = feature, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun DatabaseItem(name: String, description: String, url: String) {
+    val uriHandler = LocalUriHandler.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = url,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable { uriHandler.openUri(url) }
+            )
+        }
     }
 }
