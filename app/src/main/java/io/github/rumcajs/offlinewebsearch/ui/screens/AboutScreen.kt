@@ -87,17 +87,17 @@ fun AboutScreen() {
         Spacer(modifier = Modifier.height(8.dp))
         
         _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
-            name = "Awesome Database Top",
-            description = "Curated databases of top websites and web locations.",
-            url = "https://github.com/rumca-js/awesome-database-top"
-        )
-        
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
             name = "Awesome Database Feeds",
             description = "Pre-compiled databases mapping sites to their RSS feeds.",
             url = "https://github.com/rumca-js/awesome-database-feeds"
         )
-        
+
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+            name = "Awesome Database Top",
+            description = "Curated databases of top websites and web locations.",
+            url = "https://github.com/rumca-js/awesome-database-top"
+        )
+
         _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
             name = "Awesome Database AwesomeLists",
             description = "Offline search databases built from community-curated awesome lists.",
