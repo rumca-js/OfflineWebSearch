@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import android.widget.Toast
+import io.github.rumcajs.offlinewebsearch.handler.HandlerBuilder
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -158,6 +159,46 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                     lineHeight = 24.sp
                 )
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Resolve and display feeds
+            entry.link?.let { link ->
+                val handler = HandlerBuilder(link).build()
+                val feeds = handler?.getFeeds() ?: emptyList()
+                if (feeds.isNotEmpty()) {
+                    feeds.forEach { feedUrl ->
+                        val displayFeedUrl = if (isRestricted) "xXx" else feedUrl
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .pointerInput(feedUrl) {
+                                    if (!isRestricted) {
+                                        detectTapGestures(
+                                            onTap = { uriHandler.openUri(feedUrl) },
+                                            onLongPress = {
+                                                clipboardManager.setText(AnnotatedString(feedUrl))
+                                                Toast.makeText(context, "Feed link copied", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    }
+                                },
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = "Feed Link", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
+                            Text(
+                                text = displayFeedUrl,
+                                color = MaterialTheme.colorScheme.primary,
+                                textDecoration = TextDecoration.Underline,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false).padding(start = 16.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
 
             // Entry detail properties

@@ -7,15 +7,18 @@ import java.net.URI
  * Interface representing a page handler that checks if a link can be handled.
  */
 interface PageHandler {
-    fun isHandledBy(link: String): Boolean
-    fun getFeeds(link: String): List<String> = emptyList()
+    fun isHandledBy(): Boolean
+    fun getFeeds(): List<String> = emptyList()
+    fun getUrl(): String
 }
 
 /**
  * Handles YouTube videos.
  */
-class YouTubeVideoHandler : PageHandler {
-    override fun isHandledBy(link: String): Boolean {
+class YouTubeVideoHandler(private val link: String) : PageHandler {
+    override fun getUrl(): String = link
+
+    override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
         if (domain == "youtu.be") {
             val path = getPath(link)
@@ -62,8 +65,10 @@ class YouTubeVideoHandler : PageHandler {
 /**
  * Handles YouTube channels.
  */
-class YouTubeChannelHandler : PageHandler {
-    override fun isHandledBy(link: String): Boolean {
+class YouTubeChannelHandler(private val link: String) : PageHandler {
+    override fun getUrl(): String = link
+
+    override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
         if (domain == "youtube.com" || domain == "www.youtube.com" || domain == "m.youtube.com") {
             val path = getPath(link)
@@ -75,15 +80,13 @@ class YouTubeChannelHandler : PageHandler {
         return false
     }
 
-    override fun getFeeds(link: String): List<String> {
-        val path = getPath(link)
-        if (path.startsWith("/channel/")) {
-            val channelId = path.substringAfter("/channel/").split("/").firstOrNull { it.isNotEmpty() }
-            if (!channelId.isNullOrEmpty()) {
-                return listOf("https://www.youtube.com/feeds/videos.xml?channel_id=$channelId")
-            }
+    override fun getFeeds(): List<String> {
+        val uid = linkToUid(link)
+        return if (uid != null) {
+            listOf("https://www.youtube.com/feeds/videos.xml?channel_id=$uid")
+        } else {
+            emptyList()
         }
-        return emptyList()
     }
 
     private fun getPath(link: String): String {
@@ -94,13 +97,54 @@ class YouTubeChannelHandler : PageHandler {
             ""
         }
     }
+
+    companion object {
+        @JvmStatic
+        fun getUidFromChannelLink(link: String): String? {
+            val path = try {
+                val adjusted = if (!link.contains("://")) "http://$link" else link
+                URI(adjusted).path ?: ""
+            } catch (e: Exception) {
+                ""
+            }
+            if (path.startsWith("/channel/")) {
+                val uid = path.substringAfter("/channel/").split("/").firstOrNull { it.isNotEmpty() }
+                if (!uid.isNullOrEmpty()) {
+                    return uid
+                }
+            }
+            return null
+        }
+
+        @JvmStatic
+        fun getUidFromRssLink(link: String): String? {
+            return try {
+                val adjusted = if (!link.contains("://")) "http://$link" else link
+                val uri = URI(adjusted)
+                val query = uri.query ?: return null
+                query.split("&")
+                    .map { it.split("=") }
+                    .firstOrNull { it.size == 2 && it[0] == "channel_id" }
+                    ?.get(1)
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        @JvmStatic
+        fun linkToUid(link: String): String? {
+            return getUidFromChannelLink(link) ?: getUidFromRssLink(link)
+        }
+    }
 }
 
 /**
  * Handles GitHub repositories.
  */
-class GitHubRepositoryHandler : PageHandler {
-    override fun isHandledBy(link: String): Boolean {
+class GitHubRepositoryHandler(private val link: String) : PageHandler {
+    override fun getUrl(): String = link
+
+    override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
         if (domain == "github.com" || domain == "www.github.com") {
             val path = getPath(link)
@@ -143,13 +187,13 @@ class HandlerBuilder(private val link: String) {
     fun build(): PageHandler? {
         val activeHandlers = if (handlers.isEmpty()) {
             listOf(
-                YouTubeVideoHandler(),
-                YouTubeChannelHandler(),
-                GitHubRepositoryHandler()
+                YouTubeVideoHandler(link),
+                YouTubeChannelHandler(link),
+                GitHubRepositoryHandler(link)
             )
         } else {
             handlers
         }
-        return activeHandlers.firstOrNull { it.isHandledBy(link) }
+        return activeHandlers.firstOrNull { it.isHandledBy() }
     }
 }
