@@ -155,4 +155,32 @@ class HandlerBuilderTest {
         org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", YouTubeChannelHandler.linkToUid(rssUrl))
         assertNull(YouTubeChannelHandler.linkToUid(customUrl))
     }
+
+    @Test
+    fun testRedditChannelHandler() {
+        val subredditUrl = "https://www.reddit.com/r/kotlin"
+        val userUrl = "reddit.com/user/some_user/new/"
+        val postUrl = "https://www.reddit.com/r/kotlin/comments/12345/some_post"
+        val redditRoot = "https://www.reddit.com"
+
+        // Subreddit matching and feed URL
+        val handler1 = HandlerBuilder(subredditUrl).build()
+        assertTrue(handler1 is RedditChannelHandler)
+        org.junit.Assert.assertEquals(
+            listOf("https://www.reddit.com/r/kotlin/.rss"),
+            handler1?.getFeeds()
+        )
+
+        // User profile matching and feed URL
+        val handler2 = HandlerBuilder(userUrl).build()
+        assertTrue(handler2 is RedditChannelHandler)
+        org.junit.Assert.assertEquals(
+            listOf("https://reddit.com/user/some_user/new/.rss"),
+            handler2?.getFeeds()
+        )
+
+        // Non-channels (posts and root pages) should not match
+        assertNull(HandlerBuilder(postUrl).build())
+        assertNull(HandlerBuilder(redditRoot).build())
+    }
 }

@@ -160,7 +160,61 @@ class GitHubRepositoryHandler(private val link: String) : PageHandler {
                 return owner.lowercase() !in reservedNames
             }
         }
+        return false;
+    }
+
+    override fun getFeeds(): List<String> {
+        val domain = UrlLocation.getDomain(link)
+        val path = getPath(link)
+        val segments = path.split("/").filter { it.isNotEmpty() }
+        if (segments.size >= 2) {
+            val owner = segments[0]
+            val repo = segments[1]
+            val host = if (domain.isNotEmpty()) domain else "github.com"
+            return listOf(
+                "https://$host/$owner/$repo/commits.atom",
+                "https://$host/$owner/$repo/releases.atom"
+            )
+        }
+        return emptyList()
+    }
+
+    private fun getPath(link: String): String {
+        return try {
+            val adjusted = if (!link.contains("://")) "http://$link" else link
+            URI(adjusted).path ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+}
+
+/**
+ * Handles Reddit subreddits and user feeds.
+ */
+class RedditChannelHandler(private val link: String) : PageHandler {
+    override fun getUrl(): String = link
+
+    override fun isHandledBy(): Boolean {
+        val domain = UrlLocation.getDomain(link)
+        if (domain == "reddit.com" || domain == "www.reddit.com" || domain == "old.reddit.com") {
+            val path = getPath(link)
+            val isChannelPath = path.startsWith("/r/") || path.startsWith("/user/") || path.startsWith("/u/")
+            val isPost = path.contains("/comments/")
+            return isChannelPath && !isPost
+        }
         return false
+    }
+
+    override fun getFeeds(): List<String> {
+        val domain = UrlLocation.getDomain(link)
+        val path = getPath(link)
+        val cleanPath = path.removeSuffix("/")
+        if (cleanPath.startsWith("/r/") || cleanPath.startsWith("/user/") || cleanPath.startsWith("/u/")) {
+            val host = if (domain.isNotEmpty()) domain else "www.reddit.com"
+            return listOf("https://$host$cleanPath/.rss")
+        }
+        return emptyList()
     }
 
     private fun getPath(link: String): String {
@@ -189,7 +243,8 @@ class HandlerBuilder(private val link: String) {
             listOf(
                 YouTubeVideoHandler(link),
                 YouTubeChannelHandler(link),
-                GitHubRepositoryHandler(link)
+                GitHubRepositoryHandler(link),
+                RedditChannelHandler(link)
             )
         } else {
             handlers
