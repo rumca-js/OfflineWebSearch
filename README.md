@@ -9,6 +9,10 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
  - Fast local search with no waiting for server responses
  - Privacy-friendly: no network requests required for searching
 
+# Links
+
+https://f-droid.org/en/packages/io.github.rumcajs.offlinewebsearch/ - F-Droid app
+
 # Why Use Offline Web Search?
 
 Finding a website can be faster than opening a browser and typing a full URL. Offline Web Search provides a searchable index of popular domains directly on your device.
