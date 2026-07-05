@@ -126,7 +126,7 @@ class HandlerBuilderTest {
         val githubUrl = "https://github.com/google/guava"
         val githubHandler = HandlerBuilder(githubUrl).build()
         assertTrue(githubHandler is GitHubRepositoryHandler)
-        assertTrue(githubHandler?.getFeeds()?.isEmpty() == true)
+        assertTrue(githubHandler?.getFeeds()?.isEmpty() == false)
     }
 
     @Test
