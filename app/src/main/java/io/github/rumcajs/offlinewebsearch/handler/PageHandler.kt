@@ -10,6 +10,7 @@ interface PageHandler {
     fun isHandledBy(): Boolean
     fun getFeeds(): List<String> = emptyList()
     fun getUrl(): String
+    fun getChannel(): String = ""
 }
 
 /**
@@ -17,6 +18,7 @@ interface PageHandler {
  */
 class YouTubeVideoHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
+    override fun getChannel(): String = ""
 
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
@@ -67,6 +69,20 @@ class YouTubeVideoHandler(private val link: String) : PageHandler {
  */
 class YouTubeChannelHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
+
+    override fun getChannel(): String {
+        val path = getPath(link)
+        return when {
+            path.startsWith("/channel/") -> path.substringAfter("/channel/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            path.startsWith("/c/") -> path.substringAfter("/c/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            path.startsWith("/user/") -> path.substringAfter("/user/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            path.startsWith("/@") -> {
+                val handle = path.substringAfter("/@").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+                if (handle.isNotEmpty()) "@$handle" else ""
+            }
+            else -> ""
+        }
+    }
 
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
@@ -144,6 +160,12 @@ class YouTubeChannelHandler(private val link: String) : PageHandler {
 class GitHubRepositoryHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
 
+    override fun getChannel(): String {
+        val path = getPath(link)
+        val segments = path.split("/").filter { it.isNotEmpty() }
+        return if (segments.isNotEmpty()) segments[0] else ""
+    }
+
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
         if (domain == "github.com" || domain == "www.github.com") {
@@ -194,6 +216,16 @@ class GitHubRepositoryHandler(private val link: String) : PageHandler {
  */
 class RedditChannelHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
+
+    override fun getChannel(): String {
+        val path = getPath(link)
+        return when {
+            path.startsWith("/r/") -> path.substringAfter("/r/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            path.startsWith("/user/") -> path.substringAfter("/user/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            path.startsWith("/u/") -> path.substringAfter("/u/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            else -> ""
+        }
+    }
 
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)

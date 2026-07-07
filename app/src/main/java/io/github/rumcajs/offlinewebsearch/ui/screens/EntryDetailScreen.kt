@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import android.widget.Toast
 import io.github.rumcajs.offlinewebsearch.handler.HandlerBuilder
+import io.github.rumcajs.offlinewebsearch.handler.YouTubeChannelHandler
+import io.github.rumcajs.offlinewebsearch.handler.RedditChannelHandler
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -173,10 +175,23 @@ fun EntryDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // Display channel
+            entry.link?.let { link ->
+                val handler = HandlerBuilder(link).build()
+                val channel = handler?.getChannel() ?: ""
+                val isChannel = handler is YouTubeChannelHandler || handler is RedditChannelHandler
+                if (channel.isNotEmpty() && !isChannel) {
+                    DetailRow(
+                        label = "Channel",
+                        value = channel
+                    )
+                }
+            }
+
             // Resolve and display feeds
             entry.link?.let { link ->
                 val handler = HandlerBuilder(link).build()
-                val feeds = handler?.getFeeds() ?: emptyList()
+                val feeds = handler?.getFeeds()?.filter { it != link } ?: emptyList()
                 if (feeds.isNotEmpty()) {
                     feeds.forEach { feedUrl ->
                         LinkRow(
@@ -190,8 +205,7 @@ fun EntryDetailScreen(
                 }
             }
 
-            // Entry detail properties
-            // Metadata
+            // Entry detail properties, metadata
 
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
                 label = "Created",
