@@ -167,35 +167,12 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                 val feeds = handler?.getFeeds() ?: emptyList()
                 if (feeds.isNotEmpty()) {
                     feeds.forEach { feedUrl ->
-                        val displayFeedUrl = if (isRestricted) "xXx" else feedUrl
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .pointerInput(feedUrl) {
-                                    if (!isRestricted) {
-                                        detectTapGestures(
-                                            onTap = { uriHandler.openUri(feedUrl) },
-                                            onLongPress = {
-                                                clipboardManager.setText(AnnotatedString(feedUrl))
-                                                Toast.makeText(context, "Feed link copied", Toast.LENGTH_SHORT).show()
-                                            }
-                                        )
-                                    }
-                                },
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(text = "Feed Link", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
-                            Text(
-                                text = displayFeedUrl,
-                                color = MaterialTheme.colorScheme.primary,
-                                textDecoration = TextDecoration.Underline,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false).padding(start = 16.dp)
-                            )
-                        }
+                        LinkRow(
+                            label = "Feed Link",
+                            url = feedUrl,
+                            isRestricted = isRestricted,
+                            toastMessage = "Feed link copied"
+                        )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -284,6 +261,22 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                 }
             }
 
+            // Resolve and display UrlServices links
+            entry.link?.let { link ->
+                val urlServices = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.UrlServices()
+                val serviceLinks = urlServices.getServiceLinks(link)
+                if (serviceLinks.isNotEmpty()) {
+                    serviceLinks.forEach { (serviceName, serviceUrl) ->
+                        LinkRow(
+                            label = serviceName,
+                            url = serviceUrl,
+                            isRestricted = isRestricted,
+                            toastMessage = "$serviceName link copied"
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -299,5 +292,53 @@ fun DetailRow(label: String, value: String) {
     ) {
         Text(text = label, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
         Text(text = value)
+    }
+}
+
+@Composable
+fun LinkRow(
+    label: String,
+    url: String,
+    isRestricted: Boolean,
+    toastMessage: String = "Link copied"
+) {
+    val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val displayUrl = if (isRestricted) "xXx" else url
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .pointerInput(url) {
+                if (!isRestricted) {
+                    detectTapGestures(
+                        onTap = { uriHandler.openUri(url) },
+                        onLongPress = {
+                            clipboardManager.setText(AnnotatedString(url))
+                            Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            },
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Text(
+            text = displayUrl,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .padding(start = 16.dp)
+        )
     }
 }
