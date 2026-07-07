@@ -19,6 +19,7 @@ class SearchViewModel : ViewModel() {
         private set
 
     var selectedEntry by mutableStateOf<io.github.rumcajs.offlinewebsearch.data.Entry?>(null)
+    var previewUrl by mutableStateOf<String?>(null)
 
     var currentPage by mutableStateOf(0)
     private val pageSize = 20

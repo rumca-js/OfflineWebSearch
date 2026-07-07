@@ -24,7 +24,11 @@ import io.github.rumcajs.offlinewebsearch.handler.HandlerBuilder
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBack: () -> Unit) {
+fun EntryDetailScreen(
+    entry: io.github.rumcajs.offlinewebsearch.data.Entry,
+    onNavigateToLinkPreview: (String) -> Unit,
+    onBack: () -> Unit
+) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -120,6 +124,14 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                             }
                         }
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { onNavigateToLinkPreview(link) },
+                    enabled = !isRestricted,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Entry Link Preview")
+                }
             }
 
             entry.date_published?.let { date ->
