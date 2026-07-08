@@ -68,21 +68,15 @@ class YouTubeVideoHandler(private val link: String) : PageHandler {
  * Handles YouTube channels.
  */
 class YouTubeChannelHandler(private val link: String) : PageHandler {
+    val channelUid: String? = linkToUid(link)
+
     override fun getUrl(): String = link
 
-    override fun getChannel(): String {
-        val path = getPath(link)
-        return when {
-            path.startsWith("/channel/") -> path.substringAfter("/channel/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
-            path.startsWith("/c/") -> path.substringAfter("/c/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
-            path.startsWith("/user/") -> path.substringAfter("/user/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
-            path.startsWith("/@") -> {
-                val handle = path.substringAfter("/@").split("/").firstOrNull { it.isNotEmpty() } ?: ""
-                if (handle.isNotEmpty()) "@$handle" else ""
-            }
-            else -> ""
-        }
+    fun getChannelUrl(): String? {
+        return channelUid?.let { "https://www.youtube.com/channel/$it" }
     }
+
+    override fun getChannel(): String = getChannelUrl() ?: ""
 
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
@@ -97,9 +91,8 @@ class YouTubeChannelHandler(private val link: String) : PageHandler {
     }
 
     override fun getFeeds(): List<String> {
-        val uid = linkToUid(link)
-        return if (uid != null) {
-            listOf("https://www.youtube.com/feeds/videos.xml?channel_id=$uid")
+        return if (channelUid != null) {
+            listOf("https://www.youtube.com/feeds/videos.xml?channel_id=$channelUid")
         } else {
             emptyList()
         }

@@ -146,22 +146,22 @@ class HandlerBuilderTest {
         // YouTubeChannelHandler with Channel ID
         val ytChannelId = "https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q"
         val ytChannelHandlerId = HandlerBuilder(ytChannelId).build()
-        org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", ytChannelHandlerId?.getChannel())
+        org.junit.Assert.assertEquals("https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q", ytChannelHandlerId?.getChannel())
 
         // YouTubeChannelHandler with custom c/ path
         val ytChannelC = "https://youtube.com/c/YouTubeCreators"
         val ytChannelHandlerC = HandlerBuilder(ytChannelC).build()
-        org.junit.Assert.assertEquals("YouTubeCreators", ytChannelHandlerC?.getChannel())
+        org.junit.Assert.assertEquals("", ytChannelHandlerC?.getChannel())
 
         // YouTubeChannelHandler with user/ path
         val ytChannelUser = "https://www.youtube.com/user/youtube"
         val ytChannelHandlerUser = HandlerBuilder(ytChannelUser).build()
-        org.junit.Assert.assertEquals("youtube", ytChannelHandlerUser?.getChannel())
+        org.junit.Assert.assertEquals("", ytChannelHandlerUser?.getChannel())
 
         // YouTubeChannelHandler with @ handle path
         val ytChannelHandle = "https://www.youtube.com/@youtube"
         val ytChannelHandlerHandle = HandlerBuilder(ytChannelHandle).build()
-        org.junit.Assert.assertEquals("@youtube", ytChannelHandlerHandle?.getChannel())
+        org.junit.Assert.assertEquals("", ytChannelHandlerHandle?.getChannel())
 
         // GitHubRepositoryHandler
         val ghUrl = "https://github.com/google/guava"
@@ -197,6 +197,25 @@ class HandlerBuilderTest {
         org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", YouTubeChannelHandler.linkToUid(channelUrl))
         org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", YouTubeChannelHandler.linkToUid(rssUrl))
         assertNull(YouTubeChannelHandler.linkToUid(customUrl))
+    }
+
+    @Test
+    fun testYouTubeChannelUidMemberAndUrl() {
+        val channelUrl = "https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q"
+        val rssUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCfMJ2MchTSW27WSgsuxG12Q"
+        val customUrl = "https://www.youtube.com/@google"
+
+        val handlerFromChannel = YouTubeChannelHandler(channelUrl)
+        org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", handlerFromChannel.channelUid)
+        org.junit.Assert.assertEquals("https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q", handlerFromChannel.getChannelUrl())
+
+        val handlerFromRss = YouTubeChannelHandler(rssUrl)
+        org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", handlerFromRss.channelUid)
+        org.junit.Assert.assertEquals("https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q", handlerFromRss.getChannelUrl())
+
+        val handlerFromCustom = YouTubeChannelHandler(customUrl)
+        assertNull(handlerFromCustom.channelUid)
+        assertNull(handlerFromCustom.getChannelUrl())
     }
 
     @Test
