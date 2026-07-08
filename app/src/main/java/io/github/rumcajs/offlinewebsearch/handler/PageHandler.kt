@@ -19,27 +19,32 @@ interface PageHandler {
 class YouTubeVideoHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
     override fun getChannel(): String = ""
+    override fun isHandledBy(): Boolean = getVideoId() != null
 
-    override fun isHandledBy(): Boolean {
+    fun getVideoId(): String? {
         val domain = UrlLocation.getDomain(link)
         if (domain == "youtu.be") {
             val path = getPath(link)
-            return path.isNotEmpty() && path != "/"
+            val segments = path.split("/").filter { it.isNotEmpty() }
+            return segments.firstOrNull()
         }
         if (domain == "youtube.com" || domain == "www.youtube.com" || domain == "m.youtube.com") {
             val path = getPath(link)
             if (path.startsWith("/watch")) {
-                return getQueryParameter(link, "v") != null
+                return getQueryParameter(link, "v")
             }
             if (path.startsWith("/embed/")) {
-                return true
+                val segments = path.split("/").filter { it.isNotEmpty() }
+                return segments.getOrNull(1)
             }
             if (path.startsWith("/shorts/")) {
-                return true
+                val segments = path.split("/").filter { it.isNotEmpty() }
+                return segments.getOrNull(1)
             }
         }
-        return false
+        return null
     }
+
 
     private fun getPath(link: String): String {
         return try {

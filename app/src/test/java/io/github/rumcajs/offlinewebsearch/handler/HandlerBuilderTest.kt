@@ -24,6 +24,26 @@ class HandlerBuilderTest {
     }
 
     @Test
+    fun testYouTubeVideoHandlerGetVideoId() {
+        val videoUrls = mapOf(
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "http://youtube.com/watch?v=dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://m.youtube.com/watch?v=dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "youtube.com/embed/dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://www.youtube.com/shorts/dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s" to "dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ?t=10s" to "dQw4w9WgXcQ"
+        )
+
+        for ((url, expectedId) in videoUrls) {
+            val handler = YouTubeVideoHandler(url)
+            org.junit.Assert.assertEquals("Failed for URL: $url", expectedId, handler.getVideoId())
+        }
+    }
+
+
+    @Test
     fun testYouTubeChannelHandler() {
         val channelUrls = listOf(
             "https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q",
