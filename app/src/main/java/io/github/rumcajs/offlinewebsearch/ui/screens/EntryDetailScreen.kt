@@ -113,26 +113,6 @@ fun EntryDetailScreen(
                             }
                         }
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = { onNavigateToLinkPreview(link) },
-                    enabled = !isRestricted,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Check entry status")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = { onNavigateToLinkPreview(link) },
-                    enabled = !isRestricted,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Link data")
-                }
             }
 
             entry.date_published?.let { date ->
@@ -162,6 +142,28 @@ fun EntryDetailScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
+                enabled = !isRestricted,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Check entry status")
+            }
+
+            /* TODO provide link to entyr data
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
+                enabled = !isRestricted,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Link data")
+            }
+            */
 
             Spacer(modifier = Modifier.height(16.dp))
 
