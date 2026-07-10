@@ -25,6 +25,10 @@ object AppConfigManager {
         updateConfig { it.copy(showIcons = enabled) }
     }
 
+    fun setVideoPreview(enabled: Boolean) {
+        updateConfig { it.copy(videoPreview = enabled) }
+    }
+
     fun setOrderBy(orderBy: io.github.rumcajs.offlinewebsearch.data.OrderBy) {
         updateConfig { it.copy(orderBy = orderBy) }
     }

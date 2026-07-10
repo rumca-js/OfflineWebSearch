@@ -19,6 +19,7 @@ fun EntryThumbnailPreview(
     entry: Entry,
     isRestricted: Boolean,
     modifier: Modifier = Modifier,
+    videoPreview: Boolean = true,
     onTap: () -> Unit = {},
     onLongPress: () -> Unit = {}
 ) {
@@ -27,7 +28,7 @@ fun EntryThumbnailPreview(
     }
 
     val youtubeVideoId = remember(youtubeVideoHandler) {
-        if (youtubeVideoHandler?.isHandledBy() == true) {
+        if (videoPreview && youtubeVideoHandler?.isHandledBy() == true) {
             youtubeVideoHandler.getVideoId()
         } else {
             null
@@ -42,35 +43,29 @@ fun EntryThumbnailPreview(
         ) {
             AndroidView(
                 factory = { context ->
-                    WebView(context).apply {
-                        settings.apply {
+                    WebView(context).also { webView ->
+                        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                        webView.settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
                             mediaPlaybackRequiresUserGesture = false
                             loadWithOverviewMode = true
                             useWideViewPort = true
+                            allowContentAccess = true
+                            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         }
-                        webViewClient = WebViewClient()
-                        webChromeClient = WebChromeClient()
-                        val embedHtml = """
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <style>
-                                    body { margin: 0; padding: 0; background-color: black; }
-                                    .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
-                                    .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-                                </style>
-                            </head>
-                            <body>
-                                <div class="video-container">
-                                    <iframe src="https://www.youtube.com/embed/$youtubeVideoId" allowfullscreen></iframe>
-                                </div>
-                            </body>
-                            </html>
-                        """.trimIndent()
-                        loadDataWithBaseURL("https://www.youtube.com", embedHtml, "text/html", "UTF-8", null)
+                        android.webkit.CookieManager.getInstance().apply {
+                            setAcceptCookie(true)
+                            setAcceptThirdPartyCookies(webView, true)
+                        }
+                        webView.webViewClient = WebViewClient()
+                        webView.webChromeClient = WebChromeClient()
+                        // loadDataWithBaseURL has no headers parameter; extra headers
+                        // can only be passed via the two-argument loadUrl overload.
+                        webView.loadUrl(
+                            "https://www.youtube-nocookie.com/embed/$youtubeVideoId?rel=0&playsinline=1",
+                            mapOf("Referer" to "https://www.youtube.com")
+                        )
                     }
                 },
                 modifier = Modifier.fillMaxSize()

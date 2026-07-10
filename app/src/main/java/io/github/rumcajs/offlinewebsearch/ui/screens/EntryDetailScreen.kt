@@ -1,6 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
-import io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage
+import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -63,29 +63,16 @@ fun EntryDetailScreen(
                 }
             }
 
-            if (entry.thumbnail != null) {
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage(
-                    url = entry.thumbnail,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp)
-                        .padding(bottom = 16.dp)
-                        .pointerInput(entry.link) {
-                            detectTapGestures(
-                                onTap = {
-                                    entry.link?.let { uriHandler.openUri(it) }
-                                },
-                                onLongPress = {
-                                    if (!isRestricted) {
-                                        copyLink()
-                                    }
-                                }
-                            )
-                        },
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    isRestricted = isRestricted
-                )
-            }
+            EntryThumbnailPreview(
+                entry = entry,
+                isRestricted = isRestricted,
+                videoPreview = config.videoPreview,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                onTap = { entry.link?.let { uriHandler.openUri(it) } },
+                onLongPress = { if (!isRestricted) { copyLink() } }
+            )
 
             Text(
                 text = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayTitle(entry, config.userAge),

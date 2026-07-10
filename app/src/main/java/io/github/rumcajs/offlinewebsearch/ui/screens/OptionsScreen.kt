@@ -95,6 +95,19 @@ fun OptionsScreen() {
             }
         )
 
+        /*
+        Preview does not work. White frame
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionItem(
+            label = "Video preview",
+            checked = config.videoPreview,
+            onCheckedChange = {
+                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setVideoPreview(
+                    it
+                )
+            }
+        )
+        */
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(text = "User Age", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)

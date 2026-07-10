@@ -17,6 +17,7 @@ enum class ViewStyle(val displayName: String) {
 data class AppConfiguration(
     val directLinks: Boolean = false,
     val showIcons: Boolean = false,
+    val videoPreview: Boolean = true,
     val databases: List<String> = emptyList(),
     val activeDatabase: String? = null,
     val orderBy: io.github.rumcajs.offlinewebsearch.data.OrderBy = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VOTES,
