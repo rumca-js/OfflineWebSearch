@@ -96,7 +96,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     entry = place,
                                     onNavigateToLinkPreview = { url ->
                                         searchViewModel.previewUrl = url
-                                        navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.LinkPreview.route)
+                                        navController.navigate(Screen.LinkPreview.route)
                                     },
                                     onBack = { navController.popBackStack() }
                                 )

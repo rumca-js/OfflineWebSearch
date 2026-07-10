@@ -113,13 +113,25 @@ fun EntryDetailScreen(
                             }
                         }
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Button(
                     onClick = { onNavigateToLinkPreview(link) },
                     enabled = !isRestricted,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Entry Link Preview")
+                    Text("Check entry status")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = { onNavigateToLinkPreview(link) },
+                    enabled = !isRestricted,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Link data")
                 }
             }
 
