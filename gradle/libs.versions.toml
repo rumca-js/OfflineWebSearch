@@ -12,6 +12,7 @@ kotlinSerialization = "1.6.3"
 coil = "2.6.0"
 kotlin = "2.2.10"
 composeBom = "2026.02.01"
+kxml = "2.3.0"
 
 [libraries]
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
@@ -33,6 +34,7 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+kxml2 = { group = "net.sf.kxml", name = "kxml2", version.ref = "kxml" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
