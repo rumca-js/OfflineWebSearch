@@ -151,7 +151,7 @@ fun EntryDetailScreen(
                 enabled = !isRestricted,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Check entry status")
+                Text("Check status")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -161,7 +161,7 @@ fun EntryDetailScreen(
                 enabled = !isRestricted,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Read RSS data")
+                Text("Read RSS")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
