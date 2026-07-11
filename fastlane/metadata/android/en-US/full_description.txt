@@ -1,12 +1,12 @@
 Offline Web Search is a privacy-first, lightweight tool that lets you search and browse a curated index of websites, blogs, developer hubs, and RSS feeds—completely offline.
 
-By querying a local, highly structured database directly on your device, Offline Web Search removes tracking, cookies, ads, and search engine bloat. It's the perfect companion for developers, privacy advocates, and anyone looking for a clean, fast web directory.
+By querying a local, highly structured database directly on your device, Offline Web Search does not use tracking, cookies, ads, and search engine bloat. It's the perfect companion for developers, privacy advocates, and anyone looking for a clean, fast web directory.
 
 Key Features:
-- Offline & Private: No remote search queries, tracking, or profiling. Search history is stored securely on your device.
+- Offline & Private: No remote search queries, tracking, or profiling. Search history is stored securely on your device. Does not use Cloud, does not sell your data, does not require you to set up any docker apps
 - Curated Web Directory: Instantly search through a catalog of quality domains, developer resources, and independent blogs.
 - Custom Database Support: Import your own JSON or SQLite databases to curate, update, or swap search indexes as you see fit.
-- Dynamic RSS & Feeds: Seamlessly resolve feeds for popular platforms like GitHub commits/releases, Reddit subreddits, and YouTube channels.
+- RSS & Feeds: Easy discover feeds for popular platforms like GitHub commits/releases, Reddit subreddits, and YouTube channels.
 - Flexible Layouts: Customize your workspace with Standard list, Search Engine style (inline links), or Gallery view (rich previews).
 - Smart Metadata & Filters: View star ratings, status codes, age tags, and dead links (indicated by a skull overlay).
 - Safe Content Controls: Set age limits to obfuscate adult or restricted results dynamically.
