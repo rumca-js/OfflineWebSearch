@@ -25,93 +25,71 @@ object NetworkUtils {
         }
     }
 
-    suspend fun downloadFile(urlString: String): ByteArray? = withContext(Dispatchers.IO) {
-        try {
-            val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
-            val url = URL(urlString)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = config.connectTimeout
-            connection.readTimeout = config.readTimeout
-            connection.setRequestProperty("User-Agent", config.userAgent)
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                connection.inputStream.use { it.readBytes() }
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
+    suspend fun downloadAll(urlString: String): PageResponseObject =
+        executeRequest(
+            urlString,
+            "application/rss+xml, application/atom+xml, text/xml, application/json, */*"
+        )
 
-    suspend fun getLinkPreview(urlString: String): LinkPreviewResult = withContext(Dispatchers.IO) {
+    suspend fun getLinkPreview(urlString: String): PageResponseObject =
+        executeRequest(urlString)
+
+    private suspend fun executeRequest(
+        urlString: String,
+        acceptHeader: String? = null
+    ): PageResponseObject = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
             val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
             val url = URL(urlString)
             connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
             connection.connectTimeout = config.connectTimeout
             connection.readTimeout = config.readTimeout
             connection.setRequestProperty("User-Agent", config.userAgent)
-
-            val responseCode = connection.responseCode
-
-            var length = connection.contentLengthLong
-            if (length < 0) {
-                val stream = if (responseCode in 200..299) {
-                    connection.inputStream
-                } else {
-                    connection.errorStream
-                }
-                val bytes = stream?.readBytes()
-                length = bytes?.size?.toLong() ?: 0L
+            if (acceptHeader != null) {
+                connection.setRequestProperty("Accept", acceptHeader)
             }
+            val responseCode = connection.responseCode
+            val headers = connection.headerFields.mapNotNull { (key, value) ->
+                if (key != null) key to value else null
+            }.toMap()
 
-            LinkPreviewResult(statusCode = responseCode, length = length, contentType = connection.contentType)
+            val stream = if (responseCode in 200..299) {
+                connection.inputStream
+            } else {
+                connection.errorStream
+            }
+            val text = stream?.use { it.bufferedReader().readText() }
+
+            if (responseCode in 200..299) {
+                PageResponseObject(responseCode, headers, text)
+            } else {
+                PageResponseObject(responseCode, headers, text, "HTTP $responseCode")
+            }
         } catch (e: Exception) {
-            LinkPreviewResult(
+            PageResponseObject(
                 statusCode = -1,
-                length = 0L,
+                headers = emptyMap(),
+                text = null,
                 error = e.localizedMessage ?: e.message ?: e.javaClass.simpleName
             )
         } finally {
             connection?.disconnect()
         }
     }
-
-    suspend fun fetchRawContent(urlString: String): Pair<String?, String?> =
-        withContext(Dispatchers.IO) {
-            var connection: HttpURLConnection? = null
-            try {
-                val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
-                val url = URL(urlString)
-                connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connectTimeout = config.connectTimeout
-                connection.readTimeout = config.readTimeout
-                connection.setRequestProperty("User-Agent", config.userAgent)
-                connection.setRequestProperty(
-                    "Accept",
-                    "application/rss+xml, application/atom+xml, text/xml, application/json, */*"
-                )
-
-                if (connection.responseCode !in 200..299) {
-                    return@withContext Pair(null, "HTTP ${connection.responseCode}")
-                }
-
-                val body = connection.inputStream.bufferedReader().readText()
-                Pair(body, null)
-            } catch (e: Exception) {
-                Pair(null, e.localizedMessage ?: e.javaClass.simpleName)
-            } finally {
-                connection?.disconnect()
-            }
-        }
 }
 
-data class LinkPreviewResult(
+data class PageResponseObject(
     val statusCode: Int,
-    val length: Long,
-    val contentType: String? = null,
+    val headers: Map<String, List<String>>,
+    val text: String?,
     val error: String? = null
-)
+) {
+    val contentType: String?
+        get() = headers.entries.find { it.key.equals("Content-Type", ignoreCase = true) }?.value?.firstOrNull()
+
+    val length: Long
+        get() = headers.entries.find { it.key.equals("Content-Length", ignoreCase = true) }?.value?.firstOrNull()?.toLongOrNull()
+            ?: text?.toByteArray(Charsets.UTF_8)?.size?.toLong()
+            ?: 0L
+}

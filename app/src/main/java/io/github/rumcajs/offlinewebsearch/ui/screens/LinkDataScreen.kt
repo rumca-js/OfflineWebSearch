@@ -44,8 +44,9 @@ fun LinkDataScreen(
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
         error = null
-        val (body, err) = NetworkUtils.fetchRawContent(url)
-        if (body != null) {
+        val response = NetworkUtils.downloadAll(url)
+        if (response.statusCode in 200..299 && response.text != null) {
+            val body = response.text
             val inputType = if (url.contains(".html") || url.contains(".htm") ||
                 body.trim().startsWith("<html", ignoreCase = true) ||
                 body.trim().contains("<!doctype html", ignoreCase = true)) {
@@ -60,7 +61,7 @@ fun LinkDataScreen(
                 page = null
             }
         } else {
-            error = err
+            error = response.error ?: "Failed to download content"
             page = null
         }
         isLoading = false

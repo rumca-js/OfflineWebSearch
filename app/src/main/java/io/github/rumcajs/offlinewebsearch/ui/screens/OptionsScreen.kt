@@ -294,10 +294,13 @@ fun OptionsScreen() {
                 onUpdate = {
                     if (!url.startsWith("local://")) {
                         scope.launch {
-                            val content =
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.downloadFile(
+                            val response =
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.downloadAll(
                                     url
                                 )
+                            val content = if (response.statusCode in 200..299) {
+                                response.text?.toByteArray(Charsets.UTF_8)
+                            } else null
                             if (content != null) {
                                 val extension = if (url.endsWith(".db")) ".db" else ".json"
                                 val fileName = "db_${url.hashCode()}$extension"
@@ -419,7 +422,10 @@ fun OptionsScreen() {
                                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.updateDatabase(editingUrl!!, urlInput)
                                     }
                                     scope.launch {
-                                        val content = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.downloadFile(urlInput)
+                                        val response = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.downloadAll(urlInput)
+                                        val content = if (response.statusCode in 200..299) {
+                                            response.text?.toByteArray(Charsets.UTF_8)
+                                        } else null
                                         if (content != null) {
                                             val extension = if (urlInput.endsWith(".db")) ".db" else ".json"
                                             val fileName = "db_${urlInput.hashCode()}$extension"

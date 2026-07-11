@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.util.NetworkUtils
-import io.github.rumcajs.offlinewebsearch.util.LinkPreviewResult
+import io.github.rumcajs.offlinewebsearch.util.PageResponseObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,7 +23,7 @@ fun LinkPreviewScreen(
     onBack: () -> Unit
 ) {
     var isLoading by remember { mutableStateOf(true) }
-    var previewResult by remember { mutableStateOf<LinkPreviewResult?>(null) }
+    var previewResult by remember { mutableStateOf<PageResponseObject?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
     LaunchedEffect(url, refreshTrigger) {
