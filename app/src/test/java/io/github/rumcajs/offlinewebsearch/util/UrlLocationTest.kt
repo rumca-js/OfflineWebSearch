@@ -1,5 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.util
 
+import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

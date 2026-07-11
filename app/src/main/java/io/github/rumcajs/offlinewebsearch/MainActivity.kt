@@ -100,10 +100,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                         searchViewModel.previewUrl = url
                                         navController.navigate(Screen.LinkPreview.route)
                                     },
-                                    onNavigateToLinkData = { url ->
-                                        searchViewModel.previewUrl = url
-                                        navController.navigate(Screen.LinkData.route)
-                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }
@@ -112,6 +108,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             searchViewModel.previewUrl?.let { url ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.LinkPreviewScreen(
                                     url = url,
+                                    onNavigateToLinkData = {
+                                        searchViewModel.previewUrl = url
+                                        navController.navigate(Screen.LinkData.route)
+                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }

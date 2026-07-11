@@ -12,7 +12,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.handler.YouTubeVideoHandler
+import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeVideoHandler
 
 @Composable
 fun EntryThumbnailPreview(

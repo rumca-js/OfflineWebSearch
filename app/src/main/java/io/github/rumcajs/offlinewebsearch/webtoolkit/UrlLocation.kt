@@ -1,4 +1,4 @@
-package io.github.rumcajs.offlinewebsearch.util
+package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import java.net.URI
 

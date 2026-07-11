@@ -17,7 +17,11 @@ import io.github.rumcajs.offlinewebsearch.util.LinkPreviewResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LinkPreviewScreen(url: String, onBack: () -> Unit) {
+fun LinkPreviewScreen(
+    url: String,
+    onNavigateToLinkData: () -> Unit,
+    onBack: () -> Unit
+) {
     var isLoading by remember { mutableStateOf(true) }
     var previewResult by remember { mutableStateOf<LinkPreviewResult?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
@@ -233,6 +237,16 @@ fun LinkPreviewScreen(url: String, onBack: () -> Unit) {
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = onNavigateToLinkData,
+                        enabled = previewResult?.statusCode?.let { it > 0 } == true,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Read RSS")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
                         onClick = { refreshTrigger++ },

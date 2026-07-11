@@ -20,16 +20,15 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import android.widget.Toast
-import io.github.rumcajs.offlinewebsearch.handler.HandlerBuilder
-import io.github.rumcajs.offlinewebsearch.handler.YouTubeChannelHandler
-import io.github.rumcajs.offlinewebsearch.handler.RedditChannelHandler
+import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
+import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeChannelHandler
+import io.github.rumcajs.offlinewebsearch.webtoolkit.RedditChannelHandler
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryDetailScreen(
     entry: io.github.rumcajs.offlinewebsearch.data.Entry,
     onNavigateToLinkPreview: (String) -> Unit,
-    onNavigateToLinkData: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -153,17 +152,6 @@ fun EntryDetailScreen(
             ) {
                 Text("Check status")
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = { entry.link?.let { onNavigateToLinkData(it) } },
-                enabled = !isRestricted,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Read RSS")
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.let {

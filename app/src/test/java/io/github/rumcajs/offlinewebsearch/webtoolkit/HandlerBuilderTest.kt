@@ -1,4 +1,4 @@
-package io.github.rumcajs.offlinewebsearch.handler
+package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

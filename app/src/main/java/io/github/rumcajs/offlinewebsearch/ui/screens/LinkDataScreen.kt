@@ -17,7 +17,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.util.NetworkUtils
-import io.github.rumcajs.offlinewebsearch.util.RssPage
+import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
+import io.github.rumcajs.offlinewebsearch.webtoolkit.PageBuilder
+import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
+import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.platform.LocalUriHandler
 import io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage
 import androidx.compose.ui.layout.ContentScale
 
@@ -29,7 +37,7 @@ fun LinkDataScreen(
     onNavigateToDetail: (Entry) -> Unit
 ) {
     var isLoading by remember { mutableStateOf(true) }
-    var entries by remember { mutableStateOf<List<Entry>>(emptyList()) }
+    var page by remember { mutableStateOf<Page?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
@@ -38,27 +46,36 @@ fun LinkDataScreen(
         error = null
         val (body, err) = NetworkUtils.fetchRawContent(url)
         if (body != null) {
-            val rssPage = RssPage(url, body)
-            entries = rssPage.getEntries().map {
-                Entry(
-                    link = it.link,
-                    title = it.title,
-                    description = it.description,
-                    thumbnail = it.thumbnail,
-                    date_published = it.datePublished
-                )
+            val inputType = if (url.contains(".html") || url.contains(".htm") ||
+                body.trim().startsWith("<html", ignoreCase = true) ||
+                body.trim().contains("<!doctype html", ignoreCase = true)) {
+                "html"
+            } else {
+                "rss"
+            }
+            try {
+                page = PageBuilder.build(url, body, inputType)
+            } catch (e: Exception) {
+                error = e.localizedMessage ?: "Failed to parse page"
+                page = null
             }
         } else {
             error = err
-            entries = emptyList()
+            page = null
         }
         isLoading = false
+    }
+
+    val titleText = when (page) {
+        is HtmlPage -> "Web Page"
+        is RssPage -> "Feed Data"
+        else -> "Page Data"
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Feed Data") },
+                title = { Text(titleText) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -86,14 +103,14 @@ fun LinkDataScreen(
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Loading feed…",
+                            text = "Loading page…",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                error != null && entries.isEmpty() -> {
+                error != null && page == null -> {
                     Column(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -101,7 +118,7 @@ fun LinkDataScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Failed to load feed",
+                            text = "Failed to load page",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
@@ -121,69 +138,85 @@ fun LinkDataScreen(
                     }
                 }
 
-                entries.isEmpty() -> {
+                page == null -> {
                     Text(
-                        text = "No entries found in feed.",
+                        text = "No content loaded.",
                         modifier = Modifier.align(Alignment.Center),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
+                page is HtmlPage -> {
+                    HtmlPageDetails(
+                        page = page as HtmlPage,
+                        url = url
+                    )
+                }
+
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            // Feed source card
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                )
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text(
-                                        text = "Feed source",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.SemiBold
+                    val entries = page?.getEntries() ?: emptyList()
+                    if (entries.isEmpty()) {
+                        Text(
+                            text = "No entries found in feed.",
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                // Feed source card
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                                     )
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = "Feed source",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = url,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "${entries.size} entries",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+
+                            if (error != null) {
+                                item {
                                     Text(
-                                        text = url,
+                                        text = "⚠ Partial load: $error",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "${entries.size} entries",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.secondary
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
 
-                        if (error != null) {
-                            item {
-                                Text(
-                                    text = "⚠ Partial load: $error",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(vertical = 4.dp)
+                            items(entries) { entry ->
+                                FeedEntryCard(
+                                    entry = entry,
+                                    onClick = { onNavigateToDetail(entry) }
                                 )
                             }
-                        }
-
-                        items(entries) { entry ->
-                            FeedEntryCard(
-                                entry = entry,
-                                onClick = { onNavigateToDetail(entry) }
-                            )
                         }
                     }
                 }
@@ -191,6 +224,149 @@ fun LinkDataScreen(
         }
     }
 }
+
+@Composable
+private fun HtmlPageDetails(page: HtmlPage, url: String) {
+    val uriHandler = LocalUriHandler.current
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Hero Section or Main image
+        val thumbnails = page.getThumbnails()
+        if (thumbnails.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                RemoteImage(
+                    url = thumbnails.first(),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+
+        // Title
+        val title = page.getTitle() ?: "Untitled Page"
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // Date published badge
+        val datePublished = page.getDatePublished()
+        if (!datePublished.isNullOrBlank()) {
+            SuggestionChip(
+                onClick = {},
+                label = {
+                    Text(
+                        text = "Published: $datePublished",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            )
+        }
+
+        // Description Card
+        val description = page.getDescription()
+        if (!description.isNullOrBlank()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Description",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 22.sp
+                    )
+                }
+            }
+        }
+
+        // Source Link
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Source Link",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                Button(
+                    onClick = { uriHandler.openUri(url) },
+                    modifier = Modifier.align(Alignment.End),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text("Open in Browser", fontSize = 12.sp)
+                }
+            }
+        }
+
+        // Gallery of other thumbnails if more than 1
+        if (thumbnails.size > 1) {
+            Text(
+                text = "Thumbnails",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(thumbnails.drop(1)) { imageUrl ->
+                    Card(
+                        modifier = Modifier
+                            .size(120.dp, 80.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        RemoteImage(
+                            url = imageUrl,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun FeedEntryCard(entry: Entry, onClick: () -> Unit) {

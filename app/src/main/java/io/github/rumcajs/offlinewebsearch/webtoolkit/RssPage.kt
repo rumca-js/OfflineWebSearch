@@ -1,13 +1,16 @@
-package io.github.rumcajs.offlinewebsearch.util
+package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
+import java.lang.StringBuilder
+import io.github.rumcajs.offlinewebsearch.data.Entry
 
-class RssPage(val link: String, val contents: String) {
+class RssPage(val link: String, val contents: String) : Page {
     private var feedTitle: String? = null
     private var feedDescription: String? = null
     private val entries = mutableListOf<RssEntry>()
+
 
     init {
         if (contents.isNotBlank()) {
@@ -25,7 +28,7 @@ class RssPage(val link: String, val contents: String) {
                 var entryDescription: String? = null
                 var entryThumbnail: String? = null
                 var entryDatePublished: String? = null
-                var currentText = java.lang.StringBuilder()
+                var currentText = StringBuilder()
 
                 var eventType = parser.eventType
                 while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -62,7 +65,7 @@ class RssPage(val link: String, val contents: String) {
                                 }
                             }
 
-                            currentText = java.lang.StringBuilder()
+                            currentText = StringBuilder()
                         }
 
                         XmlPullParser.TEXT -> {
@@ -123,7 +126,7 @@ class RssPage(val link: String, val contents: String) {
                                 }
                             }
 
-                            currentText = java.lang.StringBuilder()
+                            currentText = StringBuilder()
                         }
                     }
                     eventType = parser.next()
@@ -134,9 +137,20 @@ class RssPage(val link: String, val contents: String) {
         }
     }
 
-    fun getTitle(): String? = feedTitle
-    fun getDescription(): String? = feedDescription
-    fun getEntries(): List<RssEntry> = entries
+    override fun getTitle(): String? = feedTitle
+    override fun getDescription(): String? = feedDescription
+    override fun getDatePublished(): String? = null
+    override fun getEntries(): List<Entry> {
+        return entries.map {
+            Entry(
+                link = it.link,
+                title = it.title,
+                description = it.description,
+                thumbnail = it.thumbnail,
+                date_published = it.datePublished
+            )
+        }
+    }
 }
 
 class RssEntry(
