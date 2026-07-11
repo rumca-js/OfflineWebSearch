@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.util.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.util.RssPage
 import io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage
 import androidx.compose.ui.layout.ContentScale
 
@@ -35,9 +36,19 @@ fun LinkDataScreen(
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
         error = null
-        val (result, err) = NetworkUtils.fetchRssEntries(url)
-        entries = result
-        error = err
+        val (body, err) = NetworkUtils.fetchRawContent(url)
+        if (body != null) {
+            val rssPage = RssPage(url, body)
+            entries = rssPage.getEntries().map {
+                Entry(
+                    link = it.link,
+                    description = it.description
+                )
+            }
+        } else {
+            error = err
+            entries = emptyList()
+        }
         isLoading = false
     }
 

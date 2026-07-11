@@ -79,6 +79,35 @@ object NetworkUtils {
         }
     }
 
+    suspend fun fetchRawContent(urlString: String): Pair<String?, String?> =
+        withContext(Dispatchers.IO) {
+            var connection: HttpURLConnection? = null
+            try {
+                val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                val url = URL(urlString)
+                connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = config.connectTimeout
+                connection.readTimeout = config.readTimeout
+                connection.setRequestProperty("User-Agent", config.userAgent)
+                connection.setRequestProperty(
+                    "Accept",
+                    "application/rss+xml, application/atom+xml, text/xml, application/json, */*"
+                )
+
+                if (connection.responseCode !in 200..299) {
+                    return@withContext Pair(null, "HTTP ${connection.responseCode}")
+                }
+
+                val body = connection.inputStream.bufferedReader().readText()
+                Pair(body, null)
+            } catch (e: Exception) {
+                Pair(null, e.localizedMessage ?: e.javaClass.simpleName)
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
     /**
      * Fetches [urlString] and parses it as either:
      *  - The app's native JSON format (list of Entry or single Entry)
@@ -142,6 +171,7 @@ object NetworkUtils {
     }
 
     // ── XML (RSS 2.0 / Atom) ──────────────────────────────────────────────────
+    // TODO: Obsolete
 
     private fun tryParseXml(body: String): Pair<List<Entry>, String?> {
         return try {
