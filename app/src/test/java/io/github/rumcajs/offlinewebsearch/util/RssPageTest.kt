@@ -19,11 +19,13 @@ class RssPageTest {
                   <title>Item 1 Title</title>
                   <link>https://example.com/item1</link>
                   <description>Description for Item 1</description>
+                  <pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate>
                 </item>
                 <item>
                   <title>Item 2 Title</title>
                   <link>https://example.com/item2</link>
                   <description>Description for Item 2</description>
+                  <pubDate>Tue, 02 Jan 2024 00:00:00 GMT</pubDate>
                 </item>
               </channel>
             </rss>
@@ -36,10 +38,14 @@ class RssPageTest {
 
         val entries = rssPage.getEntries()
         assertEquals(2, entries.size)
+        assertEquals("Item 1 Title", entries[0].title)
         assertEquals("https://example.com/item1", entries[0].link)
         assertEquals("Description for Item 1", entries[0].description)
+        assertEquals("Mon, 01 Jan 2024 00:00:00 GMT", entries[0].datePublished)
+        assertEquals("Item 2 Title", entries[1].title)
         assertEquals("https://example.com/item2", entries[1].link)
         assertEquals("Description for Item 2", entries[1].description)
+        assertEquals("Tue, 02 Jan 2024 00:00:00 GMT", entries[1].datePublished)
     }
 
     @Test
@@ -52,6 +58,7 @@ class RssPageTest {
                 <title>Atom Entry 1</title>
                 <link href="https://example.com/atom1" />
                 <summary>Atom Summary 1</summary>
+                <published>2024-01-01T00:00:00Z</published>
               </entry>
             </feed>
         """.trimIndent()
@@ -63,8 +70,10 @@ class RssPageTest {
 
         val entries = rssPage.getEntries()
         assertEquals(1, entries.size)
+        assertEquals("Atom Entry 1", entries[0].title)
         assertEquals("https://example.com/atom1", entries[0].link)
         assertEquals("Atom Summary 1", entries[0].description)
+        assertEquals("2024-01-01T00:00:00Z", entries[0].datePublished)
     }
 
     @Test

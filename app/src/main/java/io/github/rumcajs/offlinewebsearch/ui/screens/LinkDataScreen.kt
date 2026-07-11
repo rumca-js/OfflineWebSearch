@@ -42,7 +42,10 @@ fun LinkDataScreen(
             entries = rssPage.getEntries().map {
                 Entry(
                     link = it.link,
-                    description = it.description
+                    title = it.title,
+                    description = it.description,
+                    thumbnail = it.thumbnail,
+                    date_published = it.datePublished
                 )
             }
         } else {

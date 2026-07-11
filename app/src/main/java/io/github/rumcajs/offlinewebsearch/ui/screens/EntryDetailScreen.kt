@@ -161,7 +161,7 @@ fun EntryDetailScreen(
                 enabled = !isRestricted,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Link data")
+                Text("Read RSS data")
             }
 
             Spacer(modifier = Modifier.height(16.dp))

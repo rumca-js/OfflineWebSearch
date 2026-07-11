@@ -21,7 +21,10 @@ class RssPage(val link: String, val contents: String) {
                 var isAtom = false
                 var inEntry = false
                 var entryLink: String? = null
+                var entryTitle: String? = null
                 var entryDescription: String? = null
+                var entryThumbnail: String? = null
+                var entryDatePublished: String? = null
                 var currentText = java.lang.StringBuilder()
 
                 var eventType = parser.eventType
@@ -37,7 +40,10 @@ class RssPage(val link: String, val contents: String) {
                             if (isItemTag) {
                                 inEntry = true
                                 entryLink = null
+                                entryTitle = null
                                 entryDescription = null
+                                entryThumbnail = null
+                                entryDatePublished = null
                             }
 
                             // Atom: link is an attribute
@@ -45,6 +51,14 @@ class RssPage(val link: String, val contents: String) {
                                 val href = parser.getAttributeValue(null, "href")
                                 if (href != null && entryLink == null) {
                                     entryLink = href
+                                }
+                            }
+
+                            // media:thumbnail or enclosure url attribute
+                            if ((tag == "thumbnail" || tag == "enclosure") && inEntry) {
+                                val url = parser.getAttributeValue(null, "url")
+                                if (url != null && entryThumbnail == null) {
+                                    entryThumbnail = url
                                 }
                             }
 
@@ -61,6 +75,11 @@ class RssPage(val link: String, val contents: String) {
 
                             if (inEntry) {
                                 when (tag) {
+                                    "title" -> {
+                                        if (entryTitle == null) {
+                                            entryTitle = text.ifEmpty { null }
+                                        }
+                                    }
                                     "link" -> {
                                         if (!isAtom && entryLink == null) {
                                             entryLink = text.ifEmpty { null }
@@ -71,11 +90,21 @@ class RssPage(val link: String, val contents: String) {
                                             entryDescription = text.ifEmpty { null }
                                         }
                                     }
+                                    "url" -> {
+                                        if (entryThumbnail == null) {
+                                            entryThumbnail = text.ifEmpty { null }
+                                        }
+                                    }
+                                    "pubDate", "published", "updated", "dc:date" -> {
+                                        if (entryDatePublished == null) {
+                                            entryDatePublished = text.ifEmpty { null }
+                                        }
+                                    }
                                 }
 
                                 val isEndItemTag = tag == "item" || (isAtom && tag == "entry")
                                 if (isEndItemTag) {
-                                    entries.add(RssEntry(entryLink, entryDescription))
+                                    entries.add(RssEntry(entryLink, entryTitle, entryDescription, entryThumbnail, entryDatePublished))
                                     inEntry = false
                                 }
                             } else {
@@ -112,5 +141,8 @@ class RssPage(val link: String, val contents: String) {
 
 class RssEntry(
     val link: String?,
-    val description: String?
+    val title: String? = null,
+    val description: String?,
+    val thumbnail: String? = null,
+    val datePublished: String? = null
 )
