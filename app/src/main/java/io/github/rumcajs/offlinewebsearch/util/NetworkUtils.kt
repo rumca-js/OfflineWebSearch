@@ -67,7 +67,7 @@ object NetworkUtils {
                 length = bytes?.size?.toLong() ?: 0L
             }
 
-            LinkPreviewResult(statusCode = responseCode, length = length)
+            LinkPreviewResult(statusCode = responseCode, length = length, contentType = connection.contentType)
         } catch (e: Exception) {
             LinkPreviewResult(
                 statusCode = -1,
@@ -243,5 +243,6 @@ object NetworkUtils {
 data class LinkPreviewResult(
     val statusCode: Int,
     val length: Long,
+    val contentType: String? = null,
     val error: String? = null
 )

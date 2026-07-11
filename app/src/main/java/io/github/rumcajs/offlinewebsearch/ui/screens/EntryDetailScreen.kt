@@ -29,6 +29,7 @@ import io.github.rumcajs.offlinewebsearch.handler.RedditChannelHandler
 fun EntryDetailScreen(
     entry: io.github.rumcajs.offlinewebsearch.data.Entry,
     onNavigateToLinkPreview: (String) -> Unit,
+    onNavigateToLinkData: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -153,17 +154,15 @@ fun EntryDetailScreen(
                 Text("Check entry status")
             }
 
-            /* TODO provide link to entyr data
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
+                onClick = { entry.link?.let { onNavigateToLinkData(it) } },
                 enabled = !isRestricted,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Link data")
             }
-            */
 
             Spacer(modifier = Modifier.height(16.dp))
 
