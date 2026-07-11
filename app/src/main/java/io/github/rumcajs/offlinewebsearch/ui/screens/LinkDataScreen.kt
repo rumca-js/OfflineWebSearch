@@ -36,6 +36,7 @@ fun LinkDataScreen(
     onBack: () -> Unit,
     onNavigateToDetail: (Entry) -> Unit
 ) {
+    val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
     var isLoading by remember { mutableStateOf(true) }
     var page by remember { mutableStateOf<Page?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -150,7 +151,8 @@ fun LinkDataScreen(
                 page is HtmlPage -> {
                     HtmlPageDetails(
                         page = page as HtmlPage,
-                        url = url
+                        url = url,
+                        showIcons = config.showIcons
                     )
                 }
 
@@ -215,6 +217,7 @@ fun LinkDataScreen(
                             items(entries) { entry ->
                                 FeedEntryCard(
                                     entry = entry,
+                                    showIcons = config.showIcons,
                                     onClick = { onNavigateToDetail(entry) }
                                 )
                             }
@@ -227,7 +230,7 @@ fun LinkDataScreen(
 }
 
 @Composable
-private fun HtmlPageDetails(page: HtmlPage, url: String) {
+private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
     val uriHandler = LocalUriHandler.current
     Column(
         modifier = Modifier
@@ -238,7 +241,7 @@ private fun HtmlPageDetails(page: HtmlPage, url: String) {
     ) {
         // Hero Section or Main image
         val thumbnails = page.getThumbnails()
-        if (thumbnails.isNotEmpty()) {
+        if (showIcons && thumbnails.isNotEmpty()) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -339,7 +342,7 @@ private fun HtmlPageDetails(page: HtmlPage, url: String) {
         }
 
         // Gallery of other thumbnails if more than 1
-        if (thumbnails.size > 1) {
+        if (showIcons && thumbnails.size > 1) {
             Text(
                 text = "Thumbnails",
                 style = MaterialTheme.typography.titleMedium,
@@ -370,7 +373,7 @@ private fun HtmlPageDetails(page: HtmlPage, url: String) {
 
 
 @Composable
-private fun FeedEntryCard(entry: Entry, onClick: () -> Unit) {
+private fun FeedEntryCard(entry: Entry, showIcons: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -379,7 +382,7 @@ private fun FeedEntryCard(entry: Entry, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Thumbnail
-            if (entry.thumbnail != null) {
+            if (showIcons && entry.thumbnail != null) {
                 RemoteImage(
                     url = entry.thumbnail,
                     modifier = Modifier
