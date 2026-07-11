@@ -10,6 +10,7 @@ interface PageHandler {
     fun isHandledBy(): Boolean
     fun getFeeds(): List<String> = emptyList()
     fun getUrl(): String
+    fun getChannel(): String = ""
 }
 
 /**
@@ -17,27 +18,33 @@ interface PageHandler {
  */
 class YouTubeVideoHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
+    override fun getChannel(): String = ""
+    override fun isHandledBy(): Boolean = getVideoId() != null
 
-    override fun isHandledBy(): Boolean {
+    fun getVideoId(): String? {
         val domain = UrlLocation.getDomain(link)
         if (domain == "youtu.be") {
             val path = getPath(link)
-            return path.isNotEmpty() && path != "/"
+            val segments = path.split("/").filter { it.isNotEmpty() }
+            return segments.firstOrNull()
         }
         if (domain == "youtube.com" || domain == "www.youtube.com" || domain == "m.youtube.com") {
             val path = getPath(link)
             if (path.startsWith("/watch")) {
-                return getQueryParameter(link, "v") != null
+                return getQueryParameter(link, "v")
             }
             if (path.startsWith("/embed/")) {
-                return true
+                val segments = path.split("/").filter { it.isNotEmpty() }
+                return segments.getOrNull(1)
             }
             if (path.startsWith("/shorts/")) {
-                return true
+                val segments = path.split("/").filter { it.isNotEmpty() }
+                return segments.getOrNull(1)
             }
         }
-        return false
+        return null
     }
+
 
     private fun getPath(link: String): String {
         return try {
@@ -66,7 +73,15 @@ class YouTubeVideoHandler(private val link: String) : PageHandler {
  * Handles YouTube channels.
  */
 class YouTubeChannelHandler(private val link: String) : PageHandler {
+    val channelUid: String? = linkToUid(link)
+
     override fun getUrl(): String = link
+
+    fun getChannelUrl(): String? {
+        return channelUid?.let { "https://www.youtube.com/channel/$it" }
+    }
+
+    override fun getChannel(): String = getChannelUrl() ?: ""
 
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
@@ -81,9 +96,8 @@ class YouTubeChannelHandler(private val link: String) : PageHandler {
     }
 
     override fun getFeeds(): List<String> {
-        val uid = linkToUid(link)
-        return if (uid != null) {
-            listOf("https://www.youtube.com/feeds/videos.xml?channel_id=$uid")
+        return if (channelUid != null) {
+            listOf("https://www.youtube.com/feeds/videos.xml?channel_id=$channelUid")
         } else {
             emptyList()
         }
@@ -144,6 +158,12 @@ class YouTubeChannelHandler(private val link: String) : PageHandler {
 class GitHubRepositoryHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
 
+    override fun getChannel(): String {
+        val path = getPath(link)
+        val segments = path.split("/").filter { it.isNotEmpty() }
+        return if (segments.isNotEmpty()) segments[0] else ""
+    }
+
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)
         if (domain == "github.com" || domain == "www.github.com") {
@@ -194,6 +214,16 @@ class GitHubRepositoryHandler(private val link: String) : PageHandler {
  */
 class RedditChannelHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
+
+    override fun getChannel(): String {
+        val path = getPath(link)
+        return when {
+            path.startsWith("/r/") -> path.substringAfter("/r/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            path.startsWith("/user/") -> path.substringAfter("/user/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            path.startsWith("/u/") -> path.substringAfter("/u/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
+            else -> ""
+        }
+    }
 
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation.getDomain(link)

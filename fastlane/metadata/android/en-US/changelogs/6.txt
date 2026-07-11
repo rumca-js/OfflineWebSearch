@@ -1,0 +1,2 @@
+ - Added display of link content type
+ - Reading RSS data works for youtube feed links

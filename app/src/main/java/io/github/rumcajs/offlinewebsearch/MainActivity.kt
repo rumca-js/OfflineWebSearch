@@ -23,6 +23,8 @@ import androidx.navigation.compose.rememberNavController
 import io.github.rumcajs.offlinewebsearch.ui.screens.AboutScreen
 import io.github.rumcajs.offlinewebsearch.ui.screens.BrowseScreen
 import io.github.rumcajs.offlinewebsearch.ui.screens.OptionsScreen
+import io.github.rumcajs.offlinewebsearch.ui.screens.LinkPreviewScreen
+import io.github.rumcajs.offlinewebsearch.ui.screens.LinkDataScreen
 import io.github.rumcajs.offlinewebsearch.ui.theme.OfflineWebSearchTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -31,11 +33,14 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object About : io.github.rumcajs.offlinewebsearch.Screen("about", "About", Icons.Filled.Info)
     object Options : io.github.rumcajs.offlinewebsearch.Screen("options", "Options", Icons.Filled.Settings)
     object Detail : io.github.rumcajs.offlinewebsearch.Screen("detail", "Detail", Icons.Filled.Search)
+    object LinkPreview : io.github.rumcajs.offlinewebsearch.Screen("link_preview", "Link Preview", Icons.Filled.Search)
+    object LinkData : io.github.rumcajs.offlinewebsearch.Screen("link_data", "Link Data", Icons.Filled.Search)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.loadNetworkConfig(this)
         enableEdgeToEdge()
         setContent {
             val searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel()
@@ -91,7 +96,35 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             searchViewModel.selectedEntry?.let { place ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryDetailScreen(
                                     entry = place,
+                                    onNavigateToLinkPreview = { url ->
+                                        searchViewModel.previewUrl = url
+                                        navController.navigate(Screen.LinkPreview.route)
+                                    },
+                                    onNavigateToLinkData = { url ->
+                                        searchViewModel.previewUrl = url
+                                        navController.navigate(Screen.LinkData.route)
+                                    },
                                     onBack = { navController.popBackStack() }
+                                )
+                            }
+                        }
+                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.LinkPreview.route) {
+                            searchViewModel.previewUrl?.let { url ->
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.LinkPreviewScreen(
+                                    url = url,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                        }
+                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.LinkData.route) {
+                            searchViewModel.previewUrl?.let { url ->
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.LinkDataScreen(
+                                    url = url,
+                                    onBack = { navController.popBackStack() },
+                                    onNavigateToDetail = { entry ->
+                                        searchViewModel.selectedEntry = entry
+                                        navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Detail.route)
+                                    }
                                 )
                             }
                         }

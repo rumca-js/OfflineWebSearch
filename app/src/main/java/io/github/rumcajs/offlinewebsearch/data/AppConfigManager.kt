@@ -25,6 +25,10 @@ object AppConfigManager {
         updateConfig { it.copy(showIcons = enabled) }
     }
 
+    fun setVideoPreview(enabled: Boolean) {
+        updateConfig { it.copy(videoPreview = enabled) }
+    }
+
     fun setOrderBy(orderBy: io.github.rumcajs.offlinewebsearch.data.OrderBy) {
         updateConfig { it.copy(orderBy = orderBy) }
     }
@@ -63,5 +67,27 @@ object AppConfigManager {
 
     fun setActiveDatabase(url: String?) {
         updateConfig { it.copy(activeDatabase = url) }
+    }
+
+    fun loadNetworkConfig(context: android.content.Context) {
+        try {
+            context.assets.open("network_config.json").bufferedReader().use { reader ->
+                val jsonString = reader.readText()
+                val json = kotlinx.serialization.json.Json {
+                    ignoreUnknownKeys = true
+                    coerceInputValues = true
+                }
+                val networkConfig = json.decodeFromString<NetworkConfig>(jsonString)
+                updateConfig {
+                    it.copy(
+                        connectTimeout = networkConfig.connectTimeout,
+                        readTimeout = networkConfig.readTimeout,
+                        userAgent = networkConfig.userAgent
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

@@ -1,6 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
-import io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage
+import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,10 +21,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import android.widget.Toast
 import io.github.rumcajs.offlinewebsearch.handler.HandlerBuilder
+import io.github.rumcajs.offlinewebsearch.handler.YouTubeChannelHandler
+import io.github.rumcajs.offlinewebsearch.handler.RedditChannelHandler
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBack: () -> Unit) {
+fun EntryDetailScreen(
+    entry: io.github.rumcajs.offlinewebsearch.data.Entry,
+    onNavigateToLinkPreview: (String) -> Unit,
+    onNavigateToLinkData: (String) -> Unit,
+    onBack: () -> Unit
+) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -57,29 +64,16 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                 }
             }
 
-            if (entry.thumbnail != null) {
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage(
-                    url = entry.thumbnail,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp)
-                        .padding(bottom = 16.dp)
-                        .pointerInput(entry.link) {
-                            detectTapGestures(
-                                onTap = {
-                                    entry.link?.let { uriHandler.openUri(it) }
-                                },
-                                onLongPress = {
-                                    if (!isRestricted) {
-                                        copyLink()
-                                    }
-                                }
-                            )
-                        },
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    isRestricted = isRestricted
-                )
-            }
+            EntryThumbnailPreview(
+                entry = entry,
+                isRestricted = isRestricted,
+                videoPreview = config.videoPreview,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                onTap = { entry.link?.let { uriHandler.openUri(it) } },
+                onLongPress = { if (!isRestricted) { copyLink() } }
+            )
 
             Text(
                 text = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayTitle(entry, config.userAge),
@@ -150,6 +144,26 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
+                enabled = !isRestricted,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Check status")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { entry.link?.let { onNavigateToLinkData(it) } },
+                enabled = !isRestricted,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Read RSS")
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.let {
@@ -161,48 +175,37 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // Display channel
+            entry.link?.let { link ->
+                val handler = HandlerBuilder(link).build()
+                val channel = handler?.getChannel() ?: ""
+                val isChannel = handler is YouTubeChannelHandler || handler is RedditChannelHandler
+                if (channel.isNotEmpty() && !isChannel) {
+                    DetailRow(
+                        label = "Channel",
+                        value = channel
+                    )
+                }
+            }
+
             // Resolve and display feeds
             entry.link?.let { link ->
                 val handler = HandlerBuilder(link).build()
-                val feeds = handler?.getFeeds() ?: emptyList()
+                val feeds = handler?.getFeeds()?.filter { it != link } ?: emptyList()
                 if (feeds.isNotEmpty()) {
                     feeds.forEach { feedUrl ->
-                        val displayFeedUrl = if (isRestricted) "xXx" else feedUrl
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .pointerInput(feedUrl) {
-                                    if (!isRestricted) {
-                                        detectTapGestures(
-                                            onTap = { uriHandler.openUri(feedUrl) },
-                                            onLongPress = {
-                                                clipboardManager.setText(AnnotatedString(feedUrl))
-                                                Toast.makeText(context, "Feed link copied", Toast.LENGTH_SHORT).show()
-                                            }
-                                        )
-                                    }
-                                },
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(text = "Feed Link", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
-                            Text(
-                                text = displayFeedUrl,
-                                color = MaterialTheme.colorScheme.primary,
-                                textDecoration = TextDecoration.Underline,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false).padding(start = 16.dp)
-                            )
-                        }
+                        LinkRow(
+                            label = "Feed Link",
+                            url = feedUrl,
+                            isRestricted = isRestricted,
+                            toastMessage = "Feed link copied"
+                        )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            // Entry detail properties
-            // Metadata
+            // Entry detail properties, metadata
 
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
                 label = "Created",
@@ -284,6 +287,22 @@ fun EntryDetailScreen(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onBa
                 }
             }
 
+            // Resolve and display UrlServices links
+            entry.link?.let { link ->
+                val urlServices = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.UrlServices()
+                val serviceLinks = urlServices.getServiceLinks(link)
+                if (serviceLinks.isNotEmpty()) {
+                    serviceLinks.forEach { (serviceName, serviceUrl) ->
+                        LinkRow(
+                            label = serviceName,
+                            url = serviceUrl,
+                            isRestricted = isRestricted,
+                            toastMessage = "$serviceName link copied"
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -299,5 +318,53 @@ fun DetailRow(label: String, value: String) {
     ) {
         Text(text = label, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
         Text(text = value)
+    }
+}
+
+@Composable
+fun LinkRow(
+    label: String,
+    url: String,
+    isRestricted: Boolean,
+    toastMessage: String = "Link copied"
+) {
+    val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val displayUrl = if (isRestricted) "xXx" else url
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .pointerInput(url) {
+                if (!isRestricted) {
+                    detectTapGestures(
+                        onTap = { uriHandler.openUri(url) },
+                        onLongPress = {
+                            clipboardManager.setText(AnnotatedString(url))
+                            Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            },
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Text(
+            text = displayUrl,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .padding(start = 16.dp)
+        )
     }
 }

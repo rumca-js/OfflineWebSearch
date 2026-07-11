@@ -24,6 +24,26 @@ class HandlerBuilderTest {
     }
 
     @Test
+    fun testYouTubeVideoHandlerGetVideoId() {
+        val videoUrls = mapOf(
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "http://youtube.com/watch?v=dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://m.youtube.com/watch?v=dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "youtube.com/embed/dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://www.youtube.com/shorts/dQw4w9WgXcQ" to "dQw4w9WgXcQ",
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s" to "dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ?t=10s" to "dQw4w9WgXcQ"
+        )
+
+        for ((url, expectedId) in videoUrls) {
+            val handler = YouTubeVideoHandler(url)
+            org.junit.Assert.assertEquals("Failed for URL: $url", expectedId, handler.getVideoId())
+        }
+    }
+
+
+    @Test
     fun testYouTubeChannelHandler() {
         val channelUrls = listOf(
             "https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q",
@@ -126,7 +146,7 @@ class HandlerBuilderTest {
         val githubUrl = "https://github.com/google/guava"
         val githubHandler = HandlerBuilder(githubUrl).build()
         assertTrue(githubHandler is GitHubRepositoryHandler)
-        assertTrue(githubHandler?.getFeeds()?.isEmpty() == true)
+        assertTrue(githubHandler?.getFeeds()?.isEmpty() == false)
     }
 
     @Test
@@ -134,6 +154,49 @@ class HandlerBuilderTest {
         val testUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         val handler = HandlerBuilder(testUrl).build()
         org.junit.Assert.assertEquals(testUrl, handler?.getUrl())
+    }
+
+    @Test
+    fun testGetChannel() {
+        // YouTubeVideoHandler (returns "")
+        val videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val videoHandler = HandlerBuilder(videoUrl).build()
+        org.junit.Assert.assertEquals("", videoHandler?.getChannel())
+
+        // YouTubeChannelHandler with Channel ID
+        val ytChannelId = "https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q"
+        val ytChannelHandlerId = HandlerBuilder(ytChannelId).build()
+        org.junit.Assert.assertEquals("https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q", ytChannelHandlerId?.getChannel())
+
+        // YouTubeChannelHandler with custom c/ path
+        val ytChannelC = "https://youtube.com/c/YouTubeCreators"
+        val ytChannelHandlerC = HandlerBuilder(ytChannelC).build()
+        org.junit.Assert.assertEquals("", ytChannelHandlerC?.getChannel())
+
+        // YouTubeChannelHandler with user/ path
+        val ytChannelUser = "https://www.youtube.com/user/youtube"
+        val ytChannelHandlerUser = HandlerBuilder(ytChannelUser).build()
+        org.junit.Assert.assertEquals("", ytChannelHandlerUser?.getChannel())
+
+        // YouTubeChannelHandler with @ handle path
+        val ytChannelHandle = "https://www.youtube.com/@youtube"
+        val ytChannelHandlerHandle = HandlerBuilder(ytChannelHandle).build()
+        org.junit.Assert.assertEquals("", ytChannelHandlerHandle?.getChannel())
+
+        // GitHubRepositoryHandler
+        val ghUrl = "https://github.com/google/guava"
+        val ghHandler = HandlerBuilder(ghUrl).build()
+        org.junit.Assert.assertEquals("google", ghHandler?.getChannel())
+
+        // RedditChannelHandler subreddit
+        val subUrl = "https://www.reddit.com/r/kotlin"
+        val subHandler = HandlerBuilder(subUrl).build()
+        org.junit.Assert.assertEquals("kotlin", subHandler?.getChannel())
+
+        // RedditChannelHandler user
+        val redUserUrl = "https://www.reddit.com/user/some_user"
+        val redUserHandler = HandlerBuilder(redUserUrl).build()
+        org.junit.Assert.assertEquals("some_user", redUserHandler?.getChannel())
     }
 
     @Test
@@ -154,6 +217,25 @@ class HandlerBuilderTest {
         org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", YouTubeChannelHandler.linkToUid(channelUrl))
         org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", YouTubeChannelHandler.linkToUid(rssUrl))
         assertNull(YouTubeChannelHandler.linkToUid(customUrl))
+    }
+
+    @Test
+    fun testYouTubeChannelUidMemberAndUrl() {
+        val channelUrl = "https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q"
+        val rssUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCfMJ2MchTSW27WSgsuxG12Q"
+        val customUrl = "https://www.youtube.com/@google"
+
+        val handlerFromChannel = YouTubeChannelHandler(channelUrl)
+        org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", handlerFromChannel.channelUid)
+        org.junit.Assert.assertEquals("https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q", handlerFromChannel.getChannelUrl())
+
+        val handlerFromRss = YouTubeChannelHandler(rssUrl)
+        org.junit.Assert.assertEquals("UCfMJ2MchTSW27WSgsuxG12Q", handlerFromRss.channelUid)
+        org.junit.Assert.assertEquals("https://www.youtube.com/channel/UCfMJ2MchTSW27WSgsuxG12Q", handlerFromRss.getChannelUrl())
+
+        val handlerFromCustom = YouTubeChannelHandler(customUrl)
+        assertNull(handlerFromCustom.channelUid)
+        assertNull(handlerFromCustom.getChannelUrl())
     }
 
     @Test

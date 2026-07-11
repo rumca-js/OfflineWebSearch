@@ -5,21 +5,19 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
 # Features
 
  - Instant search across a large collection of well-known domains
- - Simple and lightweight interface
- - Fast local search with no waiting for server responses
+ - No cloud, no server. Fast local search with no waiting for server responses
  - Privacy-friendly: no network requests required for searching
+ - Pre-built with many youtube channels in the database, ready to be discovered
 
 # Links
 
-https://f-droid.org/en/packages/io.github.rumcajs.offlinewebsearch/ - F-Droid app
-
-# Why Use Offline Web Search?
-
-Finding a website can be faster than opening a browser and typing a full URL. Offline Web Search provides a searchable index of popular domains directly on your device.
+[F-droid App](https://f-droid.org/en/packages/io.github.rumcajs.offlinewebsearch)
 
 # Permissions
 
-The app requires minimal permissions and does not rely on remote services for searching.
+ - The app requires minimal permissions and does not rely on remote services for searching.
+
+ - It does use 'network' access. The user might trigger a check of domain if is still available
 
 # Databases
 
@@ -28,6 +26,22 @@ The application is highly customizable and allows you to load different database
 # Open Source
 
 This project is open source and welcomes contributions, bug reports, and suggestions.
+
+# Why use Offline Web Search?
+
+ - some apps already require you to have server operational
+
+ - some apps are bookmarking apps, maintain a lot of data. We want just a simple 'title', 'description' etc metadata, so highly optimized
+
+ - does not require you to create cloud, does not sell your data (Google search)
+
+ - does not require you to have server, install docker apps (eg. karakeep)
+
+ - bookmark apps often focus on bookmarks. This app focus is on search
+
+ - import is fast, since it uses SQLite, so it is easy to reuse in other projects (linki was found to be slow since it performs HTML import export)
+
+ - some apps might be better, but are not open source (eg. obsidian is proprietary)
 
 # Screenshots
 
