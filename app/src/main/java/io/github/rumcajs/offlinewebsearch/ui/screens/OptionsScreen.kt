@@ -30,6 +30,7 @@ import android.provider.OpenableColumns
 import android.content.Context
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -295,7 +296,7 @@ fun OptionsScreen() {
                     if (!url.startsWith("local://")) {
                         scope.launch {
                             val response =
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.getResponseFull(
+                                NetworkUtils.getResponseFull(
                                     url
                                 )
                             val content = if (response.statusCode in 200..299) {
@@ -409,7 +410,7 @@ fun OptionsScreen() {
                                     return@launch
                                 }
                                 
-                                val isValid = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.verifyUrl(urlInput)
+                                val isValid = NetworkUtils.verifyUrl(urlInput)
                                 if (isValid) {
                                     if (editingUrl == null) {
                                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.addDatabase(urlInput)
@@ -422,7 +423,7 @@ fun OptionsScreen() {
                                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.updateDatabase(editingUrl!!, urlInput)
                                     }
                                     scope.launch {
-                                        val response = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.getResponseFull(urlInput)
+                                        val response = NetworkUtils.getResponseFull(urlInput)
                                         val content = if (response.statusCode in 200..299) {
                                             response.text?.toByteArray(Charsets.UTF_8)
                                         } else null

@@ -12,8 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.rumcajs.offlinewebsearch.util.NetworkUtils
-import io.github.rumcajs.offlinewebsearch.util.PageResponseObject
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

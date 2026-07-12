@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.util.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageBuilder
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage

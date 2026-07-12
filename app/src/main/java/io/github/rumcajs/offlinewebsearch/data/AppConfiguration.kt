@@ -15,17 +15,24 @@ enum class ViewStyle(val displayName: String) {
 }
 
 data class AppConfiguration(
+    // database configuration
     val directLinks: Boolean = false,
     val showIcons: Boolean = false,
     val videoPreview: Boolean = false,
-    val databases: List<String> = emptyList(),
-    val activeDatabase: String? = null,
-    val orderBy: io.github.rumcajs.offlinewebsearch.data.OrderBy = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VOTES,
-    val viewStyle: io.github.rumcajs.offlinewebsearch.data.ViewStyle = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.ViewStyle.SEARCH_ENGINE,
+    val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+    val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
+
+    // App configuration
     val userAge: Int = 0,
+
+    // TODO networking config - redundant? we have NetworkConfig
     val connectTimeout: Int = 10000,
     val readTimeout: Int = 10000,
-    val userAgent: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    val userAgent: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+
+    // main things
+    val databases: List<String> = emptyList(),
+    val activeDatabase: String? = null,
 )
 
 @Serializable

@@ -1,11 +1,13 @@
-package io.github.rumcajs.offlinewebsearch.util
+package io.github.rumcajs.offlinewebsearch.webtoolkit
 
+import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
 object NetworkUtils {
+    // TODO move to statusCodes.kt
     fun isStatusCodeValid(statusCode: Int): Boolean {
         return (statusCode >= 200 && statusCode < 400);
     }
@@ -27,7 +29,7 @@ object NetworkUtils {
 
     suspend fun verifyUrl(urlString: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+            val config = AppConfigManager.config.value
             val url = URL(urlString)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "HEAD"
@@ -57,7 +59,7 @@ object NetworkUtils {
     ): PageResponseObject = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+            val config = AppConfigManager.config.value
             val url = URL(urlString)
             connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = config.connectTimeout
@@ -96,6 +98,7 @@ object NetworkUtils {
     }
 }
 
+// TODO move to PageResponseObject.kt
 data class PageResponseObject(
     val statusCode: Int,
     val headers: Map<String, List<String>>,
