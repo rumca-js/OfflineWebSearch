@@ -295,7 +295,7 @@ fun OptionsScreen() {
                     if (!url.startsWith("local://")) {
                         scope.launch {
                             val response =
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.downloadAll(
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.getResponseFull(
                                     url
                                 )
                             val content = if (response.statusCode in 200..299) {
@@ -422,7 +422,7 @@ fun OptionsScreen() {
                                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.updateDatabase(editingUrl!!, urlInput)
                                     }
                                     scope.launch {
-                                        val response = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.downloadAll(urlInput)
+                                        val response = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.NetworkUtils.getResponseFull(urlInput)
                                         val content = if (response.statusCode in 200..299) {
                                             response.text?.toByteArray(Charsets.UTF_8)
                                         } else null

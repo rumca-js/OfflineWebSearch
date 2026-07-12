@@ -4,11 +4,27 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
-import io.github.rumcajs.offlinewebsearch.data.Entry
 
 object NetworkUtils {
+    fun isStatusCodeValid(statusCode: Int): Boolean {
+        return (statusCode >= 200 && statusCode < 400);
+    }
+
+    fun isStatusCodeInvalid(statusCode: Int): Boolean {
+        if (statusCode == 0)
+            return false;
+        if (statusCode == 403)
+            return false;
+        if (statusCode == 429)
+            return false;
+
+        if (statusCode < 200)
+            return true;
+        if (statusCode >= 400)
+            return true;
+        return false;
+    }
+
     suspend fun verifyUrl(urlString: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
@@ -19,19 +35,20 @@ object NetworkUtils {
             connection.readTimeout = config.readTimeout
             connection.setRequestProperty("User-Agent", config.userAgent)
             val responseCode = connection.responseCode
-            responseCode in 200..299
+            isStatusCodeValid(responseCode)
         } catch (e: Exception) {
             false
         }
     }
 
-    suspend fun downloadAll(urlString: String): PageResponseObject =
+    suspend fun getResponseFull(urlString: String): PageResponseObject =
         executeRequest(
             urlString,
             "application/rss+xml, application/atom+xml, text/xml, application/json, */*"
         )
 
-    suspend fun getLinkPreview(urlString: String): PageResponseObject =
+    // TODO check only headers. Do not obtain contents
+    suspend fun getResponseHeaders(urlString: String): PageResponseObject =
         executeRequest(urlString)
 
     private suspend fun executeRequest(
@@ -54,14 +71,14 @@ object NetworkUtils {
                 if (key != null) key to value else null
             }.toMap()
 
-            val stream = if (responseCode in 200..299) {
+            val stream = if (isStatusCodeValid(responseCode)) {
                 connection.inputStream
             } else {
                 connection.errorStream
             }
             val text = stream?.use { it.bufferedReader().readText() }
 
-            if (responseCode in 200..299) {
+            if (isStatusCodeValid(responseCode)) {
                 PageResponseObject(responseCode, headers, text)
             } else {
                 PageResponseObject(responseCode, headers, text, "HTTP $responseCode")

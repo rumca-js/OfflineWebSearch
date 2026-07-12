@@ -28,7 +28,7 @@ fun LinkPreviewScreen(
 
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
-        previewResult = NetworkUtils.getLinkPreview(url)
+        previewResult = NetworkUtils.getResponseHeaders(url)
         isLoading = false
     }
 

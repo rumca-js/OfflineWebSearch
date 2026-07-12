@@ -45,7 +45,7 @@ fun LinkDataScreen(
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
         error = null
-        val response = NetworkUtils.downloadAll(url)
+        val response = NetworkUtils.getResponseFull(url)
         if (response.statusCode in 200..299 && response.text != null) {
             val body = response.text
             val inputType = if (url.contains(".html") || url.contains(".htm") ||
