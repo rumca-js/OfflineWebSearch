@@ -49,9 +49,61 @@ object NetworkUtils {
             "application/rss+xml, application/atom+xml, text/xml, application/json, */*"
         )
 
-    // TODO check only headers. Do not obtain contents
     suspend fun getResponseHeaders(urlString: String): PageResponseObject =
-        executeRequest(urlString)
+        executeHeaderRequest(urlString)
+
+    suspend fun executeHeaderRequest(
+        urlString: String,
+        acceptHeader: String? = null
+    ): PageResponseObject = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
+            val config = AppConfigManager.config.value
+            val url = URL(urlString)
+            connection = url.openConnection() as HttpURLConnection
+
+            // 1. Set the request method to HEAD
+            connection.requestMethod = "HEAD"
+
+            connection.connectTimeout = config.connectTimeout
+            connection.readTimeout = config.readTimeout
+            connection.setRequestProperty("User-Agent", config.userAgent)
+            if (acceptHeader != null) {
+                connection.setRequestProperty("Accept", acceptHeader)
+            }
+
+            val responseCode = connection.responseCode
+            val headers = connection.headerFields.mapNotNull { (key, value) ->
+                if (key != null) key to value else null
+            }.toMap()
+
+            // 2. Skip reading connection.inputStream. HEAD requests have no body.
+
+            if (isStatusCodeValid(responseCode)) {
+                PageResponseObject(
+                    statusCode = responseCode,
+                    headers = headers,
+                    text = null // No body content to provide
+                )
+            } else {
+                PageResponseObject(
+                    statusCode = responseCode,
+                    headers = headers,
+                    text = null,
+                    error = "HTTP $responseCode"
+                )
+            }
+        } catch (e: Exception) {
+            PageResponseObject(
+                statusCode = -1,
+                headers = emptyMap(),
+                text = null,
+                error = e.localizedMessage ?: e.message ?: e.javaClass.simpleName
+            )
+        } finally {
+            connection?.disconnect()
+        }
+    }
 
     private suspend fun executeRequest(
         urlString: String,
