@@ -52,6 +52,43 @@ class HtmlPage(val url: String, val contents: String) : Page {
             .replace("&gt;", ">")
     }
 
+    /**
+     * Resolves relative URLs against the base site URL if necessary.
+     */
+    private fun resolveUrl(path: String): String {
+        return try {
+            val baseUri = java.net.URI(url)
+            baseUri.resolve(path).toString()
+        } catch (e: Exception) {
+            path // Fallback to raw string if URI resolution fails
+        }
+    }
+
+    // TODO write test for it
+    // TODO make it getFeeds, returns list, consistent with API
+    fun getFeed(): String? {
+        if (contents.isBlank()) return null
+
+        // Regex to match any <link ...> tag in a case-insensitive manner
+        val linkTagRegex = """<link\s+([^>]+)>""".toRegex(RegexOption.IGNORE_CASE)
+
+        linkTagRegex.findAll(contents).forEach { matchResult ->
+            val tag = matchResult.value
+            val type = getAttrValue(tag, "type")
+            val rel = getAttrValue(tag, "rel")
+
+            // RSS links have type="application/rss+xml" (or sometimes type="application/atom+xml")
+            // and usually rel="alternate"
+            if (type?.lowercase() == "application/rss+xml" || type?.lowercase() == "application/atom+xml") {
+                val href = getAttrValue(tag, "href")
+                if (href != null) {
+                    return resolveUrl(unescapeHtml(href))
+                }
+            }
+        }
+        return null
+    }
+
     override fun getTitle(): String? = title
     override fun getDescription(): String? = description
     fun getThumbnails(): List<String> = thumbnails
