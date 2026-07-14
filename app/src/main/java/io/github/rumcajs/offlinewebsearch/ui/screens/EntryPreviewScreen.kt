@@ -148,6 +148,9 @@ fun LinkDataScreen(
                     )
                 }
 
+                // TODO does not provide RSS page preview?
+                // TODO missing generic handling?
+
                 page is HtmlPage -> {
                     HtmlPageDetails(
                         page = page as HtmlPage,
