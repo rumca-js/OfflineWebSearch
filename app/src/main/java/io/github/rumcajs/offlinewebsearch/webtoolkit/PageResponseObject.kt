@@ -160,10 +160,9 @@ data class PageResponseObject(
     val contentType: String?
         get() = headers.entries.find { it.key.equals("Content-Type", ignoreCase = true) }?.value?.firstOrNull()
 
-    val length: Long
-        get() = headers.entries.find { it.key.equals("Content-Length", ignoreCase = true) }?.value?.firstOrNull()?.toLongOrNull()
+    val length: Long?
+        get() = headers.entries.find { it.key.equals("Content-Length", ignoreCase = true) }?.value?.firstOrNull()?.trim()?.toLongOrNull()?.takeIf { it >= 0 }
             ?: text?.toByteArray(Charsets.UTF_8)?.size?.toLong()
-            ?: 0L
 
     val isValid: Boolean get() = NetworkUtils.isStatusCodeValid(statusCode)
     val isInvalid: Boolean get() = NetworkUtils.isStatusCodeInvalid(statusCode)

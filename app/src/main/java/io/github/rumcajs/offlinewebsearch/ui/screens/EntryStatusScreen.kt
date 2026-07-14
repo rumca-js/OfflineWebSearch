@@ -177,8 +177,9 @@ fun EntryStatusScreen(
                                         fontWeight = FontWeight.SemiBold,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
-                                    val formattedLength = formatBytes(pageResponse.length)
-                                    val lengthDisplay = if (pageResponse.length > 0) "${pageResponse.length} bytes ($formattedLength)" else "0 bytes"
+                                    val lengthDisplay = pageResponse.length?.let { len ->
+                                        "$len bytes (${formatBytes(len)})"
+                                    } ?: "Unknown"
                                     Text(
                                         text = lengthDisplay,
                                         style = MaterialTheme.typography.bodyMedium,
