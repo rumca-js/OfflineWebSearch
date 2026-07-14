@@ -20,8 +20,8 @@ object AppConfigManager {
 
     fun initialize(context: android.content.Context) {
         appContext = context.applicationContext
-        loadNetworkConfig(context)
         loadPersistedConfig()
+        loadNetworkConfig(context)
     }
 
     fun updateConfig(update: (AppConfiguration) -> AppConfiguration) {
@@ -142,7 +142,7 @@ object AppConfigManager {
                     coerceInputValues = true
                 }
                 val networkConfig = json.decodeFromString<NetworkConfig>(jsonString)
-                updateConfig {
+                _config.update {
                     it.copy(networkConfig = networkConfig)
                 }
             }
