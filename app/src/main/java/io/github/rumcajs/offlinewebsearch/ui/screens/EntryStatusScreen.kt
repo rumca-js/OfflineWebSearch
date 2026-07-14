@@ -23,12 +23,12 @@ fun LinkPreviewScreen(
     onBack: () -> Unit
 ) {
     var isLoading by remember { mutableStateOf(true) }
-    var previewResult by remember { mutableStateOf<PageResponseObject?>(null) }
+    var previewResponseObject by remember { mutableStateOf<PageResponseObject?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
-        previewResult = NetworkUtils.getResponseHeaders(url)
+        previewResponseObject = NetworkUtils.getResponseHeaders(url)
         isLoading = false
     }
 
@@ -71,7 +71,7 @@ fun LinkPreviewScreen(
                     )
                 }
             } else {
-                val result = previewResult
+                val pageResponse = previewResponseObject
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -106,7 +106,7 @@ fun LinkPreviewScreen(
                         }
                     }
 
-                    if (result != null) {
+                    if (pageResponse != null) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
@@ -128,14 +128,14 @@ fun LinkPreviewScreen(
                                 )
 
                                 val (statusColor, statusText) = when {
-                                    result.statusCode in 200..299 -> {
-                                        androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${result.statusCode})"
+                                    pageResponse.statusCode in 200..299 -> {
+                                        androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${pageResponse.statusCode})"
                                     }
-                                    result.statusCode in 300..399 -> {
-                                        androidx.compose.ui.graphics.Color(0xFFEF6C00) to "Redirect (${result.statusCode})"
+                                    pageResponse.statusCode in 300..399 -> {
+                                        androidx.compose.ui.graphics.Color(0xFFEF6C00) to "Redirect (${pageResponse.statusCode})"
                                     }
-                                    result.statusCode > 0 -> {
-                                        MaterialTheme.colorScheme.error to "Error (${result.statusCode})"
+                                    pageResponse.statusCode > 0 -> {
+                                        MaterialTheme.colorScheme.error to "Error (${pageResponse.statusCode})"
                                     }
                                     else -> {
                                         MaterialTheme.colorScheme.error to "Connection Failed"
@@ -180,8 +180,8 @@ fun LinkPreviewScreen(
                                         fontWeight = FontWeight.SemiBold,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
-                                    val formattedLength = formatBytes(result.length)
-                                    val lengthDisplay = if (result.length > 0) "${result.length} bytes ($formattedLength)" else "0 bytes"
+                                    val formattedLength = formatBytes(pageResponse.length)
+                                    val lengthDisplay = if (pageResponse.length > 0) "${pageResponse.length} bytes ($formattedLength)" else "0 bytes"
                                     Text(
                                         text = lengthDisplay,
                                         style = MaterialTheme.typography.bodyMedium,
@@ -207,13 +207,13 @@ fun LinkPreviewScreen(
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Text(
-                                        text = result.contentType ?: "N/A",
+                                        text = pageResponse.contentType ?: "N/A",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
 
-                                if (result.error != null) {
+                                if (pageResponse.error != null) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(vertical = 8.dp),
                                         color = MaterialTheme.colorScheme.outlineVariant
@@ -227,7 +227,7 @@ fun LinkPreviewScreen(
                                         modifier = Modifier.padding(bottom = 4.dp)
                                     )
                                     Text(
-                                        text = result.error,
+                                        text = pageResponse.error,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error
                                     )
@@ -251,7 +251,7 @@ fun LinkPreviewScreen(
 
                     Button(
                         onClick = onNavigateToLinkData,
-                        enabled = previewResult?.statusCode?.let { it > 0 } == true,
+                        enabled = previewResponseObject?.statusCode?.let { it > 0 } == true,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Show page data")
