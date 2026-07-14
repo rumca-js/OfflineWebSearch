@@ -14,30 +14,13 @@ enum class ViewStyle(val displayName: String) {
     STANDARD("Standard")
 }
 
-data class AppConfiguration(
-    val dbconfig: DatabaseConfiguration = DatabaseConfiguration(),
-
-    // App configuration
-    val userAge: Int = 0,
-
-    // TODO networking config - redundant? we have NetworkConfig
-    val connectTimeout: Int = 10000,
-    val readTimeout: Int = 10000,
-    val userAgent: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-
-    // main things
-    val databases: List<String> = emptyList(),
-    val activeDatabase: String? = null,
+data class DatabaseConfiguration(
+    val directLinks: Boolean = false,
+    val showIcons: Boolean = false,
+    val videoPreview: Boolean = false,
+    val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+    val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
 )
-{
-    data class DatabaseConfiguration(
-        val directLinks: Boolean = false,
-        val showIcons: Boolean = false,
-        val videoPreview: Boolean = false,
-        val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
-        val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
-    )
-}
 
 @Serializable
 data class NetworkConfig(
@@ -45,3 +28,17 @@ data class NetworkConfig(
     val readTimeout: Int = 10000,
     val userAgent: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
+
+data class AppConfiguration(
+    val dbconfig: DatabaseConfiguration = DatabaseConfiguration(),
+
+    // general app configuration, does
+    val userAge: Int = 0,
+
+    val networkConfig : NetworkConfig = NetworkConfig(),
+
+    // main things
+    val databases: List<String> = emptyList(),
+    val activeDatabase: String? = null,
+)
+

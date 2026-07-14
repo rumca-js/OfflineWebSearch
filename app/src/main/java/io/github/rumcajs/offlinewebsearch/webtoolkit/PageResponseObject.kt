@@ -33,9 +33,9 @@ object NetworkUtils {
             val url = URL(urlString)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "HEAD"
-            connection.connectTimeout = config.connectTimeout
-            connection.readTimeout = config.readTimeout
-            connection.setRequestProperty("User-Agent", config.userAgent)
+            connection.connectTimeout = config.networkConfig.connectTimeout
+            connection.readTimeout = config.networkConfig.readTimeout
+            connection.setRequestProperty("User-Agent", config.networkConfig.userAgent)
             val responseCode = connection.responseCode
             isStatusCodeValid(responseCode)
         } catch (e: Exception) {
@@ -65,9 +65,9 @@ object NetworkUtils {
             // 1. Set the request method to HEAD
             connection.requestMethod = "HEAD"
 
-            connection.connectTimeout = config.connectTimeout
-            connection.readTimeout = config.readTimeout
-            connection.setRequestProperty("User-Agent", config.userAgent)
+            connection.connectTimeout = config.networkConfig.connectTimeout
+            connection.readTimeout = config.networkConfig.readTimeout
+            connection.setRequestProperty("User-Agent", config.networkConfig.userAgent)
             if (acceptHeader != null) {
                 connection.setRequestProperty("Accept", acceptHeader)
             }
@@ -114,9 +114,9 @@ object NetworkUtils {
             val config = AppConfigManager.config.value
             val url = URL(urlString)
             connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = config.connectTimeout
-            connection.readTimeout = config.readTimeout
-            connection.setRequestProperty("User-Agent", config.userAgent)
+            connection.connectTimeout = config.networkConfig.connectTimeout
+            connection.readTimeout = config.networkConfig.readTimeout
+            connection.setRequestProperty("User-Agent", config.networkConfig.userAgent)
             if (acceptHeader != null) {
                 connection.setRequestProperty("Accept", acceptHeader)
             }

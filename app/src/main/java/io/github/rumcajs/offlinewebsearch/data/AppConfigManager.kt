@@ -99,11 +99,7 @@ object AppConfigManager {
                 }
                 val networkConfig = json.decodeFromString<NetworkConfig>(jsonString)
                 updateConfig {
-                    it.copy(
-                        connectTimeout = networkConfig.connectTimeout,
-                        readTimeout = networkConfig.readTimeout,
-                        userAgent = networkConfig.userAgent
-                    )
+                    it.copy(networkConfig = networkConfig)
                 }
             }
         } catch (e: Exception) {
