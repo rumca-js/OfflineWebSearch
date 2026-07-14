@@ -15,12 +15,7 @@ enum class ViewStyle(val displayName: String) {
 }
 
 data class AppConfiguration(
-    // database configuration
-    val directLinks: Boolean = false,
-    val showIcons: Boolean = false,
-    val videoPreview: Boolean = false,
-    val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
-    val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
+    val dbconfig: DatabaseConfiguration = DatabaseConfiguration(),
 
     // App configuration
     val userAge: Int = 0,
@@ -34,6 +29,15 @@ data class AppConfiguration(
     val databases: List<String> = emptyList(),
     val activeDatabase: String? = null,
 )
+{
+    data class DatabaseConfiguration(
+        val directLinks: Boolean = false,
+        val showIcons: Boolean = false,
+        val videoPreview: Boolean = false,
+        val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+        val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
+    )
+}
 
 @Serializable
 data class NetworkConfig(

@@ -152,7 +152,7 @@ fun LinkDataScreen(
                     HtmlPageDetails(
                         page = page as HtmlPage,
                         url = url,
-                        showIcons = config.showIcons
+                        showIcons = config.dbconfig.showIcons
                     )
                 }
 
@@ -217,7 +217,7 @@ fun LinkDataScreen(
                             items(entries) { entry ->
                                 FeedEntryCard(
                                     entry = entry,
-                                    showIcons = config.showIcons,
+                                    showIcons = config.dbconfig.showIcons,
                                     onClick = { onNavigateToDetail(entry) }
                                 )
                             }

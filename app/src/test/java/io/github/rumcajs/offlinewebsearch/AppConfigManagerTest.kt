@@ -14,15 +14,15 @@ class AppConfigManagerTest {
     @Test
     fun testDefaultConfig() = runBlocking {
         val config = AppConfigManager.config.first()
-        assertFalse(config.directLinks)
-        assertFalse(config.showIcons)
+        assertFalse(config.dbconfig.directLinks)
+        assertFalse(config.dbconfig.showIcons)
     }
 
     @Test
     fun testUpdateDirectLinks() = runBlocking {
         AppConfigManager.setDirectLinks(true)
         val config = AppConfigManager.config.first()
-        assertTrue(config.directLinks)
+        assertTrue(config.dbconfig.directLinks)
         
         // Reset for other tests if needed, though they run in parallel or sequence
         AppConfigManager.setDirectLinks(false)
@@ -32,7 +32,7 @@ class AppConfigManagerTest {
     fun testUpdateShowIcons() = runBlocking {
         AppConfigManager.setShowIcons(true)
         val config = AppConfigManager.config.first()
-        assertTrue(config.showIcons)
+        assertTrue(config.dbconfig.showIcons)
         
         AppConfigManager.setShowIcons(false)
     }
@@ -40,17 +40,17 @@ class AppConfigManagerTest {
     @Test
     fun testUpdateViewStyle() = runBlocking {
         val initialConfig = AppConfigManager.config.first()
-        assertEquals(ViewStyle.SEARCH_ENGINE, initialConfig.viewStyle)
+        assertEquals(ViewStyle.SEARCH_ENGINE, initialConfig.dbconfig.viewStyle)
 
         AppConfigManager.setViewStyle(
             ViewStyle.GALLERY)
         var config = AppConfigManager.config.first()
-        assertEquals(ViewStyle.GALLERY, config.viewStyle)
+        assertEquals(ViewStyle.GALLERY, config.dbconfig.viewStyle)
 
         AppConfigManager.setViewStyle(
             ViewStyle.STANDARD)
         config = AppConfigManager.config.first()
-        assertEquals(ViewStyle.STANDARD, config.viewStyle)
+        assertEquals(ViewStyle.STANDARD, config.dbconfig.viewStyle)
 
         // Reset
         AppConfigManager.setViewStyle(

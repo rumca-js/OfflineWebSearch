@@ -13,28 +13,48 @@ object AppConfigManager {
     private val _config = MutableStateFlow(_root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfiguration())
     val config: StateFlow<io.github.rumcajs.offlinewebsearch.data.AppConfiguration> = _config.asStateFlow()
 
-    fun updateConfig(update: (io.github.rumcajs.offlinewebsearch.data.AppConfiguration) -> io.github.rumcajs.offlinewebsearch.data.AppConfiguration) {
+    fun updateConfig(update: (AppConfiguration) -> AppConfiguration) {
         _config.update(update)
     }
 
     fun setDirectLinks(enabled: Boolean) {
-        updateConfig { it.copy(directLinks = enabled) }
+        updateConfig { currentConfig ->
+            currentConfig.copy(
+                dbconfig = currentConfig.dbconfig.copy(directLinks = enabled)
+            )
+        }
     }
 
     fun setShowIcons(enabled: Boolean) {
-        updateConfig { it.copy(showIcons = enabled) }
+        updateConfig { currentConfig ->
+            currentConfig.copy(
+                dbconfig = currentConfig.dbconfig.copy(showIcons = enabled)
+            )
+        }
     }
 
     fun setVideoPreview(enabled: Boolean) {
-        updateConfig { it.copy(videoPreview = enabled) }
+        updateConfig { currentConfig ->
+            currentConfig.copy(
+                dbconfig = currentConfig.dbconfig.copy(videoPreview = enabled)
+            )
+        }
     }
 
-    fun setOrderBy(orderBy: io.github.rumcajs.offlinewebsearch.data.OrderBy) {
-        updateConfig { it.copy(orderBy = orderBy) }
+    fun setOrderBy(orderBy: OrderBy) {
+        updateConfig { currentConfig ->
+            currentConfig.copy(
+                dbconfig = currentConfig.dbconfig.copy(orderBy = orderBy)
+            )
+        }
     }
 
-    fun setViewStyle(viewStyle: io.github.rumcajs.offlinewebsearch.data.ViewStyle) {
-        updateConfig { it.copy(viewStyle = viewStyle) }
+    fun setViewStyle(viewStyle: ViewStyle) {
+        updateConfig { currentConfig ->
+            currentConfig.copy(
+                dbconfig = currentConfig.dbconfig.copy(viewStyle = viewStyle)
+            )
+        }
     }
 
     fun setUserAge(age: Int) {

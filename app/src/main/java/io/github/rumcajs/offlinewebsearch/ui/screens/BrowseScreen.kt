@@ -192,8 +192,8 @@ fun EntryItem(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onClick: (io
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .alpha(if (isDead) 0.5f else 1f)
-            .clickable(enabled = entry.link != null || !config.directLinks) {
-                if (config.directLinks) {
+            .clickable(enabled = entry.link != null || !config.dbconfig.directLinks) {
+                if (config.dbconfig.directLinks) {
                     entry.link?.let { uriHandler.openUri(it) }
                 } else {
                     onClick(entry)
@@ -202,7 +202,7 @@ fun EntryItem(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onClick: (io
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            if (config.viewStyle == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY && config.showIcons && entry.thumbnail != null) {
+            if (config.dbconfig.viewStyle == io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY && config.dbconfig.showIcons && entry.thumbnail != null) {
                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage(
                     url = entry.thumbnail,
                     modifier = Modifier
@@ -227,7 +227,7 @@ fun EntryItem(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onClick: (io
                         modifier = Modifier.weight(1f),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
-                        if (config.showIcons && (config.viewStyle != _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY || entry.thumbnail == null)) {
+                        if (config.dbconfig.showIcons && (config.dbconfig.viewStyle != io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY || entry.thumbnail == null)) {
                             if (entry.thumbnail != null) {
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage(
                                     url = entry.thumbnail,
@@ -288,9 +288,9 @@ fun EntryItem(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onClick: (io
                     }
                 }
                 
-                val isRestricted = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.isRestricted(entry, config.userAge)
+                val isRestricted = io.github.rumcajs.offlinewebsearch.util.EntryUtils.isRestricted(entry, config.userAge)
                 
-                if (config.viewStyle == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.ViewStyle.SEARCH_ENGINE) {
+                if (config.dbconfig.viewStyle == io.github.rumcajs.offlinewebsearch.data.ViewStyle.SEARCH_ENGINE) {
                     entry.link?.let {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -301,7 +301,7 @@ fun EntryItem(entry: io.github.rumcajs.offlinewebsearch.data.Entry, onClick: (io
                     }
                 }
 
-                if (config.viewStyle == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.ViewStyle.STANDARD || config.viewStyle == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY) {
+                if (config.dbconfig.viewStyle == io.github.rumcajs.offlinewebsearch.data.ViewStyle.STANDARD || config.dbconfig.viewStyle == io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween

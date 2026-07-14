@@ -78,7 +78,7 @@ fun OptionsScreen() {
 
         _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionItem(
             label = "Direct links",
-            checked = config.directLinks,
+            checked = config.dbconfig.directLinks,
             onCheckedChange = {
                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setDirectLinks(
                     it
@@ -88,7 +88,7 @@ fun OptionsScreen() {
 
         _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionItem(
             label = "Show icons",
-            checked = config.showIcons,
+            checked = config.dbconfig.showIcons,
             onCheckedChange = {
                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setShowIcons(
                     it
@@ -139,7 +139,7 @@ fun OptionsScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = config.orderBy.displayName,
+                value = config.dbconfig.orderBy.displayName,
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = orderByExpanded) },
@@ -178,7 +178,7 @@ fun OptionsScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = config.viewStyle.displayName,
+                value = config.dbconfig.viewStyle.displayName,
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = viewStyleExpanded) },

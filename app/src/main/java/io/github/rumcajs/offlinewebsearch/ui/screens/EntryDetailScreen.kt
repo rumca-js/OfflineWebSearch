@@ -66,7 +66,7 @@ fun EntryDetailScreen(
             EntryThumbnailPreview(
                 entry = entry,
                 isRestricted = isRestricted,
-                videoPreview = config.videoPreview,
+                videoPreview = config.dbconfig.videoPreview,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),

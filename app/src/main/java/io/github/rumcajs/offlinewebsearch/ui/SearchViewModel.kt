@@ -34,9 +34,9 @@ class SearchViewModel : ViewModel() {
     fun loadDataIfNeeded(context: Context) {
         viewModelScope.launch {
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collect { config ->
-                if (config.activeDatabase != currentActiveDatabase || config.orderBy != currentOrderBy || allEntries.isEmpty()) {
+                if (config.activeDatabase != currentActiveDatabase || config.dbconfig.orderBy != currentOrderBy || allEntries.isEmpty()) {
                     currentActiveDatabase = config.activeDatabase
-                    currentOrderBy = config.orderBy
+                    currentOrderBy = config.dbconfig.orderBy
                     isLoading = true
                     currentPage = 0
                     val unsortedPlaces =
@@ -44,7 +44,7 @@ class SearchViewModel : ViewModel() {
                             context,
                             config.activeDatabase
                         )
-                    allEntries = when (config.orderBy) {
+                    allEntries = when (config.dbconfig.orderBy) {
                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VOTES -> unsortedPlaces.sortedByDescending { it.page_rating_votes ?: 0 }
                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.DATE_CREATED -> unsortedPlaces.sortedByDescending { it.date_created ?: "" }
                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.DATE_PUBLISHED -> unsortedPlaces.sortedByDescending { it.date_published ?: "" }
