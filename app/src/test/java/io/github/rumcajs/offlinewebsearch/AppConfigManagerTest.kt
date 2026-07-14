@@ -4,6 +4,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.ViewStyle
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.encodeToString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -77,5 +78,49 @@ class AppConfigManagerTest {
         AppConfigManager.removeDatabase(url2)
         config = AppConfigManager.config.first()
         assertTrue(config.databases.isEmpty())
+    }
+
+    @Test
+    fun testSerialization() {
+        val originalConfig = io.github.rumcajs.offlinewebsearch.data.AppConfiguration(
+            databases = listOf("http://example.com/db1", "http://example.com/db2"),
+            activeDatabase = "http://example.com/db1",
+            userAge = 25,
+            defaultDbConfig = io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration(
+                directLinks = true,
+                showIcons = true,
+                videoPreview = true,
+                orderBy = io.github.rumcajs.offlinewebsearch.data.OrderBy.DATE_CREATED,
+                viewStyle = io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY
+            ),
+            dbConfigs = mapOf(
+                "http://example.com/db1" to io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration(
+                    directLinks = false,
+                    showIcons = false,
+                    videoPreview = false,
+                    orderBy = io.github.rumcajs.offlinewebsearch.data.OrderBy.DATE_PUBLISHED,
+                    viewStyle = io.github.rumcajs.offlinewebsearch.data.ViewStyle.STANDARD
+                )
+            )
+        )
+        val jsonString = kotlinx.serialization.json.Json.encodeToString(originalConfig)
+        val decodedConfig = kotlinx.serialization.json.Json.decodeFromString<io.github.rumcajs.offlinewebsearch.data.AppConfiguration>(jsonString)
+        
+        assertEquals(originalConfig.databases, decodedConfig.databases)
+        assertEquals(originalConfig.activeDatabase, decodedConfig.activeDatabase)
+        assertEquals(originalConfig.userAge, decodedConfig.userAge)
+        assertEquals(originalConfig.defaultDbConfig.directLinks, decodedConfig.defaultDbConfig.directLinks)
+        assertEquals(originalConfig.defaultDbConfig.showIcons, decodedConfig.defaultDbConfig.showIcons)
+        
+        // Assert that the active database's configuration is returned by dbconfig
+        assertEquals(false, decodedConfig.dbconfig.directLinks)
+        assertEquals(io.github.rumcajs.offlinewebsearch.data.OrderBy.DATE_PUBLISHED, decodedConfig.dbconfig.orderBy)
+        assertEquals(io.github.rumcajs.offlinewebsearch.data.ViewStyle.STANDARD, decodedConfig.dbconfig.viewStyle)
+        
+        // Assert that when active database is changed or cleared, dbconfig falls back to default
+        val configWithNoActive = decodedConfig.copy(activeDatabase = null)
+        assertEquals(true, configWithNoActive.dbconfig.directLinks)
+        assertEquals(io.github.rumcajs.offlinewebsearch.data.OrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
+        assertEquals(io.github.rumcajs.offlinewebsearch.data.ViewStyle.GALLERY, configWithNoActive.dbconfig.viewStyle)
     }
 }

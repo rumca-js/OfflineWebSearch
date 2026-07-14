@@ -34,7 +34,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 class MainActivity : androidx.activity.ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.loadNetworkConfig(this)
+        _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.initialize(this)
         enableEdgeToEdge()
         setContent {
             val searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel()
