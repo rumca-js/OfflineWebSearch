@@ -299,7 +299,7 @@ fun OptionsScreen() {
                                 NetworkUtils.getResponseFull(
                                     url
                                 )
-                            val content = if (response.statusCode in 200..299) {
+                            val content = if (response.isValid) {
                                 response.text?.toByteArray(Charsets.UTF_8)
                             } else null
                             if (content != null) {
@@ -307,7 +307,7 @@ fun OptionsScreen() {
                                 val fileName = "db_${url.hashCode()}$extension"
                                 context.openFileOutput(
                                     fileName,
-                                    android.content.Context.MODE_PRIVATE
+                                    Context.MODE_PRIVATE
                                 ).use {
                                     it.write(content)
                                 }
@@ -424,7 +424,7 @@ fun OptionsScreen() {
                                     }
                                     scope.launch {
                                         val response = NetworkUtils.getResponseFull(urlInput)
-                                        val content = if (response.statusCode in 200..299) {
+                                        val content = if (response.isValid) {
                                             response.text?.toByteArray(Charsets.UTF_8)
                                         } else null
                                         if (content != null) {

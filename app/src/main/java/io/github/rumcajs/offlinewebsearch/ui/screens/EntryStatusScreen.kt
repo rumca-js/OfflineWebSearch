@@ -17,7 +17,7 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LinkPreviewScreen(
+fun EntryStatusScreen(
     url: String,
     onNavigateToLinkData: () -> Unit,
     onBack: () -> Unit
@@ -128,17 +128,14 @@ fun LinkPreviewScreen(
                                 )
 
                                 val (statusColor, statusText) = when {
-                                    pageResponse.statusCode in 200..299 -> {
+                                    pageResponse.isValid -> {
                                         androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${pageResponse.statusCode})"
                                     }
-                                    pageResponse.statusCode in 300..399 -> {
-                                        androidx.compose.ui.graphics.Color(0xFFEF6C00) to "Redirect (${pageResponse.statusCode})"
-                                    }
-                                    pageResponse.statusCode > 0 -> {
+                                    pageResponse.isInvalid -> {
                                         MaterialTheme.colorScheme.error to "Error (${pageResponse.statusCode})"
                                     }
                                     else -> {
-                                        MaterialTheme.colorScheme.error to "Connection Failed"
+                                        MaterialTheme.colorScheme.error to "Unknown (${pageResponse.statusCode})"
                                     }
                                 }
 

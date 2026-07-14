@@ -164,4 +164,7 @@ data class PageResponseObject(
         get() = headers.entries.find { it.key.equals("Content-Length", ignoreCase = true) }?.value?.firstOrNull()?.toLongOrNull()
             ?: text?.toByteArray(Charsets.UTF_8)?.size?.toLong()
             ?: 0L
+
+    val isValid: Boolean get() = NetworkUtils.isStatusCodeValid(statusCode)
+    val isInvalid: Boolean get() = NetworkUtils.isStatusCodeInvalid(statusCode)
 }

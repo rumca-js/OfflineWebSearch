@@ -20,12 +20,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import io.github.rumcajs.offlinewebsearch.ui.screens.AboutScreen
-import io.github.rumcajs.offlinewebsearch.ui.screens.BrowseScreen
-import io.github.rumcajs.offlinewebsearch.ui.screens.OptionsScreen
-import io.github.rumcajs.offlinewebsearch.ui.screens.LinkPreviewScreen
-import io.github.rumcajs.offlinewebsearch.ui.screens.LinkDataScreen
-import io.github.rumcajs.offlinewebsearch.ui.theme.OfflineWebSearchTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -106,7 +100,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.LinkPreview.route) {
                             searchViewModel.previewUrl?.let { url ->
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.LinkPreviewScreen(
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryStatusScreen(
                                     url = url,
                                     onNavigateToLinkData = {
                                         searchViewModel.previewUrl = url
@@ -118,7 +112,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.LinkData.route) {
                             searchViewModel.previewUrl?.let { url ->
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.LinkDataScreen(
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryPreviewScreen(
                                     url = url,
                                     onBack = { navController.popBackStack() },
                                     onNavigateToDetail = { entry ->

@@ -31,7 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LinkDataScreen(
+fun EntryPreviewScreen(
     url: String,
     onBack: () -> Unit,
     onNavigateToDetail: (Entry) -> Unit
@@ -45,9 +45,9 @@ fun LinkDataScreen(
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
         error = null
-        val response = NetworkUtils.getResponseFull(url)
-        if (response.statusCode in 200..299 && response.text != null) {
-            val body = response.text
+        val pageResponse = NetworkUtils.getResponseFull(url)
+        if (pageResponse.text != null) {
+            val body = pageResponse.text
             val inputType = if (url.contains(".html") || url.contains(".htm") ||
                 body.trim().startsWith("<html", ignoreCase = true) ||
                 body.trim().contains("<!doctype html", ignoreCase = true)) {
@@ -62,7 +62,7 @@ fun LinkDataScreen(
                 page = null
             }
         } else {
-            error = response.error ?: "Failed to download content"
+            error = pageResponse.error ?: "Failed to download content"
             page = null
         }
         isLoading = false
