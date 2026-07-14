@@ -21,7 +21,7 @@ class YouTubeVideoHandler(private val link: String) : PageHandler {
     override fun isHandledBy(): Boolean = getVideoId() != null
 
     fun getVideoId(): String? {
-        val domain = UrlLocation.getDomain(link)
+        val domain = UrlLocation(link).getDomain()
         if (domain == "youtu.be") {
             val path = getPath(link)
             val segments = path.split("/").filter { it.isNotEmpty() }
@@ -83,7 +83,7 @@ class YouTubeChannelHandler(private val link: String) : PageHandler {
     override fun getChannel(): String = getChannelUrl() ?: ""
 
     override fun isHandledBy(): Boolean {
-        val domain = UrlLocation.getDomain(link)
+        val domain = UrlLocation(link).getDomain()
         if (domain == "youtube.com" || domain == "www.youtube.com" || domain == "m.youtube.com") {
             val path = getPath(link)
             return path.startsWith("/channel/") ||
@@ -164,7 +164,7 @@ class GitHubRepositoryHandler(private val link: String) : PageHandler {
     }
 
     override fun isHandledBy(): Boolean {
-        val domain = UrlLocation.getDomain(link)
+        val domain = UrlLocation(link).getDomain()
         if (domain == "github.com" || domain == "www.github.com") {
             val path = getPath(link)
             val segments = path.split("/").filter { it.isNotEmpty() }
@@ -183,7 +183,7 @@ class GitHubRepositoryHandler(private val link: String) : PageHandler {
     }
 
     override fun getFeeds(): List<String> {
-        val domain = UrlLocation.getDomain(link)
+        val domain = UrlLocation(link).getDomain()
         val path = getPath(link)
         val segments = path.split("/").filter { it.isNotEmpty() }
         if (segments.size >= 2) {
@@ -225,7 +225,7 @@ class RedditChannelHandler(private val link: String) : PageHandler {
     }
 
     override fun isHandledBy(): Boolean {
-        val domain = UrlLocation.getDomain(link)
+        val domain = UrlLocation(link).getDomain()
         if (domain == "reddit.com" || domain == "www.reddit.com" || domain == "old.reddit.com") {
             val path = getPath(link)
             val isChannelPath = path.startsWith("/r/") || path.startsWith("/user/") || path.startsWith("/u/")
@@ -236,7 +236,7 @@ class RedditChannelHandler(private val link: String) : PageHandler {
     }
 
     override fun getFeeds(): List<String> {
-        val domain = UrlLocation.getDomain(link)
+        val domain = UrlLocation(link).getDomain()
         val path = getPath(link)
         val cleanPath = path.removeSuffix("/")
         if (cleanPath.startsWith("/r/") || cleanPath.startsWith("/user/") || cleanPath.startsWith("/u/")) {

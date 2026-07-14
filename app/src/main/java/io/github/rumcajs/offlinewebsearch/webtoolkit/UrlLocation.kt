@@ -2,13 +2,13 @@ package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import java.net.URI
 
-object UrlLocation {
+class UrlLocation(private val link: String?) {
 
     /**
      * Extracts the domain (host) from the given input link, removing the protocol.
      * For example, for "https://google.com" or "google.com" it returns "google.com".
      */
-    fun getDomain(link: String?): String {
+    fun getDomain(): String {
         if (link.isNullOrBlank()) return ""
 
         // Normalize URL protocol
@@ -45,5 +45,19 @@ object UrlLocation {
             temp = temp.substring(0, pathEnd)
         }
         return temp
+    }
+
+    /**
+     * Strips leading http://, https://, or ftp:// from the given link (case-insensitive).
+     */
+    fun getProtocolles(): String {
+        if (link.isNullOrBlank()) return ""
+        val trimmed = link.trim()
+        return when {
+            trimmed.startsWith("http://", ignoreCase = true) -> trimmed.substring(7)
+            trimmed.startsWith("https://", ignoreCase = true) -> trimmed.substring(8)
+            trimmed.startsWith("ftp://", ignoreCase = true) -> trimmed.substring(6)
+            else -> trimmed
+        }
     }
 }

@@ -1,5 +1,7 @@
 package io.github.rumcajs.offlinewebsearch.util
 
+import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
+
 // A common contract for all future URL services
 interface LinkProvider {
     val serviceName: String
@@ -17,11 +19,21 @@ class WebArchiveProvider : LinkProvider {
     }
 }
 
+// The Is It Down Right Now implementation
+class IsItDownRightNowProvider : LinkProvider {
+    override val serviceName: String = "Is It Down Right Now"
+
+    override fun generateLink(inputLink: String): String {
+        val stripped = UrlLocation(inputLink).getProtocolles()
+        return "https://isitdownrightnow.com/$stripped.html"
+    }
+}
+
 class UrlServices {
     // Easily add more providers to this list in the future
     private val providers: List<LinkProvider> = listOf(
-        WebArchiveProvider()
-        // Future services go here, e.g., GoogleCacheProvider()
+        WebArchiveProvider(),
+        IsItDownRightNowProvider()
     )
 
     /**
