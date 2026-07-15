@@ -91,7 +91,7 @@ class HtmlPage(val url: String, val contents: String) : Page {
 
     override fun getTitle(): String? = title
     override fun getDescription(): String? = description
-    fun getThumbnails(): List<String> = thumbnails
+    override fun getThumbnails(): List<String> = thumbnails
     override fun getDatePublished(): String? = datePublished
     override fun getEntries(): List<Entry> = emptyList()
 }

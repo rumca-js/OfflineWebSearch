@@ -148,9 +148,6 @@ fun EntryPreviewScreen(
                     )
                 }
 
-                // TODO does not provide RSS page preview?
-                // TODO missing generic handling?
-
                 page is HtmlPage -> {
                     HtmlPageDetails(
                         page = page as HtmlPage,
@@ -159,72 +156,25 @@ fun EntryPreviewScreen(
                     )
                 }
 
+                page is RssPage -> {
+                    RssPageDetails(
+                        page = page as RssPage,
+                        url = url,
+                        showIcons = config.dbconfig.showIcons,
+                        onNavigateToDetail = onNavigateToDetail,
+                        error = error
+                    )
+                }
+
                 else -> {
-                    val entries = page?.getEntries() ?: emptyList()
-                    if (entries.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = "No entries found in feed.",
-                            modifier = Modifier.align(Alignment.Center),
+                            text = "No content loaded.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            item {
-                                // Feed source card
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text(
-                                            text = "Feed source",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = url,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "${entries.size} entries",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                            }
-
-                            if (error != null) {
-                                item {
-                                    Text(
-                                        text = "⚠ Partial load: $error",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                }
-                            }
-
-                            items(entries) { entry ->
-                                FeedEntryCard(
-                                    entry = entry,
-                                    showIcons = config.dbconfig.showIcons,
-                                    onClick = { onNavigateToDetail(entry) }
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -233,8 +183,96 @@ fun EntryPreviewScreen(
 }
 
 @Composable
-private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
+private fun PageMetadataSection(page: Page, url: String) {
     val uriHandler = LocalUriHandler.current
+
+    // Title
+    val title = page.getTitle() ?: "Untitled Page"
+    Text(
+        text = title,
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface
+    )
+
+    // Date published badge
+    val datePublished = page.getDatePublished()
+    if (!datePublished.isNullOrBlank()) {
+        SuggestionChip(
+            onClick = {},
+            label = {
+                Text(
+                    text = "Published: $datePublished",
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        )
+    }
+
+    // Description Card
+    val description = page.getDescription()
+    if (!description.isNullOrBlank()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            ),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Description",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 22.sp
+                )
+            }
+        }
+    }
+
+    // Source Link
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "Source Link",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = url,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+            Button(
+                onClick = { uriHandler.openUri(url) },
+                modifier = Modifier.align(Alignment.End),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Open in Browser", fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -260,89 +298,8 @@ private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
             }
         }
 
-        // Title
-        val title = page.getTitle() ?: "Untitled Page"
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        // Date published badge
-        val datePublished = page.getDatePublished()
-        if (!datePublished.isNullOrBlank()) {
-            SuggestionChip(
-                onClick = {},
-                label = {
-                    Text(
-                        text = "Published: $datePublished",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
-            )
-        }
-
-        // Description Card
-        val description = page.getDescription()
-        if (!description.isNullOrBlank()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Description",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 22.sp
-                    )
-                }
-            }
-        }
-
-        // Source Link
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = "Source Link",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = url,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-                Button(
-                    onClick = { uriHandler.openUri(url) },
-                    modifier = Modifier.align(Alignment.End),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text("Open in Browser", fontSize = 12.sp)
-                }
-            }
-        }
+        // Generic page details handling
+        PageMetadataSection(page = page, url = url)
 
         // Gallery of other thumbnails if more than 1
         if (showIcons && thumbnails.size > 1) {
@@ -370,6 +327,76 @@ private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RssPageDetails(
+    page: RssPage,
+    url: String,
+    showIcons: Boolean,
+    onNavigateToDetail: (Entry) -> Unit,
+    error: String?
+) {
+    val entries = page.getEntries()
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+                PageMetadataSection(page = page, url = url)
+
+                if (entries.isNotEmpty()) {
+                    Text(
+                        text = "Feed Entries (${entries.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            }
+        }
+
+        if (entries.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No entries found in feed.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        if (error != null) {
+            item {
+                Text(
+                    text = "⚠ Partial load: $error",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
+
+        items(entries) { entry ->
+            FeedEntryCard(
+                entry = entry,
+                showIcons = showIcons,
+                onClick = { onNavigateToDetail(entry) }
+            )
         }
     }
 }

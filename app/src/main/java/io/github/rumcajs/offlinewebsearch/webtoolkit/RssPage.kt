@@ -10,6 +10,8 @@ class RssPage(val link: String, val contents: String) : Page {
     private var feedTitle: String? = null
     private var feedDescription: String? = null
     private val entries = mutableListOf<RssEntry>()
+    // TODO read from channel -> thumbnails
+    private val thumbnails = mutableListOf<String>()
 
 
     init {
@@ -140,6 +142,7 @@ class RssPage(val link: String, val contents: String) : Page {
     override fun getTitle(): String? = feedTitle
     override fun getDescription(): String? = feedDescription
     override fun getDatePublished(): String? = null
+    override fun getThumbnails(): List<String> = thumbnails
     override fun getEntries(): List<Entry> {
         return entries.map {
             Entry(

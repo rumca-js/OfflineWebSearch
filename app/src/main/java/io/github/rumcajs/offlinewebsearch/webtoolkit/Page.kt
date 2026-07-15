@@ -7,4 +7,6 @@ interface Page {
     fun getDescription(): String?
     fun getDatePublished(): String?
     fun getEntries(): List<Entry>
+    // TODO refactor. It should be string
+    fun getThumbnails(): List<String>
 }
