@@ -56,29 +56,21 @@ fun AboutScreen() {
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "A fast, lightweight Android application for searching a curated collection of popular websites, YouTube channels, and X channels.",
+            text = "Open-Source, privacy-first bookmarking search engine. No cloud. No server. Just highly structured meta-database of valuable internet domains, communities, and personal web spaces directly on your local device.",
             style = MaterialTheme.typography.bodyLarge
         )
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SectionTitle("Features")
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.FeatureItem("Instant search across a large collection of well-known domains")
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.FeatureItem("Simple and lightweight interface")
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.FeatureItem("Fast local search with no waiting for server responses")
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.FeatureItem("Privacy-friendly: no network requests required for searching")
+        SectionTitle("Features")
+        FeatureItem("Predefined database with common domains, YouTube channels")
+        FeatureItem("No cloud, no server. Fast local search with no waiting for server responses")
+        FeatureItem("Privacy-friendly: no network requests required for searching")
+        FeatureItem("Convenience links, services. Static auto RSS feeds discovery")
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SectionTitle("Why Use Offline Web Search?")
-        Text(
-            text = "Finding a website can be faster than opening a browser and typing a full URL. Offline Web Search provides a searchable index of popular domains directly on your device.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SectionTitle("Ready Databases")
+        SectionTitle("Ready Databases")
         Text(
             text = "Explore and import pre-compiled offline databases to expand your search options. You can add them in the Options tab.",
             style = MaterialTheme.typography.bodyMedium
@@ -86,19 +78,19 @@ fun AboutScreen() {
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+        DatabaseItem(
             name = "Awesome Database Feeds",
             description = "Pre-compiled databases mapping sites to their RSS feeds.",
             url = "https://github.com/rumca-js/awesome-database-feeds"
         )
 
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+        DatabaseItem(
             name = "Awesome Database Top",
             description = "Curated databases of top websites and web locations.",
             url = "https://github.com/rumca-js/awesome-database-top"
         )
 
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+        DatabaseItem(
             name = "Awesome Database AwesomeLists",
             description = "Offline search databases built from community-curated awesome lists.",
             url = "https://github.com/rumca-js/awesome-database-awesomelists"
@@ -106,15 +98,21 @@ fun AboutScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SectionTitle("Permissions")
-        Text(
-            text = "The app requires minimal permissions and does not rely on remote services for searching.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        
+        SectionTitle("Why Use Offline Web Search?")
+        FeatureItem("some apps require you to have accounts, keep your data, sell your data")
+        FeatureItem("some apps are bookmarking apps, maintain a lot of data. We want just a simple 'title', 'description' etc metadata, so highly optimized")
+        FeatureItem("some apps do not allow you to backup, share, or export your data")
+        FeatureItem("bookmark apps often focus on bookmarks. This app focus is on search")
+        FeatureItem("import is fast, since it uses SQLite, so it is easy to reuse in other projects ('linki' app was found to be slow since it performs HTML import export)")
+        FeatureItem("some apps might be better, but are not open source (eg. obsidian is proprietary)")
+
+        SectionTitle("Permissions")
+        FeatureItem("The app requires minimal permissions and does not rely on remote services for searching.")
+        FeatureItem("It does use 'network' access. The user might trigger a check of domain if is still available")
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SectionTitle("Open Source")
+        SectionTitle("Open Source")
         Text(
             text = "This project is open source and welcomes contributions, bug reports, and suggestions.",
             style = MaterialTheme.typography.bodyMedium

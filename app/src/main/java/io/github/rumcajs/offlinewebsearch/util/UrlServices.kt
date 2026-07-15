@@ -25,7 +25,7 @@ class IsItDownRightNowProvider : LinkProvider {
 
     override fun generateLink(inputLink: String): String {
         val stripped = UrlLocation(inputLink).getProtocolles()
-        return "https://isitdownrightnow.com/$stripped.html"
+        return "https://www.isitdownrightnow.com/$stripped.html"
     }
 }
 

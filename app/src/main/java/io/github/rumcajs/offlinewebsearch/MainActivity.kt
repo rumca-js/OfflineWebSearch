@@ -76,7 +76,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Home.route) {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.BrowseScreen(
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryListScreen(
                                 viewModel = searchViewModel,
                                 onNavigateToDetail = { entry ->
                                     searchViewModel.selectedEntry = entry

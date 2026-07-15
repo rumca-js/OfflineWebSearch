@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.rumcajs.offlinewebsearch.ui.components.RemoteImage
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
@@ -27,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun BrowseScreen(
+fun EntryListScreen(
     viewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel(),
     onNavigateToDetail: (io.github.rumcajs.offlinewebsearch.data.Entry) -> Unit = {}
 ) {
