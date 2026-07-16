@@ -42,7 +42,7 @@ class SearchViewModel : ViewModel() {
                     val unsortedPlaces =
                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.EntryListRepository.loadAllEntries(
                             context,
-                            config.activeDatabase
+                            config.activeDatabaseState,
                         )
                     allEntries = when (config.dbconfig.orderBy) {
                         _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VOTES -> unsortedPlaces.sortedByDescending { it.page_rating_votes ?: 0 }

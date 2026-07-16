@@ -237,17 +237,6 @@ fun EntryStatusScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Button(
-                        onClick = { refreshTrigger++ },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Re-fetch Preview")
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(
                         onClick = onNavigateToLinkData,
                         enabled = previewResponseObject?.statusCode?.let { it > 0 } == true,
                         modifier = Modifier.fillMaxWidth()

@@ -50,16 +50,16 @@ object EntryListRepository {
         "places_10.json",
     )
 
-    suspend fun loadAllEntries(context: Context, activeDatabaseUrl: String? = null): List<io.github.rumcajs.offlinewebsearch.data.Entry> = withContext(Dispatchers.IO) {
-        val allPlaces = mutableListOf<io.github.rumcajs.offlinewebsearch.data.Entry>()
+    suspend fun loadAllEntries(context: Context, activeDatabaseState: DatabaseState? = null): List<Entry> = withContext(Dispatchers.IO) {
+        val allPlaces = mutableListOf<Entry>()
 
-        if (activeDatabaseUrl == null) {
+        if (activeDatabaseState == null) {
             // Load from assets if no external database is active
             assets.forEach { fileName ->
                 try {
                     context.assets.open(fileName).bufferedReader().use { reader ->
                         val jsonString = reader.readText()
-                        val places: List<io.github.rumcajs.offlinewebsearch.data.Entry> = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.jsonConfig.decodeFromString(jsonString)
+                        val places: List<Entry> = jsonConfig.decodeFromString(jsonString)
                         allPlaces.addAll(places)
                     }
                 } catch (e: Exception) {
@@ -68,9 +68,9 @@ object EntryListRepository {
             }
         } else {
             // Load ONLY the active database from local storage
-            val isSqlite = activeDatabaseUrl.endsWith(".db")
-            val extension = if (isSqlite) ".db" else ".json"
-            val fileName = "db_${activeDatabaseUrl.hashCode()}$extension"
+            val extension = activeDatabaseState.extension
+            val isSqlite = extension == ".db"
+            val fileName = activeDatabaseState.localFileName
             val file = File(context.filesDir, fileName)
             if (file.exists()) {
                 if (isSqlite) {
@@ -106,7 +106,7 @@ object EntryListRepository {
                                 val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
 
                                 allPlaces.add(
-                                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
+                                    Entry(
                                         link = link,
                                         title = title,
                                         description = description,
@@ -136,7 +136,7 @@ object EntryListRepository {
                     try {
                         file.bufferedReader().use { reader ->
                             val jsonString = reader.readText()
-                            val entries: List<io.github.rumcajs.offlinewebsearch.data.Entry> = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.jsonConfig.decodeFromString(jsonString)
+                            val entries: List<Entry> = jsonConfig.decodeFromString(jsonString)
                             allPlaces.addAll(entries)
                         }
                     } catch (e: Exception) {
