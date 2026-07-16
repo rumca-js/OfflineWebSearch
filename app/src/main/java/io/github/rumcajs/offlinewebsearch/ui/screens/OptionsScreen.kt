@@ -30,12 +30,14 @@ import android.provider.OpenableColumns
 import android.content.Context
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OptionsScreen() {
-    val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
+    val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -51,7 +53,7 @@ fun OptionsScreen() {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            val fileName = _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.getFileName(
+            val fileName = getFileName(
                 context,
                 uri
             ) ?: "local_db.json"
@@ -207,23 +209,31 @@ fun OptionsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Active Database", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = "Active Database",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         var expanded by remember { mutableStateOf(false) }
+
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
+            onExpandedChange = { expanded = it }, // Let the component dictate state updates
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = config.activeDatabase?.let { if (it.startsWith("local://")) it.removePrefix("local://") else it } ?: "Default (Assets)",
+                // Clean display property from our AppConfiguration!
+                value = config.activeDatabaseDisplayName,
                 onValueChange = {},
                 readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                 modifier = Modifier
-                    .menuAnchor()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable) // M3 Best Practice for non-editable drop-downs
                     .fillMaxWidth()
             )
 
@@ -231,19 +241,23 @@ fun OptionsScreen() {
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
+                // 1. Default Assets Option
                 DropdownMenuItem(
                     text = { Text("Default (Assets)") },
                     onClick = {
-                        _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setActiveDatabase(null)
+                        AppConfigManager.setActiveDatabase(null)
                         expanded = false
                     },
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
-                config.databases.forEach { dbUrl ->
+
+                // 2. Dynamic Database Options (destructured cleanly into url and state)
+                config.databases.forEach { (url, state) ->
                     DropdownMenuItem(
-                        text = { Text(if (dbUrl.startsWith("local://")) dbUrl.removePrefix("local://") else dbUrl) },
+                        // Leverages the model's clean display name directly!
+                        text = { Text(state.displayName) },
                         onClick = {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setActiveDatabase(dbUrl)
+                            AppConfigManager.setActiveDatabase(url)
                             expanded = false
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -273,8 +287,8 @@ fun OptionsScreen() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        config.databases.forEach { url ->
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseItem(
+        config.databases.forEach { (url, state) ->
+            DatabaseItem(
                 url = url,
                 onEdit = {
                     urlInput = url
@@ -284,16 +298,15 @@ fun OptionsScreen() {
                     showDialog = true
                 },
                 onDelete = {
-                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.removeDatabase(
+                    AppConfigManager.removeDatabase(
                         url
                     )
                     // Optionally delete the local file
-                    val extension = if (url.endsWith(".db")) ".db" else ".json"
-                    val fileName = "db_${url.hashCode()}$extension"
+                    val fileName = state.localFileName
                     File(context.filesDir, fileName).delete()
                 },
                 onUpdate = {
-                    if (!url.startsWith("local://")) {
+                    if (!state.isLocal) {
                         scope.launch {
                             val response =
                                 NetworkUtils.getResponseFull(
@@ -303,8 +316,7 @@ fun OptionsScreen() {
                                 response.text?.toByteArray(Charsets.UTF_8)
                             } else null
                             if (content != null) {
-                                val extension = if (url.endsWith(".db")) ".db" else ".json"
-                                val fileName = "db_${url.hashCode()}$extension"
+                                val fileName = state.localFileName
                                 context.openFileOutput(
                                     fileName,
                                     Context.MODE_PRIVATE
@@ -371,69 +383,60 @@ fun OptionsScreen() {
                         scope.launch {
                             isVerifying = true
                             verificationError = null
-                            
-                            if (urlInput.startsWith("local://") && selectedFileUri != null) {
-                                try {
-                                    val content = context.contentResolver.openInputStream(selectedFileUri!!)?.use { 
-                                        it.readBytes()
-                                    }
-                                    if (content != null) {
-                                        val extension = if (urlInput.endsWith(".db")) ".db" else ".json"
-                                        val fileName = "db_${urlInput.hashCode()}$extension"
-                                        context.openFileOutput(fileName, android.content.Context.MODE_PRIVATE).use {
-                                            it.write(content)
-                                        }
 
-                                        if (editingUrl == null) {
-                                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.addDatabase(urlInput)
-                                        } else if (editingUrl != urlInput) {
-                                            val oldExtension = if (editingUrl!!.endsWith(".db")) ".db" else ".json"
-                                            val oldFileName = "db_${editingUrl!!.hashCode()}$oldExtension"
-                                            File(context.filesDir, oldFileName).delete()
-                                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.updateDatabase(editingUrl!!, urlInput)
+                            // temporary new state
+                            val state = DatabaseState(url = urlInput)
+
+                            if (state.isLocal) {
+                                if (selectedFileUri != null) {
+                                    try {
+                                        val content = context.contentResolver.openInputStream(selectedFileUri!!)?.use {
+                                            it.readBytes()
                                         }
-                                        showDialog = false
-                                    } else {
-                                        verificationError = "Failed to read file"
+                                        if (content != null) {
+                                            AppConfigManager.saveDatabaseSource(
+                                                context = context,
+                                                url = urlInput,
+                                                content = content,
+                                                oldUrl = editingUrl
+                                            )
+                                            showDialog = false
+                                        } else {
+                                            verificationError = "Failed to read file"
+                                        }
+                                    } catch (e: Exception) {
+                                        verificationError = "Error reading file: ${e.message}"
                                     }
-                                } catch (e: Exception) {
-                                    verificationError = "Error reading file: ${e.message}"
+                                } else {
+                                    // Editing existing local entry without picking a new file
+                                    showDialog = false
                                 }
-                            } else if (urlInput.startsWith("local://") && selectedFileUri == null) {
-                                // If editing an existing local entry but didn't pick a new file, just close
-                                showDialog = false
                             } else {
-                                val isSupportedUrl = urlInput.endsWith(".json", ignoreCase = true) || urlInput.endsWith(".db", ignoreCase = true)
-                                if (!isSupportedUrl) {
+                                // Check extension
+                                if (state.extension != ".json" && state.extension != ".db") {
                                     verificationError = "URL must end with .json or .db"
                                     isVerifying = false
                                     return@launch
                                 }
-                                
-                                val isValid = NetworkUtils.verifyUrl(urlInput)
-                                if (isValid) {
+
+                                if (NetworkUtils.verifyUrl(urlInput)) {
+                                    // Transition DB configuration settings immediately
                                     if (editingUrl == null) {
-                                        _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.addDatabase(urlInput)
+                                        AppConfigManager.addDatabase(urlInput)
                                     } else {
-                                        if (editingUrl != urlInput) {
-                                            val oldExtension = if (editingUrl!!.endsWith(".db")) ".db" else ".json"
-                                            val oldFileName = "db_${editingUrl!!.hashCode()}$oldExtension"
-                                            File(context.filesDir, oldFileName).delete()
-                                        }
-                                        _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.updateDatabase(editingUrl!!, urlInput)
+                                        AppConfigManager.updateDatabase(editingUrl!!, urlInput)
                                     }
-                                    scope.launch {
-                                        val response = NetworkUtils.getResponseFull(urlInput)
-                                        val content = if (response.isValid) {
-                                            response.text?.toByteArray(Charsets.UTF_8)
-                                        } else null
-                                        if (content != null) {
-                                            val extension = if (urlInput.endsWith(".db")) ".db" else ".json"
-                                            val fileName = "db_${urlInput.hashCode()}$extension"
-                                            context.openFileOutput(fileName, android.content.Context.MODE_PRIVATE).use {
-                                                it.write(content)
-                                            }
-                                        }
+
+                                    // Offload download & save completely to the background scope
+                                    val response = NetworkUtils.getResponseFull(urlInput)
+                                    val content = if (response.isValid) response.text?.toByteArray() else null
+                                    if (content != null) {
+                                        AppConfigManager.saveDatabaseSource(
+                                            context = context,
+                                            url = urlInput,
+                                            content = content,
+                                            oldUrl = editingUrl
+                                        )
                                     }
                                     showDialog = false
                                 } else {

@@ -10,6 +10,41 @@ enum class OrderBy(val displayName: String) {
 }
 
 @Serializable
+enum class DatabaseStatus {
+    INIT,
+    DOWNLOADING,
+    UNPACKING,
+    READY,
+    FAILED
+}
+
+@Serializable
+data class DatabaseState(
+    val url: String = "",
+    val status: DatabaseStatus = DatabaseStatus.INIT,
+    val progress: Float = 0f,
+    val errorMessage: String? = null,
+    val sizeInBytes: Long = 0L
+) {
+    val extension: String
+        get() = if (url.endsWith(".db")) ".db" else ".json"
+
+    val isLocal: Boolean
+        get() = url.startsWith("local://")
+
+    val localFileName: String
+        get() = "db_${url.hashCode()}$extension"
+
+    val displayName: String
+        get() = when {
+            isLocal -> url.removePrefix("local://")
+            url.isEmpty() -> "Default (Assets)"
+            else -> url
+        }
+
+}
+
+@Serializable
 enum class ViewStyle(val displayName: String) {
     GALLERY("Gallery"),
     SEARCH_ENGINE("Search Engine"),
@@ -43,11 +78,21 @@ data class AppConfiguration(
     val networkConfig : NetworkConfig = NetworkConfig(),
 
     // main things
-    val databases: List<String> = emptyList(),
+    val databases: Map<String, DatabaseState> = emptyMap(),
     val activeDatabase: String? = null,
 ) {
     val dbconfig: DatabaseConfiguration
         get() = activeDatabase?.let { dbConfigs[it] } ?: defaultDbConfig
+
+    /**
+     * Gets the state (downloading, unpacking, ready, etc.) of the currently active database.
+     * Returns null if there is no active database or if it hasn't been registered in the map.
+     */
+    val activeDatabaseState: DatabaseState?
+        get() = activeDatabase?.let { databases[it] }
+
+    val activeDatabaseDisplayName: String
+        get() = activeDatabaseState?.displayName ?: "Default (Assets)"
 
     fun updateActiveDbConfig(update: (DatabaseConfiguration) -> DatabaseConfiguration): AppConfiguration {
         val activeDb = activeDatabase
