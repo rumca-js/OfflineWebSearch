@@ -34,12 +34,12 @@ data class NetworkConfig(
 
 @Serializable
 data class AppConfiguration(
+    // TOD do we need default db config?
     val defaultDbConfig: DatabaseConfiguration = DatabaseConfiguration(),
     val dbConfigs: Map<String, DatabaseConfiguration> = emptyMap(),
 
     // general app configuration, does
     val userAge: Int = 0,
-
     val networkConfig : NetworkConfig = NetworkConfig(),
 
     // main things
