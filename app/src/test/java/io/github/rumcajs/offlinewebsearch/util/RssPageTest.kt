@@ -92,4 +92,138 @@ class RssPageTest {
         assertNull(rssPage.getDescription())
         assertTrue(rssPage.getEntries().isEmpty())
     }
+
+    @Test
+    fun testRss20ChannelImageThumbnail() {
+        val xml = """
+            <rss version="2.0">
+              <channel>
+                <title>Feed With Image</title>
+                <image>
+                  <url>https://example.com/channel-image.png</url>
+                  <title>Feed With Image</title>
+                  <link>https://example.com</link>
+                </image>
+                <item>
+                  <title>Item 1</title>
+                  <link>https://example.com/item1</link>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/feed.xml", xml)
+        assertEquals(listOf("https://example.com/channel-image.png"), rssPage.getThumbnails())
+    }
+
+    @Test
+    fun testAtomLogoThumbnail() {
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Atom Feed</title>
+              <logo>https://example.com/logo.png</logo>
+              <entry>
+                <title>Entry 1</title>
+                <link href="https://example.com/entry1" />
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/atom.xml", xml)
+        assertEquals(listOf("https://example.com/logo.png"), rssPage.getThumbnails())
+    }
+
+    @Test
+    fun testAtomIconThumbnail() {
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Atom Feed</title>
+              <icon>https://example.com/icon.png</icon>
+              <entry>
+                <title>Entry 1</title>
+                <link href="https://example.com/entry1" />
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/atom.xml", xml)
+        assertEquals(listOf("https://example.com/icon.png"), rssPage.getThumbnails())
+    }
+
+    @Test
+    fun testYouTubeMediaThumbnail() {
+        val xml = """
+            <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+              <title>YouTube Channel</title>
+              <entry>
+                <title>Video 1</title>
+                <link href="https://www.youtube.com/watch?v=abc123" />
+                <media:group>
+                  <media:thumbnail url="https://i.ytimg.com/vi/abc123/hqdefault.jpg" />
+                </media:group>
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://www.youtube.com/feeds/videos.xml?channel_id=123", xml)
+        val entries = rssPage.getEntries()
+        assertEquals(1, entries.size)
+        assertEquals("https://i.ytimg.com/vi/abc123/hqdefault.jpg", entries[0].thumbnail)
+    }
+
+    @Test
+    fun testChannelMediaThumbnail() {
+        val xml = """
+            <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+              <channel>
+                <title>Feed With Media Thumbnail</title>
+                <media:thumbnail url="https://example.com/media-thumb.jpg" />
+                <item>
+                  <title>Item 1</title>
+                  <link>https://example.com/item1</link>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/feed.xml", xml)
+        assertEquals(listOf("https://example.com/media-thumb.jpg"), rssPage.getThumbnails())
+    }
+
+    @Test
+    fun testItunesImageThumbnail() {
+        val xml = """
+            <rss version="2.0" xmlns:itunes="http://www.itunes.apple.com/dtds/podcast-1.0.dtd">
+              <channel>
+                <title>Podcast Feed</title>
+                <itunes:image href="https://example.com/podcast-art.jpg" />
+                <item>
+                  <title>Episode 1</title>
+                  <link>https://example.com/ep1</link>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/feed.xml", xml)
+        assertEquals(listOf("https://example.com/podcast-art.jpg"), rssPage.getThumbnails())
+    }
+
+    @Test
+    fun testNoChannelThumbnail() {
+        val xml = """
+            <rss version="2.0">
+              <channel>
+                <title>Feed Without Image</title>
+                <item>
+                  <title>Item 1</title>
+                  <link>https://example.com/item1</link>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/feed.xml", xml)
+        assertTrue(rssPage.getThumbnails().isEmpty())
+    }
 }

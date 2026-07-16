@@ -10,7 +10,6 @@ class RssPage(val link: String, val contents: String) : Page {
     private var feedTitle: String? = null
     private var feedDescription: String? = null
     private val entries = mutableListOf<RssEntry>()
-    // TODO read from channel -> thumbnails
     private val thumbnails = mutableListOf<String>()
 
 
@@ -25,6 +24,7 @@ class RssPage(val link: String, val contents: String) : Page {
 
                 var isAtom = false
                 var inEntry = false
+                var inChannelImage = false
                 var entryLink: String? = null
                 var entryTitle: String? = null
                 var entryDescription: String? = null
@@ -51,19 +51,42 @@ class RssPage(val link: String, val contents: String) : Page {
                                 entryDatePublished = null
                             }
 
-                            // Atom: link is an attribute
-                            if (isAtom && tag == "link" && inEntry) {
-                                val href = parser.getAttributeValue(null, "href")
-                                if (href != null && entryLink == null) {
-                                    entryLink = href
-                                }
-                            }
+                            if (inEntry) {
+                                // --- Entry-level START_TAG processing ---
 
-                            // media:thumbnail or enclosure url attribute
-                            if ((tag == "thumbnail" || tag == "enclosure") && inEntry) {
-                                val url = parser.getAttributeValue(null, "url")
-                                if (url != null && entryThumbnail == null) {
-                                    entryThumbnail = url
+                                // Atom: link is an attribute
+                                if (isAtom && tag == "link") {
+                                    val href = parser.getAttributeValue(null, "href")
+                                    if (href != null && entryLink == null) {
+                                        entryLink = href
+                                    }
+                                }
+
+                                // media:thumbnail or enclosure url attribute
+                                if (tag == "thumbnail" || tag == "enclosure") {
+                                    val url = parser.getAttributeValue(null, "url")
+                                    if (url != null && entryThumbnail == null) {
+                                        entryThumbnail = url
+                                    }
+                                }
+                            } else {
+                                // --- Channel-level START_TAG processing ---
+
+                                // media:thumbnail url attribute at channel level
+                                if (tag == "thumbnail") {
+                                    val url = parser.getAttributeValue(null, "url")
+                                    if (url != null) {
+                                        thumbnails.add(url)
+                                    }
+                                }
+
+                                // RSS 2.0 <image> block / itunes:image href attribute
+                                if (tag == "image") {
+                                    inChannelImage = true
+                                    val href = parser.getAttributeValue(null, "href")
+                                    if (href != null) {
+                                        thumbnails.add(href)
+                                    }
                                 }
                             }
 
@@ -125,6 +148,22 @@ class RssPage(val link: String, val contents: String) : Page {
                                             feedDescription = text.ifEmpty { null }
                                         }
                                     }
+                                    // RSS 2.0: <image><url>...</url></image>
+                                    "url" -> {
+                                        if (inChannelImage && text.isNotEmpty()) {
+                                            thumbnails.add(text)
+                                        }
+                                    }
+                                    // Atom: <logo> and <icon>
+                                    "logo", "icon" -> {
+                                        if (text.isNotEmpty()) {
+                                            thumbnails.add(text)
+                                        }
+                                    }
+                                }
+                                // End of RSS 2.0 <image> block
+                                if (tag == "image") {
+                                    inChannelImage = false
                                 }
                             }
 
