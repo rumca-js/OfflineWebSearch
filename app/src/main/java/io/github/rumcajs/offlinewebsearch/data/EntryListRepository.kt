@@ -54,98 +54,118 @@ object EntryListRepository {
         val allPlaces = mutableListOf<Entry>()
 
         if (activeDatabaseState == null) {
-            // Load from assets if no external database is active
-            assets.forEach { fileName ->
-                try {
-                    context.assets.open(fileName).bufferedReader().use { reader ->
-                        val jsonString = reader.readText()
-                        val places: List<Entry> = jsonConfig.decodeFromString(jsonString)
-                        allPlaces.addAll(places)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+            val assetEntries = loadEntriesFromAssets(context, assets)
+            allPlaces.addAll(assetEntries)
         } else {
-            // Load ONLY the active database from local storage
-            val extension = activeDatabaseState.extension
-            val isSqlite = extension == ".db"
-            val fileName = activeDatabaseState.localFileName
-            val file = File(context.filesDir, fileName)
-            if (file.exists()) {
-                if (isSqlite) {
-                    try {
-                        val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-                        val cursor = db.rawQuery("""
+            val entries = loadEntriesFromSql(context, activeDatabaseState)
+            allPlaces.addAll(entries)
+        }
+
+        allPlaces
+    }
+
+    private fun loadEntriesFromAssets(context: Context, assets: List<String>): List<Entry> {
+        val loadedPlaces = mutableListOf<Entry>()
+
+        assets.forEach { fileName ->
+            try {
+                context.assets.open(fileName).bufferedReader().use { reader ->
+                    val jsonString = reader.readText()
+                    val places: List<Entry> = jsonConfig.decodeFromString(jsonString)
+                    loadedPlaces.addAll(places)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        return loadedPlaces
+    }
+
+    private fun loadEntriesFromSql(context: Context, activeDatabaseState: DatabaseState): List<Entry> {
+        val loadedPlaces = mutableListOf<Entry>()
+
+        // Load ONLY the active database from local storage
+        val extension = activeDatabaseState.extension
+        val isSqlite = extension == ".db"
+        val fileName = activeDatabaseState.localFileName
+        val file = File(context.filesDir, fileName)
+
+        if (file.exists()) {
+            if (isSqlite) {
+                try {
+                    val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+
+                    val sqlText = """
                             SELECT 
                                 l.title, l.description, l.thumbnail, l.link, l.page_rating_votes, l.page_rating, l.date_created, l.date_published, l.date_dead_since,
                                 l.age, l.author, l.album, l.language, l.status_code, l.manual_status_code, l.bookmarked,
                                 t.tag 
                             FROM linkdatamodel l 
                             LEFT JOIN entrycompactedtags t ON l.id = t.entry_id
-                        """.trimIndent(), null)
-                        cursor.use {
-                            while (it.moveToNext()) {
-                                val title = it.getString(it.getColumnIndexOrThrow("title"))
-                                val description = it.getString(it.getColumnIndexOrThrow("description"))
-                                val thumbnail = it.getString(it.getColumnIndexOrThrow("thumbnail"))
-                                val link = it.getString(it.getColumnIndexOrThrow("link"))
-                                val votes = it.getInt(it.getColumnIndexOrThrow("page_rating_votes"))
-                                val rating = it.getInt(it.getColumnIndexOrThrow("page_rating"))
-                                val dateCreated = it.getString(it.getColumnIndexOrThrow("date_created"))
-                                val datePublished = it.getString(it.getColumnIndexOrThrow("date_published"))
-                                val dateDeadSince = it.getString(it.getColumnIndexOrThrow("date_dead_since"))
-                                val author = it.getString(it.getColumnIndexOrThrow("author"))
-                                val album = it.getString(it.getColumnIndexOrThrow("album"))
-                                val language = it.getString(it.getColumnIndexOrThrow("language"))
-                                val age = it.getInt(it.getColumnIndexOrThrow("age"))
-                                val statusCode = it.getInt(it.getColumnIndexOrThrow("status_code"))
-                                val manualStatusCode = it.getInt(it.getColumnIndexOrThrow("manual_status_code"))
-                                val bookmarked = it.getInt(it.getColumnIndexOrThrow("bookmarked")) == 1
-                                val tagString = it.getString(it.getColumnIndexOrThrow("tag"))
-                                val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                        """.trimIndent()
 
-                                allPlaces.add(
-                                    Entry(
-                                        link = link,
-                                        title = title,
-                                        description = description,
-                                        thumbnail = thumbnail,
-                                        author = author,
-                                        album = album,
-                                        language = language,
-                                        page_rating_votes = votes,
-                                        page_rating = rating,
-                                        date_created = dateCreated,
-                                        date_published = datePublished,
-                                        date_dead_since = dateDeadSince,
-                                        age = age,
-                                        status_code = statusCode,
-                                        manual_status_code = manualStatusCode,
-                                        bookmarked = bookmarked,
-                                        tags = tags
-                                    )
+                    val cursor = db.rawQuery(sqlText, null)
+                    cursor.use {
+                        while (it.moveToNext()) {
+                            val title = it.getString(it.getColumnIndexOrThrow("title"))
+                            val description = it.getString(it.getColumnIndexOrThrow("description"))
+                            val thumbnail = it.getString(it.getColumnIndexOrThrow("thumbnail"))
+                            val link = it.getString(it.getColumnIndexOrThrow("link"))
+                            val votes = it.getInt(it.getColumnIndexOrThrow("page_rating_votes"))
+                            val rating = it.getInt(it.getColumnIndexOrThrow("page_rating"))
+                            val dateCreated = it.getString(it.getColumnIndexOrThrow("date_created"))
+                            val datePublished = it.getString(it.getColumnIndexOrThrow("date_published"))
+                            val dateDeadSince = it.getString(it.getColumnIndexOrThrow("date_dead_since"))
+                            val author = it.getString(it.getColumnIndexOrThrow("author"))
+                            val album = it.getString(it.getColumnIndexOrThrow("album"))
+                            val language = it.getString(it.getColumnIndexOrThrow("language"))
+                            val age = it.getInt(it.getColumnIndexOrThrow("age"))
+                            val statusCode = it.getInt(it.getColumnIndexOrThrow("status_code"))
+                            val manualStatusCode = it.getInt(it.getColumnIndexOrThrow("manual_status_code"))
+                            val bookmarked = it.getInt(it.getColumnIndexOrThrow("bookmarked")) == 1
+                            val tagString = it.getString(it.getColumnIndexOrThrow("tag"))
+                            val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+
+                            loadedPlaces.add(
+                                Entry(
+                                    link = link,
+                                    title = title,
+                                    description = description,
+                                    thumbnail = thumbnail,
+                                    author = author,
+                                    album = album,
+                                    language = language,
+                                    page_rating_votes = votes,
+                                    page_rating = rating,
+                                    date_created = dateCreated,
+                                    date_published = datePublished,
+                                    date_dead_since = dateDeadSince,
+                                    age = age,
+                                    status_code = statusCode,
+                                    manual_status_code = manualStatusCode,
+                                    bookmarked = bookmarked,
+                                    tags = tags
                                 )
-                            }
+                            )
                         }
-                        db.close()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
-                } else {
-                    try {
-                        file.bufferedReader().use { reader ->
-                            val jsonString = reader.readText()
-                            val entries: List<Entry> = jsonConfig.decodeFromString(jsonString)
-                            allPlaces.addAll(entries)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    db.close()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                try {
+                    file.bufferedReader().use { reader ->
+                        val jsonString = reader.readText()
+                        val entries: List<Entry> = jsonConfig.decodeFromString(jsonString)
+                        loadedPlaces.addAll(entries)
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }
-
-        allPlaces
+        return loadedPlaces
     }
 }

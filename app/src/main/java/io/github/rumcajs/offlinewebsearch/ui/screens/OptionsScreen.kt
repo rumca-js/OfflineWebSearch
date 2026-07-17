@@ -389,6 +389,7 @@ fun OptionsScreen() {
 
                             if (state.isLocal) {
                                 if (selectedFileUri != null) {
+                                    // TODO extract to method
                                     try {
                                         val content = context.contentResolver.openInputStream(selectedFileUri!!)?.use {
                                             it.readBytes()
