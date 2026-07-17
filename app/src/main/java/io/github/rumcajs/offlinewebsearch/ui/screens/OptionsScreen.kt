@@ -33,6 +33,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipInputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +72,109 @@ fun OptionsScreen() {
         }
     }
 
+    // TODO - check if it should be moved to other file
+    suspend fun handleSaveDatabaseLocal(
+        urlInput: String,
+        editingUrl: String?,
+        selectedFileUri: Uri?
+    ) {
+        if (selectedFileUri != null) {
+            try {
+                val content = context.contentResolver.openInputStream(selectedFileUri)?.use {
+                    it.readBytes()
+                }
+                if (content != null) {
+                    AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
+                    showDialog = false
+                } else {
+                    verificationError = "Failed to read file"
+                }
+            } catch (e: Exception) {
+                verificationError = "Error reading file: ${e.message}"
+            }
+        } else {
+            showDialog = false
+        }
+    }
+
+    // move to somewhere
+    fun unzipDatabaseBytes(zipBytes: ByteArray): ByteArray? {
+        return try {
+            ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    // Find the actual database file inside the zip
+                    if (!entry.isDirectory && entry.name.endsWith(".db")) {
+                        val buffer = ByteArray(1024)
+                        val out = ByteArrayOutputStream()
+                        var len: Int
+                        while (zis.read(buffer).also { len = it } > 0) {
+                            out.write(buffer, 0, len)
+                        }
+                        return out.toByteArray()
+                    }
+                    entry = zis.nextEntry
+                }
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun handleSaveDatabaseFromInternet(
+        urlInput: String,
+        editingUrl: String?,
+        selectedFileUri: Uri?
+    ) {
+        val state = DatabaseState(url = urlInput)
+
+        // 1. Update extension check to include .db.zip
+        val isZip = urlInput.endsWith(".db.zip", ignoreCase = true)
+        if (state.extension != ".json" && state.extension != ".db" && !isZip) {
+            verificationError = "URL must end with .json, .db, or .db.zip"
+            isVerifying = false
+            return
+        }
+
+        if (NetworkUtils.verifyUrl(urlInput)) {
+            if (editingUrl == null) {
+                AppConfigManager.addDatabase(urlInput)
+            } else {
+                AppConfigManager.updateDatabase(editingUrl, urlInput)
+            }
+
+            val response = NetworkUtils.executeRequestBinary(urlInput)
+
+            // 2. Fetch raw binary bytes instead of string text
+            // Note: Change 'response.bytes' to whatever property your NetworkUtils uses for binary data
+            var content = if (response.isValid) response.bytes else null
+
+            if (content != null) {
+                // 3. Unpack if it's a zip file
+                if (isZip) {
+                    val unpackedContent = unzipDatabaseBytes(content)
+                    if (unpackedContent != null) {
+                        content = unpackedContent
+                    } else {
+                        verificationError = "Failed to extract .db from zip file"
+                        isVerifying = false
+                        return
+                    }
+                }
+
+                // 4. Save the final unpacked binary data
+                AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
+                showDialog = false
+            } else {
+                verificationError = "Failed to download database files"
+            }
+        } else {
+            verificationError = "Invalid URL or server unreachable"
+        }
+    }
+
     suspend fun handleSaveDatabase(
         urlInput: String,
         editingUrl: String?,
@@ -80,47 +186,9 @@ fun OptionsScreen() {
         val state = DatabaseState(url = urlInput)
 
         if (state.isLocal) {
-            if (selectedFileUri != null) {
-                try {
-                    val content = context.contentResolver.openInputStream(selectedFileUri)?.use {
-                        it.readBytes()
-                    }
-                    if (content != null) {
-                        AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
-                        showDialog = false
-                    } else {
-                        verificationError = "Failed to read file"
-                    }
-                } catch (e: Exception) {
-                    verificationError = "Error reading file: ${e.message}"
-                }
-            } else {
-                showDialog = false
-            }
+            handleSaveDatabaseLocal(urlInput, editingUrl, selectedFileUri)
         } else {
-            // Check extension
-            if (state.extension != ".json" && state.extension != ".db") {
-                verificationError = "URL must end with .json or .db"
-                isVerifying = false
-                return
-            }
-
-            if (NetworkUtils.verifyUrl(urlInput)) {
-                if (editingUrl == null) {
-                    AppConfigManager.addDatabase(urlInput)
-                } else {
-                    AppConfigManager.updateDatabase(editingUrl, urlInput)
-                }
-
-                val response = NetworkUtils.getResponseFull(urlInput)
-                val content = if (response.isValid) response.text?.toByteArray() else null
-                if (content != null) {
-                    AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
-                }
-                showDialog = false
-            } else {
-                verificationError = "Invalid URL or server unreachable"
-            }
+            handleSaveDatabaseFromInternet(urlInput, editingUrl, selectedFileUri)
         }
         isVerifying = false
     }
