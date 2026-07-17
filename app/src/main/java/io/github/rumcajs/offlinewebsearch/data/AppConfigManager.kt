@@ -18,7 +18,8 @@ import java.io.File
  * Can be updated from various sources.
  */
 object AppConfigManager {
-    private const val CONFIG_FILE_NAME = "app_config.json"
+    private const val APP_CONFIG_FILE_NAME = "app_config.json"
+    private const val NETWORK_CONFIG_FILE_NAME = "network_config.json"
     private var appContext: Context? = null
 
     // Reuse a single Scope for background disk I/O tasks
@@ -51,9 +52,9 @@ object AppConfigManager {
 
     private fun loadPersistedConfigSync(context: Context) {
         try {
-            val file = context.getFileStreamPath(CONFIG_FILE_NAME)
+            val file = context.getFileStreamPath(APP_CONFIG_FILE_NAME)
             if (file != null && file.exists()) {
-                context.openFileInput(CONFIG_FILE_NAME).bufferedReader().use { reader ->
+                context.openFileInput(APP_CONFIG_FILE_NAME).bufferedReader().use { reader ->
                     val jsonString = reader.readText()
                     val persistedConfig = json.decodeFromString<AppConfiguration>(jsonString)
                     _config.update { currentConfig ->
@@ -68,7 +69,7 @@ object AppConfigManager {
 
     private fun loadNetworkConfigSync(context: Context) {
         try {
-            context.assets.open("network_config.json").bufferedReader().use { reader ->
+            context.assets.open(NETWORK_CONFIG_FILE_NAME).bufferedReader().use { reader ->
                 val jsonString = reader.readText()
                 val networkConfig = json.decodeFromString<NetworkConfig>(jsonString)
                 _config.update {
@@ -86,7 +87,7 @@ object AppConfigManager {
         configScope.launch {
             try {
                 val jsonString = json.encodeToString(currentConfig)
-                context.openFileOutput(CONFIG_FILE_NAME, Context.MODE_PRIVATE).use { output ->
+                context.openFileOutput(APP_CONFIG_FILE_NAME, Context.MODE_PRIVATE).use { output ->
                     output.write(jsonString.toByteArray())
                 }
             } catch (e: Exception) {
