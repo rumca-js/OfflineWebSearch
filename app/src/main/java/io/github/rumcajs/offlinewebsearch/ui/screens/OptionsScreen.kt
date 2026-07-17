@@ -69,6 +69,62 @@ fun OptionsScreen() {
         }
     }
 
+    suspend fun handleSaveDatabase(
+        urlInput: String,
+        editingUrl: String?,
+        selectedFileUri: Uri?
+    ) {
+        isVerifying = true
+        verificationError = null
+
+        val state = DatabaseState(url = urlInput)
+
+        if (state.isLocal) {
+            if (selectedFileUri != null) {
+                try {
+                    val content = context.contentResolver.openInputStream(selectedFileUri)?.use {
+                        it.readBytes()
+                    }
+                    if (content != null) {
+                        AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
+                        showDialog = false
+                    } else {
+                        verificationError = "Failed to read file"
+                    }
+                } catch (e: Exception) {
+                    verificationError = "Error reading file: ${e.message}"
+                }
+            } else {
+                showDialog = false
+            }
+        } else {
+            // Check extension
+            if (state.extension != ".json" && state.extension != ".db") {
+                verificationError = "URL must end with .json or .db"
+                isVerifying = false
+                return
+            }
+
+            if (NetworkUtils.verifyUrl(urlInput)) {
+                if (editingUrl == null) {
+                    AppConfigManager.addDatabase(urlInput)
+                } else {
+                    AppConfigManager.updateDatabase(editingUrl, urlInput)
+                }
+
+                val response = NetworkUtils.getResponseFull(urlInput)
+                val content = if (response.isValid) response.text?.toByteArray() else null
+                if (content != null) {
+                    AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
+                }
+                showDialog = false
+            } else {
+                verificationError = "Invalid URL or server unreachable"
+            }
+        }
+        isVerifying = false
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -381,70 +437,7 @@ fun OptionsScreen() {
                 Button(
                     onClick = {
                         scope.launch {
-                            isVerifying = true
-                            verificationError = null
-
-                            // temporary new state
-                            val state = DatabaseState(url = urlInput)
-
-                            if (state.isLocal) {
-                                if (selectedFileUri != null) {
-                                    // TODO extract to method
-                                    try {
-                                        val content = context.contentResolver.openInputStream(selectedFileUri!!)?.use {
-                                            it.readBytes()
-                                        }
-                                        if (content != null) {
-                                            AppConfigManager.saveDatabaseSource(
-                                                context = context,
-                                                url = urlInput,
-                                                content = content,
-                                                oldUrl = editingUrl
-                                            )
-                                            showDialog = false
-                                        } else {
-                                            verificationError = "Failed to read file"
-                                        }
-                                    } catch (e: Exception) {
-                                        verificationError = "Error reading file: ${e.message}"
-                                    }
-                                } else {
-                                    // Editing existing local entry without picking a new file
-                                    showDialog = false
-                                }
-                            } else {
-                                // Check extension
-                                if (state.extension != ".json" && state.extension != ".db") {
-                                    verificationError = "URL must end with .json or .db"
-                                    isVerifying = false
-                                    return@launch
-                                }
-
-                                if (NetworkUtils.verifyUrl(urlInput)) {
-                                    // Transition DB configuration settings immediately
-                                    if (editingUrl == null) {
-                                        AppConfigManager.addDatabase(urlInput)
-                                    } else {
-                                        AppConfigManager.updateDatabase(editingUrl!!, urlInput)
-                                    }
-
-                                    // Offload download & save completely to the background scope
-                                    val response = NetworkUtils.getResponseFull(urlInput)
-                                    val content = if (response.isValid) response.text?.toByteArray() else null
-                                    if (content != null) {
-                                        AppConfigManager.saveDatabaseSource(
-                                            context = context,
-                                            url = urlInput,
-                                            content = content,
-                                            oldUrl = editingUrl
-                                        )
-                                    }
-                                    showDialog = false
-                                } else {
-                                    verificationError = "Invalid URL or server unreachable"
-                                }
-                            }
-                            isVerifying = false
+                            handleSaveDatabase(urlInput, editingUrl, selectedFileUri)
                         }
                     },
                     enabled = urlInput.isNotBlank() && !isVerifying
@@ -462,6 +455,7 @@ fun OptionsScreen() {
             }
         )
     }
+
 }
 
 private fun getFileName(context: Context, uri: Uri): String? {
@@ -488,6 +482,7 @@ private fun getFileName(context: Context, uri: Uri): String? {
     }
     return result
 }
+
 
 @Composable
 fun DatabaseItem(url: String, onEdit: () -> Unit, onDelete: () -> Unit, onUpdate: () -> Unit) {
