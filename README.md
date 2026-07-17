@@ -29,6 +29,8 @@ The application is highly customizable and allows you to load different database
  - [Awesome Lists](https://github.com/rumca-js/awesome-database-awesomelists)
  - [Other](https://github.com/rumca-js/rumca-js.github.io/data), [List of files](https://github.com/rumca-js/rumca-js.github.io/data/databases.txt)
 
+The databases need to comply specification maintained in the code of [linkarchivetools](https://github.com/rumca-js/linkarchivetools)
+
 # Why use Offline Web Search?
 
  - some apps require you to have accounts, keep your data, sell your data
