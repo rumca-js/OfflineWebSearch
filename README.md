@@ -27,6 +27,7 @@ The application is highly customizable and allows you to load different database
  - [Feeds](https://github.com/rumca-js/awesome-database-feeds)
  - [Top Domains](https://github.com/rumca-js/awesome-database-top)
  - [Awesome Lists](https://github.com/rumca-js/awesome-database-awesomelists)
+ - [Other](https://github.com/rumca-js/rumca-js.github.io/data), [List of files](https://github.com/rumca-js/rumca-js.github.io/data/databases.txt)
 
 # Why use Offline Web Search?
 
