@@ -338,7 +338,7 @@ object AppConfigManager {
         }
     }
 
-    private fun unzipDatabaseBytes(zipBytes: ByteArray): ByteArray? {
+    internal fun unzipDatabaseBytes(zipBytes: ByteArray): ByteArray? {
         return try {
             ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
                 var entry = zis.nextEntry
