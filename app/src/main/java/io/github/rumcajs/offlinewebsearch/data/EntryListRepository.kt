@@ -168,4 +168,67 @@ object EntryListRepository {
         }
         return loadedPlaces
     }
+
+    suspend fun addEntryToSql(context: Context, activeDatabaseState: DatabaseState, entry: Entry): Boolean = withContext(Dispatchers.IO) {
+        val extension = activeDatabaseState.extension
+        if (extension != ".db") return@withContext false
+
+        val fileName = activeDatabaseState.localFileName
+        val file = File(context.filesDir, fileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            // Open database in OPEN_READWRITE mode
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            
+            // Put columns in ContentValues
+            val values = android.content.ContentValues().apply {
+                put("link", entry.link)
+                put("title", entry.title)
+                put("description", entry.description)
+                put("author", entry.author)
+                put("album", entry.album)
+                put("language", entry.language)
+                put("page_rating_votes", entry.page_rating_votes ?: 0)
+                put("page_rating", entry.page_rating ?: 0)
+                put("thumbnail", entry.thumbnail)
+                put("date_created", entry.date_created)
+                put("date_published", entry.date_published)
+                put("date_dead_since", entry.date_dead_since)
+                put("age", entry.age ?: 0)
+                put("status_code", entry.status_code ?: 0)
+                put("manual_status_code", entry.manual_status_code ?: 0)
+                put("bookmarked", if (entry.bookmarked == true) 1 else 0)
+            }
+
+            db.beginTransaction()
+            try {
+                // 1. Insert into linkdatamodel
+                val rowId = db.insert("linkdatamodel", null, values)
+                if (rowId == -1L) {
+                    throw android.database.SQLException("Failed to insert row into linkdatamodel")
+                }
+
+                // 2. Insert tags if any exist
+                if (!entry.tags.isNullOrEmpty()) {
+                    entry.tags.forEach { tag ->
+                        val tagValues = android.content.ContentValues().apply {
+                            put("entry_id", rowId)
+                            put("tag", tag)
+                        }
+                        db.insert("entrycompactedtags", null, tagValues)
+                    }
+                }
+
+                db.setTransactionSuccessful()
+                true
+            } finally {
+                db.endTransaction()
+                db.close()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 }

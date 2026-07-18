@@ -27,7 +27,8 @@ data class DatabaseState(
     val status: DatabaseStatus = DatabaseStatus.INIT,
     val progress: Float = 0f,
     val errorMessage: String? = null,
-    val sizeInBytes: Long = 0L
+    val sizeInBytes: Long = 0L,
+    val isReadOnly: Boolean = true
 ) {
     /** The storage extension of the local file: ".db" or ".json" */
     val extension: String
