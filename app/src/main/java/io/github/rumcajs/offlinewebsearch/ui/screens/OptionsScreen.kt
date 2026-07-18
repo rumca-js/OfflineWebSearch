@@ -128,7 +128,7 @@ fun OptionsScreen() {
         editingUrl: String?,
         selectedFileUri: Uri?
     ) {
-        val state = DatabaseState(url = urlInput)
+        val state = DatabaseState.fromUrl(urlInput)
 
         // 1. Update extension check to include .db.zip
         val isZip = urlInput.endsWith(".db.zip", ignoreCase = true)
@@ -183,7 +183,7 @@ fun OptionsScreen() {
         isVerifying = true
         verificationError = null
 
-        val state = DatabaseState(url = urlInput)
+        val state = DatabaseState.fromUrl(urlInput)
 
         if (state.isLocal) {
             handleSaveDatabaseLocal(urlInput, editingUrl, selectedFileUri)

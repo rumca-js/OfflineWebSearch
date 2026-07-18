@@ -20,20 +20,21 @@ enum class DatabaseStatus {
 
 @Serializable
 data class DatabaseState(
+    /** Network URL or local:// source path */
     val url: String = "",
+    /** File name used in app internal storage (e.g. "db_12345.db") */
+    val localFileName: String = "",
     val status: DatabaseStatus = DatabaseStatus.INIT,
     val progress: Float = 0f,
     val errorMessage: String? = null,
     val sizeInBytes: Long = 0L
 ) {
+    /** The storage extension of the local file: ".db" or ".json" */
     val extension: String
-        get() = if (url.endsWith(".db")) ".db" else ".json"
+        get() = if (localFileName.endsWith(".db")) ".db" else ".json"
 
     val isLocal: Boolean
         get() = url.startsWith("local://")
-
-    val localFileName: String
-        get() = "db_${url.hashCode()}$extension"
 
     val displayName: String
         get() = when {
@@ -42,7 +43,30 @@ data class DatabaseState(
             else -> url
         }
 
+    companion object {
+        /**
+         * Derives the local file name from a source URL.
+         * .db.zip URLs are stored as .db after unpacking.
+         */
+        private fun deriveLocalFileName(url: String): String {
+            val ext = when {
+                url.endsWith(".db.zip", ignoreCase = true) -> ".db"
+                url.endsWith(".db", ignoreCase = true) -> ".db"
+                else -> ".json"
+            }
+            return "db_${url.hashCode()}$ext"
+        }
+
+        /** Creates a DatabaseState with a localFileName derived from the URL */
+        fun fromUrl(url: String): DatabaseState {
+            return DatabaseState(
+                url = url,
+                localFileName = deriveLocalFileName(url)
+            )
+        }
+    }
 }
+
 
 @Serializable
 enum class ViewStyle(val displayName: String) {

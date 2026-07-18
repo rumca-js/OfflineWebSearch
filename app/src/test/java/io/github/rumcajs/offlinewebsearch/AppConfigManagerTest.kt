@@ -96,8 +96,8 @@ class AppConfigManagerTest {
             val originalConfig = AppConfiguration(
                 // Corrected: databases is now Map<String, DatabaseState>
                 databases = mapOf(
-                    "http://example.com/db1" to DatabaseState(url = "http://example.com/db1"),
-                    "http://example.com/db2" to DatabaseState(url = "http://example.com/db2")
+                    "http://example.com/db1" to DatabaseState.fromUrl("http://example.com/db1"),
+                    "http://example.com/db2" to DatabaseState.fromUrl("http://example.com/db2")
                 ),
                 activeDatabase = "http://example.com/db1",
                 userAge = 25,

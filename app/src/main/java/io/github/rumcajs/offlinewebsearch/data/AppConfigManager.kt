@@ -132,7 +132,7 @@ object AppConfigManager {
 
     fun addDatabase(url: String) {
         updateConfig {
-            it.copy(databases = it.databases + (url to DatabaseState(url = url)))
+            it.copy(databases = it.databases + (url to DatabaseState.fromUrl(url)))
         }
     }
 
@@ -153,7 +153,7 @@ object AppConfigManager {
             val newDatabases = config.databases.toMutableMap().apply {
                 remove(oldUrl)?.let { state ->
                     // Corrected: Update the copy's internal url property too!
-                    put(newUrl, state.copy(url = newUrl))
+                    put(newUrl, state.copy(url = newUrl, localFileName = DatabaseState.fromUrl(newUrl).localFileName))
                 }
             }
 
@@ -181,7 +181,7 @@ object AppConfigManager {
         content: ByteArray,
         oldUrl: String? = null
     ) {
-        val newState = DatabaseState(url = url)
+        val newState = DatabaseState.fromUrl(url)
 
         configScope.launch {
             try {
@@ -194,14 +194,14 @@ object AppConfigManager {
                 updateConfig { config ->
                     // Clean up old file if the URL actually changed
                     if (oldUrl != null && oldUrl != url) {
-                        val oldState = DatabaseState(url = oldUrl)
+                        val oldState = DatabaseState.fromUrl(oldUrl)
                         File(context.filesDir, oldState.localFileName).delete()
                     }
 
                     // Prepare updated maps
                     val newDatabases = config.databases.toMutableMap().apply {
                         if (oldUrl != null) {
-                            remove(oldUrl)?.let { state -> put(url, state.copy(url = url)) }
+                            remove(oldUrl)?.let { state -> put(url, state.copy(url = url, localFileName = newState.localFileName)) }
                         } else {
                             put(url, newState)
                         }
