@@ -345,12 +345,8 @@ object AppConfigManager {
                 while (entry != null) {
                     // Find the actual database file inside the zip
                     if (!entry.isDirectory && entry.name.endsWith(".db")) {
-                        val buffer = ByteArray(1024)
                         val out = ByteArrayOutputStream()
-                        var len: Int
-                        while (zis.read(buffer).also { len = it } > 0) {
-                            out.write(buffer, 0, len)
-                        }
+                        zis.copyTo(out)
                         return out.toByteArray()
                     }
                     entry = zis.nextEntry
