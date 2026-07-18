@@ -60,9 +60,11 @@ data class DatabaseState(
 
         /** Creates a DatabaseState with a localFileName derived from the URL */
         fun fromUrl(url: String): DatabaseState {
+            val localName = deriveLocalFileName(url)
             return DatabaseState(
                 url = url,
-                localFileName = deriveLocalFileName(url)
+                localFileName = localName,
+                isReadOnly = !localName.endsWith(".db")
             )
         }
     }

@@ -294,7 +294,12 @@ fun OptionsScreen() {
             ) {
                 // 1. Default Assets Option
                 DropdownMenuItem(
-                    text = { Text("Default (Assets)") },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Default (Assets)")
+                            ReadOnlyBadge(isReadOnly = true)
+                        }
+                    },
                     onClick = {
                         AppConfigManager.setActiveDatabase(null)
                         expanded = false
@@ -306,7 +311,12 @@ fun OptionsScreen() {
                 config.databases.forEach { (url, state) ->
                     DropdownMenuItem(
                         // Leverages the model's clean display name directly!
-                        text = { Text(state.displayName) },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(state.displayName)
+                                ReadOnlyBadge(isReadOnly = state.isReadOnly)
+                            }
+                        },
                         onClick = {
                             AppConfigManager.setActiveDatabase(url)
                             expanded = false
@@ -473,10 +483,10 @@ private fun getFileName(context: Context, uri: Uri): String? {
 
 @Composable
 fun DatabaseList(
-    databases: Map<String, io.github.rumcajs.offlinewebsearch.data.DatabaseState>,
+    databases: Map<String, DatabaseState>,
     onEdit: (String) -> Unit,
-    onDelete: (String, io.github.rumcajs.offlinewebsearch.data.DatabaseState) -> Unit,
-    onUpdate: (String, io.github.rumcajs.offlinewebsearch.data.DatabaseState) -> Unit
+    onDelete: (String, DatabaseState) -> Unit,
+    onUpdate: (String, DatabaseState) -> Unit
 ) {
     databases.forEach { (url, state) ->
         DatabaseItem(
@@ -516,15 +526,39 @@ fun StatusBadge(status: io.github.rumcajs.offlinewebsearch.data.DatabaseStatus) 
 }
 
 @Composable
+fun ReadOnlyBadge(isReadOnly: Boolean) {
+    val (backgroundColor, textColor, label) = if (isReadOnly) {
+        Triple(Color(0xFFF3E5F5), Color(0xFF7B1FA2), "READ-ONLY")
+    } else {
+        Triple(Color(0xFFE0F2F1), Color(0xFF00796B), "READ-WRITE")
+    }
+
+    Box(
+        modifier = Modifier
+            .padding(start = 8.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(backgroundColor)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = textColor,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
 fun DatabaseItem(
-    state: io.github.rumcajs.offlinewebsearch.data.DatabaseState,
+    state: DatabaseState,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onUpdate: () -> Unit
 ) {
-    val url = state.url
-    val isLocal = url.startsWith("local://")
-    val displayName = if (isLocal) url.removePrefix("local://") else url
+    val isLocal = state.isLocal
+    val displayName = state.displayName
 
     Row(
         modifier = Modifier
@@ -539,6 +573,7 @@ fun DatabaseItem(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 StatusBadge(state.status)
+                ReadOnlyBadge(isReadOnly = state.isReadOnly)
             }
             if (state.status == io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
                 Text(
