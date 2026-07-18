@@ -10,9 +10,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -30,12 +33,10 @@ import android.provider.OpenableColumns
 import android.content.Context
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.util.zip.ZipInputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +73,6 @@ fun OptionsScreen() {
         }
     }
 
-    // TODO - check if it should be moved to other file
     suspend fun handleSaveDatabaseLocal(
         urlInput: String,
         editingUrl: String?,
@@ -80,98 +80,25 @@ fun OptionsScreen() {
     ) {
         if (selectedFileUri != null) {
             try {
-                val content = context.contentResolver.openInputStream(selectedFileUri)?.use {
-                    it.readBytes()
-                }
-                if (content != null) {
-                    AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
-                    showDialog = false
-                } else {
-                    verificationError = "Failed to read file"
-                }
+                AppConfigManager.saveDatabaseLocal(context, urlInput, selectedFileUri, editingUrl)
+                showDialog = false
             } catch (e: Exception) {
-                verificationError = "Error reading file: ${e.message}"
+                verificationError = e.message ?: "Failed to read file"
             }
         } else {
             showDialog = false
         }
     }
 
-    // move to somewhere
-    fun unzipDatabaseBytes(zipBytes: ByteArray): ByteArray? {
-        return try {
-            ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
-                var entry = zis.nextEntry
-                while (entry != null) {
-                    // Find the actual database file inside the zip
-                    if (!entry.isDirectory && entry.name.endsWith(".db")) {
-                        val buffer = ByteArray(1024)
-                        val out = ByteArrayOutputStream()
-                        var len: Int
-                        while (zis.read(buffer).also { len = it } > 0) {
-                            out.write(buffer, 0, len)
-                        }
-                        return out.toByteArray()
-                    }
-                    entry = zis.nextEntry
-                }
-                null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
     suspend fun handleSaveDatabaseFromInternet(
         urlInput: String,
-        editingUrl: String?,
-        selectedFileUri: Uri?
+        editingUrl: String?
     ) {
-        val state = DatabaseState.fromUrl(urlInput)
-
-        // 1. Update extension check to include .db.zip
-        val isZip = urlInput.endsWith(".db.zip", ignoreCase = true)
-        if (state.extension != ".json" && state.extension != ".db" && !isZip) {
-            verificationError = "URL must end with .json, .db, or .db.zip"
-            isVerifying = false
-            return
-        }
-
-        if (NetworkUtils.verifyUrl(urlInput)) {
-            if (editingUrl == null) {
-                AppConfigManager.addDatabase(urlInput)
-            } else {
-                AppConfigManager.updateDatabase(editingUrl, urlInput)
-            }
-
-            val response = NetworkUtils.executeRequestBinary(urlInput)
-
-            // 2. Fetch raw binary bytes instead of string text
-            // Note: Change 'response.bytes' to whatever property your NetworkUtils uses for binary data
-            var content = if (response.isValid) response.bytes else null
-
-            if (content != null) {
-                // 3. Unpack if it's a zip file
-                if (isZip) {
-                    val unpackedContent = unzipDatabaseBytes(content)
-                    if (unpackedContent != null) {
-                        content = unpackedContent
-                    } else {
-                        verificationError = "Failed to extract .db from zip file"
-                        isVerifying = false
-                        return
-                    }
-                }
-
-                // 4. Save the final unpacked binary data
-                AppConfigManager.saveDatabaseSource(context, urlInput, content, editingUrl)
-                showDialog = false
-            } else {
-                verificationError = "Failed to download database files"
-            }
-        } else {
-            verificationError = "Invalid URL or server unreachable"
+        try {
+            AppConfigManager.saveDatabaseFromInternet(context, urlInput, editingUrl)
+            showDialog = false
+        } catch (e: Exception) {
+            verificationError = e.message ?: "Failed to download database files"
         }
     }
 
@@ -188,7 +115,7 @@ fun OptionsScreen() {
         if (state.isLocal) {
             handleSaveDatabaseLocal(urlInput, editingUrl, selectedFileUri)
         } else {
-            handleSaveDatabaseFromInternet(urlInput, editingUrl, selectedFileUri)
+            handleSaveDatabaseFromInternet(urlInput, editingUrl)
         }
         isVerifying = false
     }
@@ -411,56 +338,48 @@ fun OptionsScreen() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        config.databases.forEach { (url, state) ->
-            DatabaseItem(
-                url = url,
-                onEdit = {
-                    urlInput = url
-                    editingUrl = url
-                    verificationError = null
-                    selectedFileUri = null
-                    showDialog = true
-                },
-                onDelete = {
-                    AppConfigManager.removeDatabase(
-                        url
-                    )
-                    // Optionally delete the local file
-                    val fileName = state.localFileName
-                    File(context.filesDir, fileName).delete()
-                },
-                onUpdate = {
-                    if (!state.isLocal) {
-                        scope.launch {
-                            val response =
-                                NetworkUtils.getResponseFull(
-                                    url
-                                )
-                            val content = if (response.isValid) {
-                                response.text?.toByteArray(Charsets.UTF_8)
-                            } else null
-                            if (content != null) {
-                                val fileName = state.localFileName
-                                context.openFileOutput(
-                                    fileName,
-                                    Context.MODE_PRIVATE
-                                ).use {
-                                    it.write(content)
-                                }
-                                Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT)
-                                    .show()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Failed to update database",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+        DatabaseList(
+            databases = config.databases,
+            onEdit = { url ->
+                urlInput = url
+                editingUrl = url
+                verificationError = null
+                selectedFileUri = null
+                showDialog = true
+            },
+            onDelete = { url, state ->
+                AppConfigManager.removeDatabase(url)
+                // Optionally delete the local file
+                val fileName = state.localFileName
+                File(context.filesDir, fileName).delete()
+            },
+            onUpdate = { url, state ->
+                if (!state.isLocal) {
+                    scope.launch {
+                        val response = NetworkUtils.getResponseFull(url)
+                        val content = if (response.isValid) {
+                            response.text?.toByteArray(Charsets.UTF_8)
+                        } else null
+                        if (content != null) {
+                            val fileName = state.localFileName
+                            context.openFileOutput(
+                                fileName,
+                                Context.MODE_PRIVATE
+                            ).use {
+                                it.write(content)
                             }
+                            Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Failed to update database",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 }
-            )
-        }
+            }
+        )
     }
 
     if (showDialog) {
@@ -553,19 +472,83 @@ private fun getFileName(context: Context, uri: Uri): String? {
 
 
 @Composable
-fun DatabaseItem(url: String, onEdit: () -> Unit, onDelete: () -> Unit, onUpdate: () -> Unit) {
+fun DatabaseList(
+    databases: Map<String, io.github.rumcajs.offlinewebsearch.data.DatabaseState>,
+    onEdit: (String) -> Unit,
+    onDelete: (String, io.github.rumcajs.offlinewebsearch.data.DatabaseState) -> Unit,
+    onUpdate: (String, io.github.rumcajs.offlinewebsearch.data.DatabaseState) -> Unit
+) {
+    databases.forEach { (url, state) ->
+        DatabaseItem(
+            state = state,
+            onEdit = { onEdit(url) },
+            onDelete = { onDelete(url, state) },
+            onUpdate = { onUpdate(url, state) }
+        )
+    }
+}
+
+@Composable
+fun StatusBadge(status: io.github.rumcajs.offlinewebsearch.data.DatabaseStatus) {
+    val (backgroundColor, textColor, label) = when (status) {
+        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY -> Triple(Color(0xFFE8F5E9), Color(0xFF2E7D32), "READY")
+        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED -> Triple(Color(0xFFFFEBEE), Color(0xFFC62828), "FAILED")
+        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.DOWNLOADING -> Triple(Color(0xFFE3F2FD), Color(0xFF1565C0), "DOWNLOADING")
+        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.UNPACKING -> Triple(Color(0xFFFFF3E0), Color(0xFFEF6C00), "UNPACKING")
+        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.INIT -> Triple(Color(0xFFF5F5F5), Color(0xFF616161), "INIT")
+    }
+
+    Box(
+        modifier = Modifier
+            .padding(start = 8.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(backgroundColor)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = textColor,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun DatabaseItem(
+    state: io.github.rumcajs.offlinewebsearch.data.DatabaseState,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onUpdate: () -> Unit
+) {
+    val url = state.url
     val isLocal = url.startsWith("local://")
+    val displayName = if (isLocal) url.removePrefix("local://") else url
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = if (isLocal) url.removePrefix("local://") else url,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                StatusBadge(state.status)
+            }
+            if (state.status == io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
+                Text(
+                    text = state.errorMessage,
+                    color = Color(0xFFC62828),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
         if (!isLocal) {
             IconButton(onClick = onUpdate) {
                 Icon(Icons.Default.Refresh, contentDescription = "Update")
