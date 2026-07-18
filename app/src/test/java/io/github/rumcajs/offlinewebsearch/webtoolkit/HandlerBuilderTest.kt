@@ -265,4 +265,141 @@ class HandlerBuilderTest {
         assertNull(HandlerBuilder(postUrl).build())
         assertNull(HandlerBuilder(redditRoot).build())
     }
+
+    @Test
+    fun testOdyseeChannelHandler() {
+        val channelUrls = listOf(
+            "https://odysee.com/@SomeChannel",
+            "https://odysee.com/@SomeChannel:1",
+            "https://odysee.com/@SomeChannel:abc123",
+            "odysee.com/@AnotherChannel",
+            "https://www.odysee.com/@SomeChannel:1"
+        )
+
+        for (url in channelUrls) {
+            val handler = HandlerBuilder(url).build()
+            assertTrue("URL $url should be handled by OdyseeChannelHandler", handler is OdyseeChannelHandler)
+        }
+    }
+
+    @Test
+    fun testOdyseeNonChannelUrls() {
+        val nonChannelUrls = listOf(
+            "https://odysee.com",
+            "https://odysee.com/",
+            "https://odysee.com/some-video",
+            "https://odysee.com/$/embed/@SomeChannel",
+            "https://odysee.com/$/search?q=test"
+        )
+
+        for (url in nonChannelUrls) {
+            val handler = HandlerBuilder(url).build()
+            assertNull("URL $url should not match OdyseeChannelHandler", handler)
+        }
+    }
+
+    @Test
+    fun testOdyseeChannelHandlerFeeds() {
+        // Channel URL with claim ID
+        val channelWithClaim = "https://odysee.com/@SomeChannel:abc123"
+        val handler1 = OdyseeChannelHandler(channelWithClaim)
+        org.junit.Assert.assertEquals(
+            listOf("https://odysee.com/\$/rss/@SomeChannel:abc123"),
+            handler1.getFeeds()
+        )
+
+        // Channel URL without claim ID
+        val channelNoClaim = "https://odysee.com/@SomeChannel"
+        val handler2 = OdyseeChannelHandler(channelNoClaim)
+        org.junit.Assert.assertEquals(
+            listOf("https://odysee.com/\$/rss/@SomeChannel"),
+            handler2.getFeeds()
+        )
+
+        // RSS URL passed directly
+        val rssUrl = "https://odysee.com/\$/rss/@SomeChannel:abc123"
+        val handler3 = OdyseeChannelHandler(rssUrl)
+        assertTrue(handler3.isHandledBy())
+        org.junit.Assert.assertEquals(
+            listOf("https://odysee.com/\$/rss/@SomeChannel:abc123"),
+            handler3.getFeeds()
+        )
+    }
+
+    @Test
+    fun testOdyseeChannelHandlerGetChannelName() {
+        org.junit.Assert.assertEquals("SomeChannel:abc123", OdyseeChannelHandler("https://odysee.com/@SomeChannel:abc123").getChannelName())
+        org.junit.Assert.assertEquals("SomeChannel", OdyseeChannelHandler("https://odysee.com/@SomeChannel").getChannelName())
+        org.junit.Assert.assertEquals("SomeChannel:abc123", OdyseeChannelHandler("https://odysee.com/\$/rss/@SomeChannel:abc123").getChannelName())
+        assertNull(OdyseeChannelHandler("https://odysee.com/some-video").getChannelName())
+    }
+
+    @Test
+    fun testOdyseeChannelHandlerGetChannel() {
+        // getChannel returns canonical channel URL
+        val handler = OdyseeChannelHandler("https://odysee.com/@SomeChannel:abc123")
+        org.junit.Assert.assertEquals("https://odysee.com/@SomeChannel:abc123", handler.getChannel())
+
+        val handlerNoClaim = OdyseeChannelHandler("https://odysee.com/@SomeChannel")
+        org.junit.Assert.assertEquals("https://odysee.com/@SomeChannel", handlerNoClaim.getChannel())
+    }
+    @Test
+    fun testOdyseeVideoHandler() {
+        val videoUrls = listOf(
+            "https://odysee.com/@SomeChannel:1/my-cool-video:a",
+            "https://odysee.com/@SomeChannel:abc123/video-title:2b",
+            "https://odysee.com/@PeoplesCar:0/Vw-Action-2023:2",
+            "https://odysee.com/@SomeChannel/video-title",
+            "odysee.com/@SomeChannel:1/my-cool-video:a"
+        )
+
+        for (url in videoUrls) {
+            val handler = HandlerBuilder(url).build()
+            assertTrue("URL $url should be handled by OdyseeVideoHandler", handler is OdyseeVideoHandler)
+        }
+    }
+
+    @Test
+    fun testOdyseeVideoHandlerNotMatchedByChannelHandler() {
+        // Channel-only URLs (1 segment) must NOT match OdyseeVideoHandler
+        val channelUrls = listOf(
+            "https://odysee.com/@SomeChannel:1",
+            "https://odysee.com/@SomeChannel"
+        )
+        for (url in channelUrls) {
+            val handler = HandlerBuilder(url).build()
+            assertTrue("$url should be OdyseeChannelHandler, not OdyseeVideoHandler", handler is OdyseeChannelHandler)
+        }
+    }
+
+    @Test
+    fun testOdyseeVideoHandlerGetVideoSlug() {
+        org.junit.Assert.assertEquals(
+            "my-cool-video:a",
+            OdyseeVideoHandler("https://odysee.com/@SomeChannel:1/my-cool-video:a").getVideoSlug()
+        )
+        org.junit.Assert.assertEquals(
+            "video-title",
+            OdyseeVideoHandler("https://odysee.com/@SomeChannel/video-title").getVideoSlug()
+        )
+        assertNull(OdyseeVideoHandler("https://odysee.com/@SomeChannel").getVideoSlug())
+        assertNull(OdyseeVideoHandler("https://odysee.com/some-video").getVideoSlug())
+        assertNull(OdyseeVideoHandler("https://odysee.com/\$/rss/@SomeChannel:1").getVideoSlug())
+        assertNull(OdyseeVideoHandler("https://youtube.com/@Channel/video").getVideoSlug())
+    }
+
+    @Test
+    fun testOdyseeVideoHandlerGetClaimId() {
+        org.junit.Assert.assertEquals(
+            "a",
+            OdyseeVideoHandler("https://odysee.com/@SomeChannel:1/my-cool-video:a").getClaimId()
+        )
+        org.junit.Assert.assertEquals(
+            "2b",
+            OdyseeVideoHandler("https://odysee.com/@SomeChannel:abc123/video-title:2b").getClaimId()
+        )
+        assertNull(OdyseeVideoHandler("https://odysee.com/@SomeChannel/video-title").getClaimId())
+    }
 }
+
+

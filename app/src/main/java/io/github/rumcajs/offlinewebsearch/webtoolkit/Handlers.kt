@@ -257,6 +257,98 @@ class RedditChannelHandler(private val link: String) : PageHandler {
 }
 
 /**
+ * Handles Odysee videos.
+ * Supports URLs of the form:
+ *   https://odysee.com/@ChannelName:claimId/video-title:claimId
+ *   https://odysee.com/@ChannelName/video-title
+ */
+class OdyseeVideoHandler(private val link: String) : PageHandler {
+    override fun getUrl(): String = link
+    override fun isHandledBy(): Boolean = getVideoSlug() != null
+
+    /**
+     * Returns the video slug (title segment, possibly with claim ID) or null if this
+     * URL does not point to a video.
+     * A video URL has exactly two non-empty path segments where the first starts with '@'.
+     */
+    fun getVideoSlug(): String? {
+        val domain = UrlLocation(link).getDomain()
+        if (domain != "odysee.com" && domain != "www.odysee.com") return null
+        val path = getPath(link)
+        // Exclude special Odysee paths like /$/rss, /$/embed, /$/download, etc.
+        if (path.startsWith("/\$")) return null
+        val segments = path.split("/").filter { it.isNotEmpty() }
+        // Must have exactly 2 segments: channel (@Name or @Name:id) + video slug
+        if (segments.size < 2) return null
+        if (!segments[0].startsWith("@")) return null
+        return segments[1]
+    }
+
+    /** Returns the claim ID portion of the video slug if present (e.g. "abc123" from "video-title:abc123") */
+    fun getClaimId(): String? = getVideoSlug()?.substringAfter(":", "")?.takeIf { it.isNotEmpty() }
+
+    private fun getPath(link: String): String {
+        return try {
+            val adjusted = if (!link.contains("://")) "http://$link" else link
+            URI(adjusted).path ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+}
+
+/**
+ * Handles Odysee channels.
+ * Supports URLs of the form:
+ *   https://odysee.com/@ChannelName
+ *   https://odysee.com/@ChannelName:claimId
+ *   https://odysee.com/$/rss/@ChannelName:claimId  (RSS URL, accepted directly)
+ */
+class OdyseeChannelHandler(private val link: String) : PageHandler {
+    override fun getUrl(): String = link
+
+    /** Returns the channel name extracted from the URL, e.g. "ChannelName" */
+    fun getChannelName(): String? {
+        val path = getPath(link)
+        // Match /@ChannelName or /@ChannelName:claimId (possibly with trailing slash)
+        val rssPrefix = "/\$/rss/"
+        val effectivePath = if (path.startsWith(rssPrefix)) path.removePrefix(rssPrefix) else path
+        if (!effectivePath.startsWith("/@")) return null
+        return effectivePath.removePrefix("/@").split("/").firstOrNull { it.isNotEmpty() }
+    }
+
+    /** Returns the canonical channel URL, preserving the claim ID if present */
+    fun getChannelUrl(): String? {
+        val name = getChannelName() ?: return null
+        return "https://odysee.com/@$name"
+    }
+
+    override fun getChannel(): String = getChannelUrl() ?: ""
+
+    override fun isHandledBy(): Boolean {
+        val domain = UrlLocation(link).getDomain()
+        if (domain != "odysee.com" && domain != "www.odysee.com") return false
+        val path = getPath(link)
+        // Accept direct channel paths or RSS paths
+        return path.startsWith("/@") || path.startsWith("/\$/rss/@")
+    }
+
+    override fun getFeeds(): List<String> {
+        val name = getChannelName() ?: return emptyList()
+        return listOf("https://odysee.com/\$/rss/@$name")
+    }
+
+    private fun getPath(link: String): String {
+        return try {
+            val adjusted = if (!link.contains("://")) "http://$link" else link
+            URI(adjusted).path ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+}
+
+/**
  * Builder class that registers handlers and matches the first handler that handles the link.
  */
 class HandlerBuilder(private val link: String) {
@@ -273,7 +365,9 @@ class HandlerBuilder(private val link: String) {
                 YouTubeVideoHandler(link),
                 YouTubeChannelHandler(link),
                 GitHubRepositoryHandler(link),
-                RedditChannelHandler(link)
+                RedditChannelHandler(link),
+                OdyseeVideoHandler(link),
+                OdyseeChannelHandler(link)
             )
         } else {
             handlers

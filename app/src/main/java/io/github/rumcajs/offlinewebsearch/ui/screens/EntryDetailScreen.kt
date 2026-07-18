@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import android.widget.Toast
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
+import io.github.rumcajs.offlinewebsearch.webtoolkit.OdyseeChannelHandler
 import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeChannelHandler
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RedditChannelHandler
 
@@ -167,7 +168,7 @@ fun EntryDetailScreen(
             entry.link?.let { link ->
                 val handler = HandlerBuilder(link).build()
                 val channel = handler?.getChannel() ?: ""
-                val isChannel = handler is YouTubeChannelHandler || handler is RedditChannelHandler
+                val isChannel = handler is YouTubeChannelHandler || handler is RedditChannelHandler || handler is OdyseeChannelHandler
                 if (channel.isNotEmpty() && !isChannel) {
                     DetailRow(
                         label = "Channel",
