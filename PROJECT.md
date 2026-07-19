@@ -2,6 +2,7 @@
 
  - offline web search (focus on search). It is an android app
  - allows user to search and find links from SQLite databases
+ - this project description should be written as simple statements. Preferrably by lists
   
  - user is able to provide databases:
    -- .db file is a file that this application can use
@@ -47,3 +48,4 @@ Contains state of database, name of local files, and remote path
 # Code
 
  - write small functions, divide into small files
+ - provide doxygen for API, and classes
