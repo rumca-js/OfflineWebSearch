@@ -1,0 +1,3 @@
+ - db.zip files can be added by url. Databases are automatically downloaded and unpacked as needed
+ - provided support for odysee links
+ - state of database is written in list
