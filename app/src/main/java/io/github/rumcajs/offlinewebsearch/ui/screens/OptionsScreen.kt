@@ -31,6 +31,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 
@@ -560,13 +562,22 @@ fun DatabaseItem(
     val isLocal = state.isLocal
     val displayName = state.displayName
 
+    // 1. Keep track of the expanded state locally
+    var isExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        // 2. Make the text details column clickable to toggle expansion
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { isExpanded = !isExpanded }
+                .padding(vertical = 4.dp) // Extra padding to make tapping easier
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = displayName,
@@ -575,6 +586,19 @@ fun DatabaseItem(
                 StatusBadge(state.status)
                 ReadOnlyBadge(isReadOnly = state.isReadOnly)
             }
+
+            // 3. Smoothly animate showing the URL when tapped
+            AnimatedVisibility(visible = isExpanded) {
+                if (state.url.isNotBlank()) {
+                    Text(
+                        text = state.url,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
             if (state.status == io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
                 Text(
                     text = state.errorMessage,
@@ -584,6 +608,7 @@ fun DatabaseItem(
                 )
             }
         }
+
         if (!isLocal) {
             IconButton(onClick = onUpdate) {
                 Icon(Icons.Default.Refresh, contentDescription = "Update")

@@ -1,5 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.data
 
+import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -40,8 +41,13 @@ data class DatabaseState(
     val displayName: String
         get() = when {
             isLocal -> url.removePrefix("local://")
-            url.isEmpty() -> "Default (Assets)"
-            else -> url
+
+            url.isBlank() -> "Default (Assets)"
+
+            else -> {
+                val fileName = UrlLocation(url).getFileName()
+                fileName.ifEmpty { "Default (Assets)" }
+            }
         }
 
     companion object {

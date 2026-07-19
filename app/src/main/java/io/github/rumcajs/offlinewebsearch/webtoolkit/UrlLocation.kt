@@ -60,4 +60,24 @@ class UrlLocation(private val link: String?) {
             else -> trimmed
         }
     }
+
+    fun getFileName(): String {
+        if (link.isNullOrBlank()) return ""
+
+        return try {
+            // Using standard URI to cleanly parse the path away from queries/fragments
+            val path = URI(link).path ?: return ""
+
+            // Get the substring after the last slash
+            val fileName = path.substringAfterLast('/')
+
+            // If the URL ends with a trailing slash, fileName will be empty
+            fileName
+        } catch (e: Exception) {
+            // Fallback for malformed URLs: manually strip query parameters/fragments
+            // and grab the last segment
+            val cleanLink = link.substringBefore('?').substringBefore('#')
+            cleanLink.substringAfterLast('/')
+        }
+    }
 }
