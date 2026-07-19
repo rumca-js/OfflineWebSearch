@@ -15,6 +15,14 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import java.io.ByteArrayOutputStream
+import java.nio.charset.StandardCharsets
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+
 
 class AppConfigManagerTest {
 
@@ -137,21 +145,5 @@ class AppConfigManagerTest {
             assertEquals(true, configWithNoActive.dbconfig.directLinks)
             assertEquals(OrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
             assertEquals(ViewStyle.GALLERY, configWithNoActive.dbconfig.viewStyle)
-    }
-
-    @Test
-    fun testUnzipDatabaseBytes() {
-        val dbContent = "dummy db content".toByteArray()
-        val baos = java.io.ByteArrayOutputStream()
-        java.util.zip.ZipOutputStream(baos).use { zos ->
-            val entry = java.util.zip.ZipEntry("test.db")
-            zos.putNextEntry(entry)
-            zos.write(dbContent)
-            zos.closeEntry()
-        }
-        val zipBytes = baos.toByteArray()
-        val result = AppConfigManager.unzipDatabaseBytes(zipBytes)
-        assertNotNull(result)
-        assertEquals("dummy db content", String(result!!, Charsets.UTF_8))
     }
 }

@@ -3,8 +3,11 @@ package io.github.rumcajs.offlinewebsearch.webtoolkit
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.TimeUnit
 
 object NetworkUtils {
     // TODO move to statusCodes.kt
@@ -25,6 +28,17 @@ object NetworkUtils {
         if (statusCode >= 400)
             return true;
         return false;
+    }
+
+    val client: OkHttpClient by lazy {
+        val config = AppConfigManager.config.value
+
+        OkHttpClient.Builder()
+            .connectTimeout(config.networkConfig.connectTimeout.toLong(), TimeUnit.MILLISECONDS)
+            .readTimeout(config.networkConfig.readTimeout.toLong(), TimeUnit.MILLISECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
     }
 
     suspend fun verifyUrl(urlString: String): Boolean = withContext(Dispatchers.IO) {
@@ -56,52 +70,31 @@ object NetworkUtils {
         urlString: String,
         acceptHeader: String? = null
     ): PageResponseObject = withContext(Dispatchers.IO) {
-        var connection: HttpURLConnection? = null
         try {
             val config = AppConfigManager.config.value
-            val url = URL(urlString)
-            connection = url.openConnection() as HttpURLConnection
 
-            // 1. Set the request method to HEAD
-            connection.requestMethod = "HEAD"
+            val requestBuilder = Request.Builder()
+                .url(urlString)
+                .head()
+                .header("User-Agent", config.networkConfig.userAgent)
 
-            connection.connectTimeout = config.networkConfig.connectTimeout
-            connection.readTimeout = config.networkConfig.readTimeout
-            connection.setRequestProperty("User-Agent", config.networkConfig.userAgent)
-            if (acceptHeader != null) {
-                connection.setRequestProperty("Accept", acceptHeader)
+            acceptHeader?.let {
+                requestBuilder.header("Accept", it)
             }
 
-            val responseCode = connection.responseCode
-            val headers = connection.headerFields.mapNotNull { (key, value) ->
-                if (key != null) key to value else null
-            }.toMap()
-
-            // 2. Skip reading connection.inputStream. HEAD requests have no body.
-
-            if (isStatusCodeValid(responseCode)) {
+            client.newCall(requestBuilder.build()).execute().use { response ->
                 PageResponseObject(
-                    statusCode = responseCode,
-                    headers = headers,
-                    text = null // No body content to provide
-                )
-            } else {
-                PageResponseObject(
-                    statusCode = responseCode,
-                    headers = headers,
-                    text = null,
-                    error = "HTTP $responseCode"
+                    statusCode = response.code,
+                    headers = response.headers.toMultimap(),
+                    error = if (response.isSuccessful) null else "HTTP ${response.code}"
                 )
             }
         } catch (e: Exception) {
             PageResponseObject(
                 statusCode = -1,
                 headers = emptyMap(),
-                text = null,
                 error = e.localizedMessage ?: e.message ?: e.javaClass.simpleName
             )
-        } finally {
-            connection?.disconnect()
         }
     }
 
@@ -109,33 +102,26 @@ object NetworkUtils {
         urlString: String,
         acceptHeader: String? = null
     ): PageResponseObject = withContext(Dispatchers.IO) {
-        var connection: HttpURLConnection? = null
         try {
             val config = AppConfigManager.config.value
-            val url = URL(urlString)
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = config.networkConfig.connectTimeout
-            connection.readTimeout = config.networkConfig.readTimeout
-            connection.setRequestProperty("User-Agent", config.networkConfig.userAgent)
-            if (acceptHeader != null) {
-                connection.setRequestProperty("Accept", acceptHeader)
-            }
-            val responseCode = connection.responseCode
-            val headers = connection.headerFields.mapNotNull { (key, value) ->
-                if (key != null) key to value else null
-            }.toMap()
 
-            val stream = if (isStatusCodeValid(responseCode)) {
-                connection.inputStream
-            } else {
-                connection.errorStream
-            }
-            val text = stream?.use { it.bufferedReader().readText() }
+            val requestBuilder = Request.Builder()
+                .url(urlString)
+                .header("User-Agent", config.networkConfig.userAgent)
 
-            if (isStatusCodeValid(responseCode)) {
-                PageResponseObject(responseCode, headers, text=text)
-            } else {
-                PageResponseObject(responseCode, headers, text=text, error="HTTP $responseCode")
+            acceptHeader?.let {
+                requestBuilder.header("Accept", it)
+            }
+
+            client.newCall(requestBuilder.build()).execute().use { response ->
+                val text = response.body?.string()
+
+                PageResponseObject(
+                    statusCode = response.code,
+                    headers = response.headers.toMultimap(),
+                    text = text,
+                    error = if (response.isSuccessful) null else "HTTP ${response.code}"
+                )
             }
         } catch (e: Exception) {
             PageResponseObject(
@@ -144,8 +130,6 @@ object NetworkUtils {
                 text = null,
                 error = e.localizedMessage ?: e.message ?: e.javaClass.simpleName
             )
-        } finally {
-            connection?.disconnect()
         }
     }
 
@@ -153,49 +137,47 @@ object NetworkUtils {
         urlString: String,
         acceptHeader: String? = null
     ): PageResponseObject = withContext(Dispatchers.IO) {
-        var connection: HttpURLConnection? = null
+
         try {
             val config = AppConfigManager.config.value
-            val url = URL(urlString)
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = config.networkConfig.connectTimeout
-            connection.readTimeout = config.networkConfig.readTimeout
-            connection.setRequestProperty("User-Agent", config.networkConfig.userAgent)
-            if (acceptHeader != null) {
-                connection.setRequestProperty("Accept", acceptHeader)
-            }
-            val responseCode = connection.responseCode
-            val headers = connection.headerFields.mapNotNull { (key, value) ->
-                if (key != null) key to value else null
-            }.toMap()
 
-            val stream = if (isStatusCodeValid(responseCode)) {
-                connection.inputStream
-            } else {
-                connection.errorStream
+            val requestBuilder = Request.Builder()
+                .url(urlString)
+                .header("User-Agent", config.networkConfig.userAgent)
+
+            acceptHeader?.let {
+                requestBuilder.header("Accept", it)
             }
 
-            // 1. Read raw binary bytes instead of a String
-            val bytes = stream?.use { it.readBytes() }
+            client.newCall(requestBuilder.build()).execute().use { response ->
 
-            if (isStatusCodeValid(responseCode)) {
-                // 2. Pass bytes to your response object (Change this param match your constructor)
-                PageResponseObject(responseCode, headers, bytes = bytes)
-            } else {
-                // For errors, it's usually fine to convert bytes to text so you can read the error message
-                val errorText = bytes?.decodeToString()
-                PageResponseObject(responseCode, headers, text = errorText, error = "HTTP $responseCode")
+                val headers = response.headers.toMultimap()
+
+                val bytes = response.body?.bytes()
+
+                if (response.isSuccessful) {
+                    PageResponseObject(
+                        statusCode = response.code,
+                        headers = headers,
+                        bytes = bytes
+                    )
+                } else {
+                    PageResponseObject(
+                        statusCode = response.code,
+                        headers = headers,
+                        text = bytes?.decodeToString(),
+                        error = "HTTP ${response.code}"
+                    )
+                }
             }
         } catch (e: Exception) {
             PageResponseObject(
                 statusCode = -1,
                 headers = emptyMap(),
+                bytes = null,
                 text = null,
-                bytes = null, // Ensure safety initialization on crash
                 error = e.localizedMessage ?: e.message ?: e.javaClass.simpleName
             )
-        } finally {
-            connection?.disconnect()
         }
     }
 }

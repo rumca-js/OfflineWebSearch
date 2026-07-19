@@ -2,7 +2,6 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import android.net.Uri
-import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,11 +13,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import java.util.zip.ZipInputStream
+import java.util.zip.ZipFile
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+
 
 /**
  * Singleton to manage app configuration.
@@ -321,13 +321,20 @@ object AppConfigManager {
             }
 
             if (isZip) {
-                // Set status to UNPACKING
                 updateDatabaseStatus(url, DatabaseStatus.UNPACKING)
-                val unpackedContent = unzipDatabaseBytes(content)
-                if (unpackedContent != null) {
+                try {
+                    // This call will now directly throw the underlying error if it fails
+                    val unpackedContent = unzipDatabaseBytes(content, context.cacheDir)
                     content = unpackedContent
-                } else {
-                    throw IOException("Failed to extract .db from zip file")
+                } catch (e: Exception) {
+                    // Extract technical detail (e.g., "ZipException: Not a ZIP archive" or "NoSuchElementException: ...")
+                    val errorDescription = "${e.javaClass.simpleName}: ${e.localizedMessage ?: "Unknown error"}"
+
+                    // Log the detailed exception somewhere if needed
+                    // Log.e("UnpackError", "Failed to extract database", e)
+
+                    // Update your status or bubble up a comprehensive IOException
+                    throw IOException("Failed to extract .db from zip file ($errorDescription)", e)
                 }
             }
 
@@ -338,24 +345,51 @@ object AppConfigManager {
         }
     }
 
-    internal fun unzipDatabaseBytes(zipBytes: ByteArray): ByteArray? {
-        return try {
-            ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
-                var entry = zis.nextEntry
-                while (entry != null) {
-                    // Find the actual database file inside the zip
+    /**
+     * Unpacks a ZIP archive provided as a byte array and extracts the first database (.db) file found.
+     *
+     * ### Android Compatibility Warning
+     * This function specifically avoids using Android's native `java.util.zip.ZipInputStream`
+     * sequential parser. When a ZIP file is generated programmatically via streams (e.g., automated
+     * backend feeds or GitHub Actions), it often leaves the size and CRC metadata empty in the local
+     * header and appends a **Data Descriptor** block *after* the compressed data payload.
+     *
+     * Android's legacy `ZipInputStream` implementation is notoriously brittle and frequently throws a
+     * `ZipException` (e.g., CRC or malformed data errors) when it encounters these post-data descriptors
+     * in-flight.
+     *
+     * To circumvent this, this implementation uses a random-access approach (via `ZipFile` or a
+     * virtual `FileSystem`). By processing the Central Directory located at the end of the archive first,
+     * it guarantees successful decompression regardless of how the ZIP header flags were generated.
+     *
+     * @param zipBytes The raw byte array representing the compressed ZIP archive.
+     * @return A [ByteArray] containing the uncompressed `.db` file content if successfully found and
+     *         extracted; `null` if no matching database file is found or if an extraction error occurs.
+     */
+    @Throws(IOException::class, NoSuchElementException::class)
+    internal fun unzipDatabaseBytes(zipBytes: ByteArray, cacheDir: File): ByteArray {
+        val tempFile = File.createTempFile("temp_db", ".zip", cacheDir)
+
+        try {
+            tempFile.writeBytes(zipBytes)
+
+            ZipFile(tempFile).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
                     if (!entry.isDirectory && entry.name.endsWith(".db")) {
-                        val out = ByteArrayOutputStream()
-                        zis.copyTo(out)
-                        return out.toByteArray()
+                        zip.getInputStream(entry).use { inputStream ->
+                            val out = ByteArrayOutputStream()
+                            inputStream.copyTo(out)
+                            return out.toByteArray()
+                        }
                     }
-                    entry = zis.nextEntry
                 }
-                null
+                // If the loop finishes without returning, the file structure is fine but missing the target
+                throw NoSuchElementException("ZIP archive parsed successfully, but no file ending in '.db' was found inside.")
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
+        } finally {
+            tempFile.delete()
         }
     }
 
