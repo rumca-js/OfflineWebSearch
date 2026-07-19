@@ -25,7 +25,7 @@ The application is highly customizable and allows you to load different database
 ## Ready Databases
 
  - [Feeds](https://media.githubusercontent.com/media/rumca-js/awesome-database-feeds/refs/heads/main/feeds.db.zip)
- - [Top Domains](https://github.com/rumca-js/awesome-database-top/raw/refs/heads/main/internet.db.zip)
+ - [Top Domains](https://raw.githubusercontent.com/rumca-js/awesome-database-top/main/internet.db.zip)
  - [Awesome Lists](https://github.com/rumca-js/awesome-database-awesomelists/raw/refs/heads/main/awesomelists.db.zip)
  - [Books](https://github.com/rumca-js/rumca-js.github.io/raw/refs/heads/main/data/books.db.zip)
  - [Memes](https://github.com/rumca-js/rumca-js.github.io/raw/refs/heads/main/data/memes.db.zip)
