@@ -38,12 +38,21 @@ Contains state of database, name of local files, and remote path
 
  - Uses generics, builder
 
-## Search Operators
+### Search Operators
 
  - & - and
  - | - or
  - = - contains string
  - == - matches string
+
+## OptionsScreen
+
+ - Databases can be added from preconfigured list available at https://rumca-js.github.io/data/databases.txt
+ - Databases can be added manually: by link, or from local filesystem
+ - Configured databases shows state: read-only, ready (or not ready)
+ - Databases fetched from the internet can be re-fetched (what happens to added links?)
+ - Database can be edited, but link cannot be changed that way
+ - There should be a method of database export
 
 # Code
 
