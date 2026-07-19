@@ -72,7 +72,7 @@ fun AboutScreen() {
 
         SectionTitle("Ready Databases")
         Text(
-            text = "Explore and import pre-compiled offline databases to expand your search options. You can add them in the Options tab.",
+            text = "Explore and import pre-compiled offline databases to expand your search options. You can add them in the Options tab. Supported extensions: .db, .db.zip",
             style = MaterialTheme.typography.bodyMedium
         )
         

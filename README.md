@@ -31,6 +31,10 @@ The application is highly customizable and allows you to load different database
 
 The databases need to comply specification maintained in the code of [linkarchivetools](https://github.com/rumca-js/linkarchivetools)
 
+Supported database types, by extension:
+ - .db - SQLite table
+ - .db.zip - archived SQLite table
+
 # Why use Offline Web Search?
 
  - some apps require you to have accounts, keep your data, sell your data
