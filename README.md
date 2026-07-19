@@ -24,10 +24,17 @@ The application is highly customizable and allows you to load different database
 
 ## Ready Databases
 
- - [Feeds](https://github.com/rumca-js/awesome-database-feeds)
- - [Top Domains](https://github.com/rumca-js/awesome-database-top)
- - [Awesome Lists](https://github.com/rumca-js/awesome-database-awesomelists)
- - [Other](https://github.com/rumca-js/rumca-js.github.io/tree/main/data), [List of files](https://github.com/rumca-js/rumca-js.github.io/blob/main/data/databases.txt)
+ - [Feeds](https://rumca-js.github.io/data/feeds.db.zip)
+ - [Awesome Lists](https://rumca-js.github.io/data/awesomelists.db.zip)
+ - [Books](https://rumca-js.github.io/data/books.db.zip)
+ - [Memes](https://rumca-js.github.io/data/memes.db.zip)
+ - [Movies](https://rumca-js.github.io/data/movies.db.zip)
+ - [Music](https://rumca-js.github.io/data/music.db.zip)
+ - [Top](https://rumca-js.github.io/data/top.db.zip)
+ - [Video games](https://rumca-js.github.io/data/videogames.db.zip)
+ - [YouTube](https://rumca-js.github.io/data/youtube.db.zip)
+ 
+ [List of files](https://github.com/rumca-js/rumca-js.github.io/blob/main/data/databases.txt)
 
 The databases need to comply specification maintained in the code of [linkarchivetools](https://github.com/rumca-js/linkarchivetools)
 
