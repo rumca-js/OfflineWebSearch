@@ -41,6 +41,8 @@ The databases need to comply specification maintained in the code of [linkarchiv
 Supported database types, by extension:
  - .db - SQLite table
  - .db.zip - archived SQLite table
+ 
+Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
 
 # Why use Offline Web Search?
 
