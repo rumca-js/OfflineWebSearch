@@ -37,13 +37,14 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DatabasesScreen() {
+fun DatabasesScreen(
+    onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> }
+) {
     val config by AppConfigManager.config.collectAsState()
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
-    var selectedDetailState by remember { mutableStateOf<Pair<String?, DatabaseState>?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingUrl by remember { mutableStateOf<String?>(null) }
     var urlInput by remember { mutableStateOf("") }
@@ -132,7 +133,7 @@ fun DatabasesScreen() {
             state = defaultState,
             isActive = defaultIsActive,
             onCardClick = {
-                selectedDetailState = Pair(null, defaultState)
+                onNavigateToDatabaseDetail(null, defaultState)
             },
             onSetActive = {
                 AppConfigManager.setActiveDatabase(null)
@@ -144,14 +145,13 @@ fun DatabasesScreen() {
         // 2. Configured Databases
         config.databases.forEach { (url, state) ->
             val isActive = config.activeDatabase == url
-            val dbConfig = config.dbConfigs[url] ?: config.defaultDbConfig
 
             DatabaseCardItem(
                 name = state.displayName,
                 state = state,
                 isActive = isActive,
                 onCardClick = {
-                    selectedDetailState = Pair(url, state)
+                    onNavigateToDatabaseDetail(url, state)
                 },
                 onSetActive = {
                     AppConfigManager.setActiveDatabase(url)
@@ -186,36 +186,6 @@ fun DatabasesScreen() {
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
-    }
-
-    // Details Dialog when user taps a database
-    selectedDetailState?.let { (url, state) ->
-        val dbConfig = if (url == null) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
-        val isActive = if (url == null) config.activeDatabase == null else config.activeDatabase == url
-
-        DatabaseDetailDialog(
-            state = state,
-            dbConfig = dbConfig,
-            isActive = isActive,
-            onDismissRequest = { selectedDetailState = null },
-            onSetActive = { AppConfigManager.setActiveDatabase(url) },
-            onUpdate = if (url != null && !state.isLocal) {
-                {
-                    scope.launch {
-                        val response = NetworkUtils.getResponseFull(url)
-                        val content = if (response.isValid) response.text?.toByteArray(Charsets.UTF_8) else null
-                        if (content != null) {
-                            context.openFileOutput(state.localFileName, Context.MODE_PRIVATE).use {
-                                it.write(content)
-                            }
-                            Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "Failed to update database", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            } else null
-        )
     }
 
     // Add / Edit Database Dialog
