@@ -343,14 +343,70 @@ fun OptionsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(text = "Databases", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-            IconButton(onClick = {
-                urlInput = ""
-                editingUrl = null
-                verificationError = null
-                selectedFileUri = null
-                showDialog = true
-            }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Database")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        var showAddDialogMode by remember { mutableStateOf<String?>(null) } // "url", "preset"
+        var presetUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+        var isLoadingPresets by remember { mutableStateOf(false) }
+        var selectedPresetUrl by remember { mutableStateOf("") }
+
+        LaunchedEffect(showAddDialogMode) {
+            if (showAddDialogMode == "preset" && presetUrls.isEmpty()) {
+                isLoadingPresets = true
+                try {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val response = NetworkUtils.getResponseFull("https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt")
+                        val text = if (response.isValid) response.text else null
+                        if (!text.isNullOrBlank()) {
+                            val lines = text.lines()
+                                .map { it.trim() }
+                                .filter { it.startsWith("http://") || it.startsWith("https://") }
+                            presetUrls = lines
+                        }
+                    }
+                } catch (_: Exception) { }
+                isLoadingPresets = false
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    filePickerLauncher.launch("*/*")
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Add local file", fontSize = 12.sp)
+            }
+            OutlinedButton(
+                onClick = {
+                    urlInput = ""
+                    editingUrl = null
+                    verificationError = null
+                    selectedFileUri = null
+                    showAddDialogMode = "url"
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Add by URL", fontSize = 12.sp)
+            }
+            OutlinedButton(
+                onClick = {
+                    urlInput = ""
+                    editingUrl = null
+                    verificationError = null
+                    selectedFileUri = null
+                    selectedPresetUrl = ""
+                    showAddDialogMode = "preset"
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Preselected list", fontSize = 12.sp)
             }
         }
 
@@ -366,11 +422,10 @@ fun OptionsScreen(
                 editingUrl = url
                 verificationError = null
                 selectedFileUri = null
-                showDialog = true
+                showAddDialogMode = "url"
             },
             onDelete = { url, state ->
                 AppConfigManager.removeDatabase(url)
-                // Optionally delete the local file
                 val fileName = state.localFileName
                 File(context.filesDir, fileName).delete()
             },
@@ -401,67 +456,141 @@ fun OptionsScreen(
                 }
             }
         )
-    }
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!isVerifying) showDialog = false },
-            title = { Text(if (editingUrl == null) "Add Database" else "Edit Database") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = urlInput,
-                        onValueChange = { 
-                            urlInput = it
-                            verificationError = null
-                        },
-                        label = { Text("Web URL") },
-                        modifier = Modifier.fillMaxWidth(),
-                        isError = verificationError != null,
-                        supportingText = verificationError?.let { { Text(it) } },
-                        readOnly = urlInput.startsWith("local://")
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Button(
-                        onClick = { filePickerLauncher.launch("*/*") },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isVerifying
-                    ) {
-                        Text("Pick local file")
-                    }
-
-                    if (isVerifying) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(top = 8.dp)
-                                .align(Alignment.CenterHorizontally)
+        // Add by URL Dialog
+        if (showAddDialogMode == "url") {
+            AlertDialog(
+                onDismissRequest = { if (!isVerifying) showAddDialogMode = null },
+                title = { Text(if (editingUrl == null) "Add Database by URL" else "Edit Database URL") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = urlInput,
+                            onValueChange = {
+                                urlInput = it
+                                verificationError = null
+                            },
+                            label = { Text("Web URL") },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = verificationError != null,
+                            supportingText = verificationError?.let { { Text(it) } }
                         )
+                        if (isVerifying) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .padding(top = 8.dp)
+                                    .align(Alignment.CenterHorizontally)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                handleSaveDatabase(urlInput, editingUrl, null)
+                                if (verificationError == null) showAddDialogMode = null
+                            }
+                        },
+                        enabled = urlInput.isNotBlank() && !isVerifying
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddDialogMode = null }, enabled = !isVerifying) {
+                        Text("Cancel")
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            handleSaveDatabase(urlInput, editingUrl, selectedFileUri)
+            )
+        }
+
+        // Add from Preselected List Dialog
+        if (showAddDialogMode == "preset") {
+            var dropdownExpanded by remember { mutableStateOf(false) }
+
+            AlertDialog(
+                onDismissRequest = { if (!isVerifying) showAddDialogMode = null },
+                title = { Text("Preselected Databases") },
+                text = {
+                    Column {
+                        Text("Select a database from rumca-js repository list:")
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (isLoadingPresets) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                        } else if (presetUrls.isEmpty()) {
+                            Text("Failed to load preselected list. Please check network connection.")
+                        } else {
+                            ExposedDropdownMenuBox(
+                                expanded = dropdownExpanded,
+                                onExpandedChange = { dropdownExpanded = !dropdownExpanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedPresetUrl.ifEmpty { "Select a database..." },
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = dropdownExpanded,
+                                    onDismissRequest = { dropdownExpanded = false }
+                                ) {
+                                    presetUrls.forEach { pUrl ->
+                                        DropdownMenuItem(
+                                            text = { Text(pUrl) },
+                                            onClick = {
+                                                selectedPresetUrl = pUrl
+                                                urlInput = pUrl
+                                                dropdownExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
-                    },
-                    enabled = urlInput.isNotBlank() && !isVerifying
-                ) {
-                    Text("Save")
+
+                        if (verificationError != null) {
+                            Text(
+                                text = verificationError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+
+                        if (isVerifying) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .padding(top = 8.dp)
+                                    .align(Alignment.CenterHorizontally)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                handleSaveDatabase(urlInput, null, null)
+                                if (verificationError == null) showAddDialogMode = null
+                            }
+                        },
+                        enabled = urlInput.isNotBlank() && !isVerifying
+                    ) {
+                        Text("Add Database")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddDialogMode = null }, enabled = !isVerifying) {
+                        Text("Cancel")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDialog = false },
-                    enabled = !isVerifying
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
+            )
+        }
     }
 
 }
