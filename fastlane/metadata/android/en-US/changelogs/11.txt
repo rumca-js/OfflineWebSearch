@@ -1,0 +1,1 @@
+ - .db files can be added again as databases
