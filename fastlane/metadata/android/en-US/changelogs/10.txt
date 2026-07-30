@@ -1,0 +1,3 @@
+ - Databases provide 'READY' and "READ-WRITE" indicators that look good this time
+ - Provided preconfigured list of databases
+ - Database detail screen
