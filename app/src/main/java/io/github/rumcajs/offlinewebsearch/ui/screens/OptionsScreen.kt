@@ -61,26 +61,6 @@ fun OptionsScreen(
     var verificationError by remember { mutableStateOf<String?>(null) }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
 
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            val fileName = getFileName(
-                context,
-                uri
-            ) ?: "local_db.json"
-            if (fileName.endsWith(".json", ignoreCase = true) || fileName.endsWith(".db", ignoreCase = true)) {
-                selectedFileUri = uri
-                urlInput = "local://$fileName"
-                verificationError = null
-            } else {
-                verificationError = "Unsupported file extension. Please select a .json or .db file."
-                urlInput = ""
-                selectedFileUri = null
-            }
-        }
-    }
-
     suspend fun handleSaveDatabaseLocal(
         urlInput: String,
         editingUrl: String?,
@@ -95,6 +75,25 @@ fun OptionsScreen(
             }
         } else {
             showDialog = false
+        }
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val fileName = getFileName(
+                context,
+                uri
+            ) ?: "local_db.json"
+            if (config.isSupportedFileName(fileName)) {
+                val url = DatabaseState.toLocalUrl(fileName)
+                scope.launch {
+                    handleSaveDatabaseLocal(url, null, uri)
+                }
+            } else {
+                Toast.makeText(context, "Unsupported file extension. Supported: ${config.supportedDatabasesExtensions.joinToString(", ")}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 

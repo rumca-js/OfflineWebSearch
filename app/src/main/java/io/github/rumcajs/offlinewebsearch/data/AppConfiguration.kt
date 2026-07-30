@@ -36,11 +36,11 @@ data class DatabaseState(
         get() = if (localFileName.endsWith(".db")) ".db" else ".json"
 
     val isLocal: Boolean
-        get() = url.startsWith("local://")
+        get() = url.startsWith(LOCAL_PREFIX)
 
     val displayName: String
         get() = when {
-            isLocal -> url.removePrefix("local://")
+            isLocal -> url.removePrefix(LOCAL_PREFIX)
 
             url.isBlank() -> "Default (Assets)"
 
@@ -51,6 +51,12 @@ data class DatabaseState(
         }
 
     companion object {
+        const val LOCAL_PREFIX = "local://"
+
+        fun toLocalUrl(fileName: String): String {
+            return if (fileName.startsWith(LOCAL_PREFIX)) fileName else "$LOCAL_PREFIX$fileName"
+        }
+
         /**
          * Derives the local file name from a source URL.
          * .db.zip URLs are stored as .db after unpacking.
@@ -113,7 +119,15 @@ data class AppConfiguration(
     // main things
     val databases: Map<String, DatabaseState> = emptyMap(),
     val activeDatabase: String? = null,
+    val supportedDatabasesExtensions: List<String> = listOf(".db",
+        ".json",
+        ".zip",      // contains json files
+        ".db.zip"),  // contains db archived
 ) {
+    fun isSupportedFileName(fileName: String): Boolean {
+        return supportedDatabasesExtensions.any { ext -> fileName.endsWith(ext, ignoreCase = true) }
+    }
+
     val dbconfig: DatabaseConfiguration
         get() = activeDatabase?.let { dbConfigs[it] } ?: defaultDbConfig
 
