@@ -22,8 +22,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+import androidx.compose.material.icons.filled.Storage
+
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : io.github.rumcajs.offlinewebsearch.Screen("home", "Browse", Icons.Filled.Home)
+    object Databases : io.github.rumcajs.offlinewebsearch.Screen("databases", "Databases", Icons.Filled.Storage)
     object About : io.github.rumcajs.offlinewebsearch.Screen("about", "About", Icons.Filled.Info)
     object Options : io.github.rumcajs.offlinewebsearch.Screen("options", "Options", Icons.Filled.Settings)
     object Detail : io.github.rumcajs.offlinewebsearch.Screen("detail", "Detail", Icons.Filled.Search)
@@ -42,6 +45,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 val navController = rememberNavController()
                 val items = listOf(
                     _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Home,
+                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Databases,
                     _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.About,
                     _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Options,
                 )
@@ -83,6 +87,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Detail.route)
                                 }
                             )
+                        }
+                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Databases.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabasesScreen()
                         }
                         composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.About.route) { _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.AboutScreen() }
                         composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Options.route) { _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionsScreen() }

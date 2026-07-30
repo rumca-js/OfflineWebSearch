@@ -38,6 +38,9 @@ import androidx.compose.ui.text.input.KeyboardType
 
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.ui.components.DatabaseDetailDialog
+import io.github.rumcajs.offlinewebsearch.ui.components.ReadOnlyBadge
+import io.github.rumcajs.offlinewebsearch.ui.components.StatusBadge
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +57,7 @@ fun OptionsScreen() {
     var isVerifying by remember { mutableStateOf(false) }
     var verificationError by remember { mutableStateOf<String?>(null) }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedDetailState by remember { mutableStateOf<Pair<String?, DatabaseState>?>(null) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -131,41 +135,6 @@ fun OptionsScreen() {
         Text(text = "Options", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
 
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionItem(
-            label = "Direct links",
-            checked = config.dbconfig.directLinks,
-            onCheckedChange = {
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setDirectLinks(
-                    it
-                )
-            }
-        )
-
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionItem(
-            label = "Show icons",
-            checked = config.dbconfig.showIcons,
-            onCheckedChange = {
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setShowIcons(
-                    it
-                )
-            }
-        )
-
-        /*
-        Preview does not work. White frame
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionItem(
-            label = "Video preview",
-            checked = config.videoPreview,
-            onCheckedChange = {
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setVideoPreview(
-                    it
-                )
-            }
-        )
-        */
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         Text(text = "User Age", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -181,6 +150,110 @@ fun OptionsScreen() {
             singleLine = true,
             placeholder = { Text("0") }
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Active Database",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        var activeDbExpanded by remember { mutableStateOf(false) }
+
+        ExposedDropdownMenuBox(
+            expanded = activeDbExpanded,
+            onExpandedChange = { activeDbExpanded = it }, // Let the component dictate state updates
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                // Clean display property from our AppConfiguration!
+                value = config.activeDatabaseDisplayName,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = activeDbExpanded)
+                },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable) // M3 Best Practice for non-editable drop-downs
+                    .fillMaxWidth()
+            )
+
+            ExposedDropdownMenu(
+                expanded = activeDbExpanded,
+                onDismissRequest = { activeDbExpanded = false }
+            ) {
+                // 1. Default Assets Option
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Default (Assets)")
+                            ReadOnlyBadge(isReadOnly = true)
+                        }
+                    },
+                    onClick = {
+                        AppConfigManager.setActiveDatabase(null)
+                        activeDbExpanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
+
+                // 2. Dynamic Database Options (destructured cleanly into url and state)
+                config.databases.forEach { (url, state) ->
+                    DropdownMenuItem(
+                        // Leverages the model's clean display name directly!
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(state.displayName)
+                                ReadOnlyBadge(isReadOnly = state.isReadOnly)
+                            }
+                        },
+                        onClick = {
+                            AppConfigManager.setActiveDatabase(url)
+                            activeDbExpanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OptionItem(
+            label = "Direct links",
+            checked = config.dbconfig.directLinks,
+            onCheckedChange = {
+                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setDirectLinks(
+                    it
+                )
+            }
+        )
+
+        OptionItem(
+            label = "Show icons",
+            checked = config.dbconfig.showIcons,
+            onCheckedChange = {
+                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setShowIcons(
+                    it
+                )
+            }
+        )
+
+        /*
+        Preview does not work. White frame
+        OptionItem(
+            label = "Video preview",
+            checked = config.videoPreview,
+            onCheckedChange = {
+                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setVideoPreview(
+                    it
+                )
+            }
+        )
+        */
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -260,75 +333,6 @@ fun OptionsScreen() {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Active Database",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        var expanded by remember { mutableStateOf(false) }
-
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it }, // Let the component dictate state updates
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                // Clean display property from our AppConfiguration!
-                value = config.activeDatabaseDisplayName,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                modifier = Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable) // M3 Best Practice for non-editable drop-downs
-                    .fillMaxWidth()
-            )
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                // 1. Default Assets Option
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Default (Assets)")
-                            ReadOnlyBadge(isReadOnly = true)
-                        }
-                    },
-                    onClick = {
-                        AppConfigManager.setActiveDatabase(null)
-                        expanded = false
-                    },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                )
-
-                // 2. Dynamic Database Options (destructured cleanly into url and state)
-                config.databases.forEach { (url, state) ->
-                    DropdownMenuItem(
-                        // Leverages the model's clean display name directly!
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(state.displayName)
-                                ReadOnlyBadge(isReadOnly = state.isReadOnly)
-                            }
-                        },
-                        onClick = {
-                            AppConfigManager.setActiveDatabase(url)
-                            expanded = false
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                    )
-                }
-            }
-        }
-
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
         Row(
@@ -352,6 +356,9 @@ fun OptionsScreen() {
 
         DatabaseList(
             databases = config.databases,
+            onItemClick = { url, state ->
+                selectedDetailState = Pair(url, state)
+            },
             onEdit = { url ->
                 urlInput = url
                 editingUrl = url
@@ -391,6 +398,34 @@ fun OptionsScreen() {
                     }
                 }
             }
+        )
+    }
+
+    selectedDetailState?.let { (url, state) ->
+        val dbConfig = if (url == null) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
+        val isActive = if (url == null) config.activeDatabase == null else config.activeDatabase == url
+        DatabaseDetailDialog(
+            state = state,
+            dbConfig = dbConfig,
+            isActive = isActive,
+            onDismissRequest = { selectedDetailState = null },
+            onSetActive = { AppConfigManager.setActiveDatabase(url) },
+            onUpdate = if (url != null && !state.isLocal) {
+                {
+                    scope.launch {
+                        val response = NetworkUtils.getResponseFull(url)
+                        val content = if (response.isValid) response.text?.toByteArray(Charsets.UTF_8) else null
+                        if (content != null) {
+                            context.openFileOutput(state.localFileName, Context.MODE_PRIVATE).use {
+                                it.write(content)
+                            }
+                            Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Failed to update database", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else null
         )
     }
 
@@ -486,6 +521,7 @@ private fun getFileName(context: Context, uri: Uri): String? {
 @Composable
 fun DatabaseList(
     databases: Map<String, DatabaseState>,
+    onItemClick: ((String, DatabaseState) -> Unit)? = null,
     onEdit: (String) -> Unit,
     onDelete: (String, DatabaseState) -> Unit,
     onUpdate: (String, DatabaseState) -> Unit
@@ -493,6 +529,7 @@ fun DatabaseList(
     databases.forEach { (url, state) ->
         DatabaseItem(
             state = state,
+            onItemClick = { onItemClick?.invoke(url, state) },
             onEdit = { onEdit(url) },
             onDelete = { onDelete(url, state) },
             onUpdate = { onUpdate(url, state) }
@@ -500,61 +537,12 @@ fun DatabaseList(
     }
 }
 
-@Composable
-fun StatusBadge(status: io.github.rumcajs.offlinewebsearch.data.DatabaseStatus) {
-    val (backgroundColor, textColor, label) = when (status) {
-        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY -> Triple(Color(0xFFE8F5E9), Color(0xFF2E7D32), "READY")
-        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED -> Triple(Color(0xFFFFEBEE), Color(0xFFC62828), "FAILED")
-        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.DOWNLOADING -> Triple(Color(0xFFE3F2FD), Color(0xFF1565C0), "DOWNLOADING")
-        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.UNPACKING -> Triple(Color(0xFFFFF3E0), Color(0xFFEF6C00), "UNPACKING")
-        io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.INIT -> Triple(Color(0xFFF5F5F5), Color(0xFF616161), "INIT")
-    }
 
-    Box(
-        modifier = Modifier
-            .padding(start = 8.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(backgroundColor)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = textColor,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun ReadOnlyBadge(isReadOnly: Boolean) {
-    val (backgroundColor, textColor, label) = if (isReadOnly) {
-        Triple(Color(0xFFF3E5F5), Color(0xFF7B1FA2), "READ-ONLY")
-    } else {
-        Triple(Color(0xFFE0F2F1), Color(0xFF00796B), "READ-WRITE")
-    }
-
-    Box(
-        modifier = Modifier
-            .padding(start = 8.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(backgroundColor)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = textColor,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
 
 @Composable
 fun DatabaseItem(
     state: DatabaseState,
+    onItemClick: (() -> Unit)? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onUpdate: () -> Unit
@@ -562,7 +550,6 @@ fun DatabaseItem(
     val isLocal = state.isLocal
     val displayName = state.displayName
 
-    // 1. Keep track of the expanded state locally
     var isExpanded by remember { mutableStateOf(false) }
 
     Row(
@@ -571,18 +558,28 @@ fun DatabaseItem(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 2. Make the text details column clickable to toggle expansion
         Column(
             modifier = Modifier
                 .weight(1f)
-                .clickable { isExpanded = !isExpanded }
-                .padding(vertical = 4.dp) // Extra padding to make tapping easier
+                .clickable {
+                    if (onItemClick != null) {
+                        onItemClick()
+                    } else {
+                        isExpanded = !isExpanded
+                    }
+                }
+                .padding(vertical = 4.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            Text(
+                text = displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Row(
+                modifier = Modifier.padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 StatusBadge(state.status)
                 ReadOnlyBadge(isReadOnly = state.isReadOnly)
             }
