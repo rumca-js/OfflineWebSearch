@@ -28,7 +28,7 @@ fun EntryStatusScreen(
 
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
-        previewResponseObject = NetworkUtils.getResponseHeaders(url)
+        previewResponseObject = NetworkUtils.executeHeaderRequest(url)
         isLoading = false
     }
 

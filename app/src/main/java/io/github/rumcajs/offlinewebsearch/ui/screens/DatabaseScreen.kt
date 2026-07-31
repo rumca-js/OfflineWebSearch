@@ -54,7 +54,7 @@ fun DatabaseScreen(
                     if (!state.isLocal && url != null) {
                         IconButton(onClick = {
                             scope.launch {
-                                val response = NetworkUtils.getResponseFull(url)
+                                val response = NetworkUtils.executeRequest(url)
                                 val content = if (response.isValid) response.text?.toByteArray(Charsets.UTF_8) else null
                                 if (content != null) {
                                     context.openFileOutput(state.localFileName, Context.MODE_PRIVATE).use {

@@ -120,7 +120,7 @@ fun DatabasesContainer(
             isLoadingPresets = true
             try {
                 withContext(Dispatchers.IO) {
-                    val response = NetworkUtils.getResponseFull(config.presetDatabasesUrl)
+                    val response = NetworkUtils.executeRequest(config.presetDatabasesUrl)
                     val text = if (response.isValid) response.text else null
                     if (!text.isNullOrBlank()) {
                         val lines = text.lines()
@@ -204,7 +204,7 @@ fun DatabasesContainer(
             onUpdate = { url, state ->
                 if (!state.isLocal) {
                     scope.launch {
-                        val response = NetworkUtils.getResponseFull(url)
+                        val response = NetworkUtils.executeRequest(url)
                         val content = if (response.isValid) {
                             response.text?.toByteArray(Charsets.UTF_8)
                         } else null

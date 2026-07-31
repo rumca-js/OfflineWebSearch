@@ -45,7 +45,7 @@ fun EntryPreviewScreen(
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
         error = null
-        val pageResponse = NetworkUtils.getResponseFull(url)
+        val pageResponse = NetworkUtils.executeRequest(url)
         if (pageResponse.text != null) {
             val body = pageResponse.text
             val inputType = if (url.contains(".html") || url.contains(".htm") ||

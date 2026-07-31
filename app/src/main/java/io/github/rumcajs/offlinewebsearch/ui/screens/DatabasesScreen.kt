@@ -96,7 +96,7 @@ fun DatabasesScreen(
             isLoadingPresets = true
             try {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val response = NetworkUtils.getResponseFull("https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt")
+                    val response = NetworkUtils.executeRequest("https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt")
                     val text = if (response.isValid) response.text else null
                     if (!text.isNullOrBlank()) {
                         val lines = text.lines()
@@ -226,7 +226,7 @@ fun DatabasesScreen(
                 onUpdate = if (!state.isLocal) {
                     {
                         scope.launch {
-                            val response = NetworkUtils.getResponseFull(url)
+                            val response = NetworkUtils.executeRequest(url)
                             val content = if (response.isValid) response.text?.toByteArray(Charsets.UTF_8) else null
                             if (content != null) {
                                 context.openFileOutput(state.localFileName, Context.MODE_PRIVATE).use {
