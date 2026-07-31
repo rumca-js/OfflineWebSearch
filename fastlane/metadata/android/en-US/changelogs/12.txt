@@ -1,0 +1,2 @@
+ - Entry list suggestions, and page controls are part of scrollable area
+ - Network utils refactor
