@@ -50,16 +50,7 @@ fun EntryListScreen(
             onPerformSearch = {
                 viewModel.performSearch()
             },
-            isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
-            showSuggestions = viewModel.showSuggestions,
-            suggestions = viewModel.suggestions,
-            onSuggestionClick = { suggestion ->
-                viewModel.searchQuery = suggestion
-                viewModel.performSearch()
-                coroutineScope.launch {
-                    listState.scrollToItem(0)
-                }
-            }
+            isSearchButtonEnabled = viewModel.isSearchButtonEnabled
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -74,6 +65,15 @@ fun EntryListScreen(
             onNextPage = { viewModel.nextPage() },
             onNavigateToDetail = onNavigateToDetail,
             listState = listState,
+            showSuggestions = viewModel.showSuggestions,
+            suggestions = viewModel.suggestions,
+            onSuggestionClick = { suggestion ->
+                viewModel.searchQuery = suggestion
+                viewModel.performSearch()
+                coroutineScope.launch {
+                    listState.scrollToItem(0)
+                }
+            },
             modifier = Modifier.weight(1f)
         )
     }

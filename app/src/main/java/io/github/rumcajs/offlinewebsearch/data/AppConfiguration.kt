@@ -119,6 +119,7 @@ data class AppConfiguration(
     // main things
     val databases: Map<String, DatabaseState> = emptyMap(),
     val activeDatabase: String? = null,
+    val presetDatabasesUrl: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt",
     val supportedDatabasesExtensions: List<String> = listOf(".db",
         ".json",
         ".zip",      // contains json files

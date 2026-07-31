@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -118,7 +120,7 @@ fun DatabasesContainer(
             isLoadingPresets = true
             try {
                 withContext(Dispatchers.IO) {
-                    val response = NetworkUtils.getResponseFull("https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt")
+                    val response = NetworkUtils.getResponseFull(config.presetDatabasesUrl)
                     val text = if (response.isValid) response.text else null
                     if (!text.isNullOrBlank()) {
                         val lines = text.lines()
@@ -144,10 +146,13 @@ fun DatabasesContainer(
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(
+            DatabaseActionButton(
+                text = "Preselected list",
                 onClick = {
                     urlInput = ""
                     editingUrl = null
@@ -155,33 +160,26 @@ fun DatabasesContainer(
                     selectedFileUri = null
                     selectedPresetUrl = ""
                     showAddDialogMode = "preset"
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Preselected list", fontSize = 12.sp)
-            }
+                }
+            )
 
-            OutlinedButton(
+            DatabaseActionButton(
+                text = "Add local file",
                 onClick = {
                     filePickerLauncher.launch("*/*")
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Add local file", fontSize = 12.sp)
-            }
+                }
+            )
 
-            OutlinedButton(
+            DatabaseActionButton(
+                text = "Add by URL",
                 onClick = {
                     urlInput = ""
                     editingUrl = null
                     verificationError = null
                     selectedFileUri = null
                     showAddDialogMode = "url"
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Add by URL", fontSize = 12.sp)
-            }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -489,5 +487,23 @@ fun DatabaseItem(
         IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, contentDescription = "Delete")
         }
+    }
+}
+
+@Composable
+private fun DatabaseActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            maxLines = 1
+        )
     }
 }

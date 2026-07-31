@@ -22,9 +22,6 @@ fun SearchContainer(
     onClearSearch: () -> Unit,
     onPerformSearch: () -> Unit,
     isSearchButtonEnabled: Boolean,
-    showSuggestions: Boolean,
-    suggestions: List<String>,
-    onSuggestionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -53,32 +50,6 @@ fun SearchContainer(
                 }
             )
         )
-
-        if (showSuggestions && suggestions.isNotEmpty()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                tonalElevation = 4.dp
-            ) {
-                Column {
-                    suggestions.forEach { suggestion ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSuggestionClick(suggestion)
-                                }
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(suggestion)
-                        }
-                    }
-                }
-            }
-        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
