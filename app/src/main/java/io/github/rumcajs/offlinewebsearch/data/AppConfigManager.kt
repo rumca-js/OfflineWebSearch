@@ -182,69 +182,88 @@ object AppConfigManager {
      * Safely saves database content (either from a local byte array or a remote download)
      * and updates the AppConfiguration maps.
      */
-    fun saveDatabaseSource(
+    suspend fun saveDatabaseSource(
         context: Context,
         url: String,
         content: ByteArray,
         oldUrl: String? = null
-    ) {
-        val newState = DatabaseState.fromUrl(url).copy(status = DatabaseStatus.READY)
+    ) = withContext(Dispatchers.IO) {
+        val newState = DatabaseState.fromUrl(url).copy(status = DatabaseStatus.READY, progress = 1.0f)
 
-        configScope.launch {
-            try {
-                // 1. Write the new file
-                context.openFileOutput(newState.localFileName, Context.MODE_PRIVATE).use { output ->
-                    output.write(content)
-                }
-
-                // 2. Perform old file cleanup and configuration state transition
-                updateConfig { config ->
-                    // Clean up old file if the URL actually changed
-                    if (oldUrl != null && oldUrl != url) {
-                        val oldState = DatabaseState.fromUrl(oldUrl)
-                        File(context.filesDir, oldState.localFileName).delete()
-                    }
-
-                    // Prepare updated maps
-                    val newDatabases = config.databases.toMutableMap().apply {
-                        if (oldUrl != null) {
-                            remove(oldUrl)?.let { state ->
-                                put(url, state.copy(
-                                    url = url,
-                                    localFileName = newState.localFileName,
-                                    status = DatabaseStatus.READY,
-                                    errorMessage = null
-                                ))
-                            }
-                        } else {
-                            put(url, newState)
-                        }
-                    }
-
-                    val newDbConfigs = config.dbConfigs.toMutableMap().apply {
-                        if (oldUrl != null) {
-                            remove(oldUrl)?.let { dbConfig -> put(url, dbConfig) }
-                        }
-                    }
-
-                    config.copy(
-                        databases = newDatabases,
-                        dbConfigs = newDbConfigs,
-                        activeDatabase = if (config.activeDatabase == oldUrl) url else config.activeDatabase
-                    )
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
+        try {
+            // 1. Write the new file
+            context.openFileOutput(newState.localFileName, Context.MODE_PRIVATE).use { output ->
+                output.write(content)
             }
+
+            // 2. Perform old file cleanup and configuration state transition
+            updateConfig { config ->
+                // Clean up old file if the URL actually changed
+                if (oldUrl != null && oldUrl != url) {
+                    val oldState = DatabaseState.fromUrl(oldUrl)
+                    File(context.filesDir, oldState.localFileName).delete()
+                }
+
+                // Prepare updated maps
+                val newDatabases = config.databases.toMutableMap().apply {
+                    if (oldUrl != null) {
+                        remove(oldUrl)?.let { state ->
+                            put(url, state.copy(
+                                url = url,
+                                localFileName = newState.localFileName,
+                                status = DatabaseStatus.READY,
+                                progress = 1.0f,
+                                errorMessage = null
+                            ))
+                        }
+                    } else {
+                        put(url, newState)
+                    }
+                }
+
+                val newDbConfigs = config.dbConfigs.toMutableMap().apply {
+                    if (oldUrl != null) {
+                        remove(oldUrl)?.let { dbConfig -> put(url, dbConfig) }
+                    }
+                }
+
+                config.copy(
+                    databases = newDatabases,
+                    dbConfigs = newDbConfigs,
+                    activeDatabase = if (config.activeDatabase == oldUrl) url else config.activeDatabase
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
+            throw e
         }
     }
 
-    fun updateDatabaseStatus(url: String, status: DatabaseStatus, errorMessage: String? = null) {
+    fun updateDatabaseStatus(
+        url: String,
+        status: DatabaseStatus,
+        errorMessage: String? = null,
+        progress: Float? = null
+    ) {
         updateConfig { config ->
             val newDatabases = config.databases.toMutableMap().apply {
                 get(url)?.let { state ->
-                    put(url, state.copy(status = status, errorMessage = errorMessage))
+                    val calculatedProgress = progress ?: when (status) {
+                        DatabaseStatus.READY -> 1.0f
+                        DatabaseStatus.UNPACKING -> 0.75f
+                        DatabaseStatus.DOWNLOADING -> 0.25f
+                        DatabaseStatus.INIT -> 0.0f
+                        DatabaseStatus.FAILED -> state.progress
+                    }
+                    put(
+                        url,
+                        state.copy(
+                            status = status,
+                            errorMessage = errorMessage,
+                            progress = calculatedProgress
+                        )
+                    )
                 }
             }
             config.copy(databases = newDatabases)
@@ -277,7 +296,21 @@ object AppConfigManager {
                 }
             } ?: throw IOException("Failed to read file")
 
-            saveDatabaseSource(context, url, content, oldUrl)
+            if (url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)) {
+                updateDatabaseStatus(url, DatabaseStatus.UNPACKING)
+                val tempZipFile = File.createTempFile("local_temp_db", ".zip", context.cacheDir)
+                val tempDbFile = File.createTempFile("local_unpacked_db", ".db", context.cacheDir)
+                try {
+                    tempZipFile.writeBytes(content)
+                    unzipDatabaseToFile(tempZipFile, tempDbFile)
+                    saveDatabaseSource(context, url, tempDbFile.readBytes(), oldUrl)
+                } finally {
+                    tempZipFile.delete()
+                    tempDbFile.delete()
+                }
+            } else {
+                saveDatabaseSource(context, url, content, oldUrl)
+            }
         } catch (e: Exception) {
             updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
             throw e
@@ -293,10 +326,10 @@ object AppConfigManager {
         oldUrl: String? = null
     ) {
         val state = DatabaseState.fromUrl(url)
-        val isZip = url.endsWith(".db.zip", ignoreCase = true)
+        val isZip = url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)
 
         if (state.extension != ".json" && state.extension != ".db" && !isZip) {
-            throw IllegalArgumentException("URL must end with .json, .db, or .db.zip")
+            throw IllegalArgumentException("URL must end with .json, .db, .zip, or .db.zip")
         }
 
         if (oldUrl == null) {
@@ -314,7 +347,7 @@ object AppConfigManager {
             }
 
             val response = NetworkUtils.executeRequestBinary(url)
-            var content = if (response.isValid) response.bytes else null
+            val content = if (response.isValid) response.bytes else null
 
             if (content == null) {
                 throw IOException("Failed to download database files")
@@ -322,74 +355,117 @@ object AppConfigManager {
 
             if (isZip) {
                 updateDatabaseStatus(url, DatabaseStatus.UNPACKING)
+                val tempZipFile = File.createTempFile("temp_db", ".zip", context.cacheDir)
+                val tempDbFile = File.createTempFile("unpacked_db", ".db", context.cacheDir)
                 try {
-                    // This call will now directly throw the underlying error if it fails
-                    val unpackedContent = unzipDatabaseBytes(content, context.cacheDir)
-                    content = unpackedContent
+                    tempZipFile.writeBytes(content)
+                    unzipDatabaseToFile(tempZipFile, tempDbFile)
+                    saveDatabaseSourceFromFile(context, url, tempDbFile, oldUrl)
                 } catch (e: Exception) {
-                    // Extract technical detail (e.g., "ZipException: Not a ZIP archive" or "NoSuchElementException: ...")
                     val errorDescription = "${e.javaClass.simpleName}: ${e.localizedMessage ?: "Unknown error"}"
-
-                    // Log the detailed exception somewhere if needed
-                    // Log.e("UnpackError", "Failed to extract database", e)
-
-                    // Update your status or bubble up a comprehensive IOException
                     throw IOException("Failed to extract .db from zip file ($errorDescription)", e)
+                } finally {
+                    tempZipFile.delete()
+                    tempDbFile.delete()
                 }
+            } else {
+                saveDatabaseSource(context, url, content, oldUrl)
             }
-
-            saveDatabaseSource(context, url, content, oldUrl)
         } catch (e: Exception) {
             updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
             throw e
         }
     }
 
-    /**
-     * Unpacks a ZIP archive provided as a byte array and extracts the first database (.db) file found.
-     *
-     * ### Android Compatibility Warning
-     * This function specifically avoids using Android's native `java.util.zip.ZipInputStream`
-     * sequential parser. When a ZIP file is generated programmatically via streams (e.g., automated
-     * backend feeds or GitHub Actions), it often leaves the size and CRC metadata empty in the local
-     * header and appends a **Data Descriptor** block *after* the compressed data payload.
-     *
-     * Android's legacy `ZipInputStream` implementation is notoriously brittle and frequently throws a
-     * `ZipException` (e.g., CRC or malformed data errors) when it encounters these post-data descriptors
-     * in-flight.
-     *
-     * To circumvent this, this implementation uses a random-access approach (via `ZipFile` or a
-     * virtual `FileSystem`). By processing the Central Directory located at the end of the archive first,
-     * it guarantees successful decompression regardless of how the ZIP header flags were generated.
-     *
-     * @param zipBytes The raw byte array representing the compressed ZIP archive.
-     * @return A [ByteArray] containing the uncompressed `.db` file content if successfully found and
-     *         extracted; `null` if no matching database file is found or if an extraction error occurs.
-     */
-    @Throws(IOException::class, NoSuchElementException::class)
-    internal fun unzipDatabaseBytes(zipBytes: ByteArray, cacheDir: File): ByteArray {
-        val tempFile = File.createTempFile("temp_db", ".zip", cacheDir)
+    private suspend fun saveDatabaseSourceFromFile(
+        context: Context,
+        url: String,
+        sourceFile: File,
+        oldUrl: String? = null
+    ) = withContext(Dispatchers.IO) {
+        val newState = DatabaseState.fromUrl(url).copy(status = DatabaseStatus.READY, progress = 1.0f)
 
         try {
-            tempFile.writeBytes(zipBytes)
+            context.openFileOutput(newState.localFileName, Context.MODE_PRIVATE).use { output ->
+                sourceFile.inputStream().use { input ->
+                    input.copyTo(output)
+                }
+            }
 
-            ZipFile(tempFile).use { zip ->
-                val entries = zip.entries()
-                while (entries.hasMoreElements()) {
-                    val entry = entries.nextElement()
-                    if (!entry.isDirectory && entry.name.endsWith(".db")) {
-                        zip.getInputStream(entry).use { inputStream ->
-                            val out = ByteArrayOutputStream()
-                            inputStream.copyTo(out)
-                            return out.toByteArray()
+            updateConfig { config ->
+                if (oldUrl != null && oldUrl != url) {
+                    val oldState = DatabaseState.fromUrl(oldUrl)
+                    File(context.filesDir, oldState.localFileName).delete()
+                }
+
+                val newDatabases = config.databases.toMutableMap().apply {
+                    if (oldUrl != null) {
+                        remove(oldUrl)?.let { state ->
+                            put(url, state.copy(
+                                url = url,
+                                localFileName = newState.localFileName,
+                                status = DatabaseStatus.READY,
+                                progress = 1.0f,
+                                errorMessage = null
+                            ))
                         }
+                    } else {
+                        put(url, newState)
                     }
                 }
-                // If the loop finishes without returning, the file structure is fine but missing the target
-                throw NoSuchElementException("ZIP archive parsed successfully, but no file ending in '.db' was found inside.")
+
+                val newDbConfigs = config.dbConfigs.toMutableMap().apply {
+                    if (oldUrl != null) {
+                        remove(oldUrl)?.let { dbConfig -> put(url, dbConfig) }
+                    }
+                }
+
+                config.copy(
+                    databases = newDatabases,
+                    dbConfigs = newDbConfigs,
+                    activeDatabase = if (config.activeDatabase == oldUrl) url else config.activeDatabase
+                )
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
+            throw e
+        }
+    }
+
+    /**
+     * Unpacks a ZIP archive provided as a File and extracts the first database (.db) file found into [outputFile].
+     */
+    @Throws(IOException::class, NoSuchElementException::class)
+    internal fun unzipDatabaseToFile(zipFile: File, outputFile: File) {
+        ZipFile(zipFile).use { zip ->
+            val entries = zip.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                if (!entry.isDirectory && entry.name.endsWith(".db", ignoreCase = true)) {
+                    zip.getInputStream(entry).use { inputStream ->
+                        outputFile.outputStream().use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                        return
+                    }
+                }
+            }
+            throw NoSuchElementException("ZIP archive parsed successfully, but no file ending in '.db' was found inside.")
+        }
+    }
+
+    @Throws(IOException::class, NoSuchElementException::class)
+    internal fun unzipDatabaseBytes(zipBytes: ByteArray, cacheDir: File): ByteArray {
+        val tempZipFile = File.createTempFile("temp_db", ".zip", cacheDir)
+        val tempDbFile = File.createTempFile("unpacked_db", ".db", cacheDir)
+        try {
+            tempZipFile.writeBytes(zipBytes)
+            unzipDatabaseToFile(tempZipFile, tempDbFile)
+            return tempDbFile.readBytes()
         } finally {
-            tempFile.delete()
+            tempZipFile.delete()
+            tempDbFile.delete()
         }
     }
 

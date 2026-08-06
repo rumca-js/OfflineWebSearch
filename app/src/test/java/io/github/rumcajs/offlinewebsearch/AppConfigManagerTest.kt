@@ -100,6 +100,20 @@ class AppConfigManagerTest {
         }
 
         @Test
+        fun testRemoveActiveDatabaseSwitchesToDefault() = runBlocking {
+            val url = "http://example.com/db_active"
+            AppConfigManager.addDatabase(url)
+            AppConfigManager.setActiveDatabase(url)
+            var config = AppConfigManager.config.first()
+            assertEquals(url, config.activeDatabase)
+
+            AppConfigManager.removeDatabase(url)
+            config = AppConfigManager.config.first()
+            assertNull(config.activeDatabase)
+            assertEquals("Default (Assets)", config.activeDatabaseDisplayName)
+        }
+
+        @Test
         fun testSerialization() {
             val originalConfig = AppConfiguration(
                 // Corrected: databases is now Map<String, DatabaseState>

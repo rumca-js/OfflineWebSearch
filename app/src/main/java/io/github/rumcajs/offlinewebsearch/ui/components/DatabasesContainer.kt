@@ -204,20 +204,10 @@ fun DatabasesContainer(
             onUpdate = { url, state ->
                 if (!state.isLocal) {
                     scope.launch {
-                        val response = NetworkUtils.executeRequest(url)
-                        val content = if (response.isValid) {
-                            response.text?.toByteArray(Charsets.UTF_8)
-                        } else null
-                        if (content != null) {
-                            val fileName = state.localFileName
-                            context.openFileOutput(
-                                fileName,
-                                Context.MODE_PRIVATE
-                            ).use {
-                                it.write(content)
-                            }
+                        try {
+                            AppConfigManager.saveDatabaseFromInternet(context, url, oldUrl = url)
                             Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
-                        } else {
+                        } catch (e: Exception) {
                             Toast.makeText(
                                 context,
                                 "Failed to update database",
