@@ -307,12 +307,14 @@ class OdyseeVideoHandler(private val link: String) : PageHandler {
 class OdyseeChannelHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
 
-    /** Returns the channel name extracted from the URL, e.g. "ChannelName" */
+    /** Returns the channel name extracted from the URL, e.g. "ChannelName" or "ChannelName:claimId" */
     fun getChannelName(): String? {
         val path = getPath(link)
-        // Match /@ChannelName or /@ChannelName:claimId (possibly with trailing slash)
-        val rssPrefix = "/\$/rss/"
-        val effectivePath = if (path.startsWith(rssPrefix)) path.removePrefix(rssPrefix) else path
+        val effectivePath = when {
+            path.startsWith("/$/rss/") -> path.removePrefix("/$/rss")
+            path.startsWith("/$/rss") -> path.removePrefix("/$/rss")
+            else -> path
+        }
         if (!effectivePath.startsWith("/@")) return null
         return effectivePath.removePrefix("/@").split("/").firstOrNull { it.isNotEmpty() }
     }
@@ -340,8 +342,9 @@ class OdyseeChannelHandler(private val link: String) : PageHandler {
 
     private fun getPath(link: String): String {
         return try {
-            val adjusted = if (!link.contains("://")) "http://$link" else link
-            URI(adjusted).path ?: ""
+            val withoutScheme = if (link.contains("://")) link.substringAfter("://") else link
+            val slashIndex = withoutScheme.indexOf('/')
+            if (slashIndex != -1) withoutScheme.substring(slashIndex) else ""
         } catch (e: Exception) {
             ""
         }

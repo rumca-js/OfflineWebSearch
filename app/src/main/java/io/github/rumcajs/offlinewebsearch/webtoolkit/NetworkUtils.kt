@@ -134,6 +134,8 @@ object NetworkUtils {
 
             val requestBuilder = Request.Builder()
                 .url(urlString)
+                .cacheControl(okhttp3.CacheControl.FORCE_NETWORK)
+                .header("Cache-Control", "no-cache, no-store")
                 .header("User-Agent", config.networkConfig.userAgent)
 
             acceptHeader?.let {

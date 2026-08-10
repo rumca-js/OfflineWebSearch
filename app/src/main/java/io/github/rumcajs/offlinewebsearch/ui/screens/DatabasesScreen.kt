@@ -221,7 +221,7 @@ fun DatabasesScreen(
                 },
                 onDelete = {
                     AppConfigManager.removeDatabase(url)
-                    File(context.filesDir, state.localFileName).delete()
+                    AppConfigManager.removeDatabaseFiles(context, state.localFileName)
                 },
                 onUpdate = if (!state.isLocal) {
                     {

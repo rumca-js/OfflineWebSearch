@@ -179,6 +179,17 @@ object AppConfigManager {
     }
 
     /**
+     * Removes the local database file and any associated SQLite sidecar files (-wal, -shm, -journal).
+     */
+    fun removeDatabaseFiles(context: Context, localFileName: String) {
+        val baseFile = File(context.filesDir, localFileName)
+        baseFile.delete()
+        File(context.filesDir, "$localFileName-wal").delete()
+        File(context.filesDir, "$localFileName-shm").delete()
+        File(context.filesDir, "$localFileName-journal").delete()
+    }
+
+    /**
      * Safely saves database content (either from a local byte array or a remote download)
      * and updates the AppConfiguration maps.
      */
@@ -191,6 +202,9 @@ object AppConfigManager {
         val newState = DatabaseState.fromUrl(url).copy(status = DatabaseStatus.READY, progress = 1.0f)
 
         try {
+            // Remove old/existing files and sidecars for this local database
+            removeDatabaseFiles(context, newState.localFileName)
+
             // 1. Write the new file
             context.openFileOutput(newState.localFileName, Context.MODE_PRIVATE).use { output ->
                 output.write(content)
@@ -201,7 +215,7 @@ object AppConfigManager {
                 // Clean up old file if the URL actually changed
                 if (oldUrl != null && oldUrl != url) {
                     val oldState = DatabaseState.fromUrl(oldUrl)
-                    File(context.filesDir, oldState.localFileName).delete()
+                    removeDatabaseFiles(context, oldState.localFileName)
                 }
 
                 // Prepare updated maps
@@ -355,8 +369,13 @@ object AppConfigManager {
 
             if (isZip) {
                 updateDatabaseStatus(url, DatabaseStatus.UNPACKING)
-                val tempZipFile = File.createTempFile("temp_db", ".zip", context.cacheDir)
-                val tempDbFile = File.createTempFile("unpacked_db", ".db", context.cacheDir)
+                val tempZipFile =
+                    withContext(Dispatchers.IO) {
+                        File.createTempFile("temp_db", ".zip", context.cacheDir)
+                    }
+                val tempDbFile = withContext(Dispatchers.IO) {
+                    File.createTempFile("unpacked_db", ".db", context.cacheDir)
+                }
                 try {
                     tempZipFile.writeBytes(content)
                     unzipDatabaseToFile(tempZipFile, tempDbFile)
@@ -386,6 +405,9 @@ object AppConfigManager {
         val newState = DatabaseState.fromUrl(url).copy(status = DatabaseStatus.READY, progress = 1.0f)
 
         try {
+            // Remove old/existing files and sidecars for this local database
+            removeDatabaseFiles(context, newState.localFileName)
+
             context.openFileOutput(newState.localFileName, Context.MODE_PRIVATE).use { output ->
                 sourceFile.inputStream().use { input ->
                     input.copyTo(output)
@@ -395,7 +417,7 @@ object AppConfigManager {
             updateConfig { config ->
                 if (oldUrl != null && oldUrl != url) {
                     val oldState = DatabaseState.fromUrl(oldUrl)
-                    File(context.filesDir, oldState.localFileName).delete()
+                    removeDatabaseFiles(context, oldState.localFileName)
                 }
 
                 val newDatabases = config.databases.toMutableMap().apply {

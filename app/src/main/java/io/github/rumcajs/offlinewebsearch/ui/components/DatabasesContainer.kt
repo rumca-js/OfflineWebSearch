@@ -198,8 +198,7 @@ fun DatabasesContainer(
             },
             onDelete = { url, state ->
                 AppConfigManager.removeDatabase(url)
-                val fileName = state.localFileName
-                File(context.filesDir, fileName).delete()
+                AppConfigManager.removeDatabaseFiles(context, state.localFileName)
             },
             onUpdate = { url, state ->
                 if (!state.isLocal) {
