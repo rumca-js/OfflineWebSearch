@@ -25,7 +25,7 @@ clean:
 	rm -rf app/release
 
 build-debug:
-    ./gradlew assembleDebug -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
+	./gradlew assembleDebug -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
 
 # ~/.gradle/gradle.properties file
 # MYAPP_RELEASE_STORE_FILE=../my-release-key.jks
@@ -34,4 +34,4 @@ build-debug:
 # MYAPP_RELEASE_KEY_PASSWORD=your_key_password
 
 build-release:
-    ./gradlew assembleRelease -Dorg.gradle.jvmargs="-Xmx1500m -XX:MaxMetaspaceSize=512m" -Dkotlin.daemon.jvmargs="-Xmx1500m" -Dkotlin.compiler.execution.strategy="in-process"
+	./gradlew assembleRelease -Dorg.gradle.jvmargs="-Xmx1500m -XX:MaxMetaspaceSize=512m" -Dkotlin.daemon.jvmargs="-Xmx1500m" -Dkotlin.compiler.execution.strategy="in-process"
