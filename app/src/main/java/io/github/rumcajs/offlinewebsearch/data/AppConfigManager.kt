@@ -226,7 +226,7 @@ object AppConfigManager {
             // 2. Inspect database for configurationentry & searchview tables using domain models
             val dbFile = if (newState.extension == ".db") File(context.filesDir, newState.localFileName) else null
             val configEntry = if (dbFile != null) ConfigurationEntry.readFromDatabase(dbFile) else null
-            val searchViewEntry = if (dbFile != null) SearchViewEntry.readDefaultFromDatabase(dbFile) else null
+            val searchViewEntry = if (dbFile != null) SearchViewRepository.readDefaultFromDatabase(dbFile) else null
 
             // 3. Perform old file cleanup and configuration state transition
             updateConfig { config ->
@@ -475,7 +475,7 @@ object AppConfigManager {
             // Inspect unpacked database for configurationentry & searchview tables using domain models
             val dbFile = if (newState.extension == ".db") File(context.filesDir, newState.localFileName) else null
             val configEntry = if (dbFile != null) ConfigurationEntry.readFromDatabase(dbFile) else null
-            val searchViewEntry = if (dbFile != null) SearchViewEntry.readDefaultFromDatabase(dbFile) else null
+            val searchViewEntry = if (dbFile != null) SearchViewRepository.readDefaultFromDatabase(dbFile) else null
 
             updateConfig { config ->
                 if (oldUrl != null && oldUrl != url) {

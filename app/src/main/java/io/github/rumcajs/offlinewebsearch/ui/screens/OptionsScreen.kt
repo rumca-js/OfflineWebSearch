@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.ui.components.DatabasesContainer
@@ -24,7 +23,8 @@ import io.github.rumcajs.offlinewebsearch.ui.components.ReadOnlyBadge
 @Composable
 fun OptionsScreen(
     onNavigateToDatabases: () -> Unit = {},
-    onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> }
+    onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> },
+    onNavigateToAbout: () -> Unit = {}
 ) {
     val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
     val scrollState = rememberScrollState()
@@ -224,6 +224,15 @@ fun OptionsScreen(
         DatabasesContainer(
             onNavigateToDatabaseDetail = onNavigateToDatabaseDetail
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = onNavigateToAbout,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("About")
+        }
     }
 }
 

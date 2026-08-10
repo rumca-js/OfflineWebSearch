@@ -229,34 +229,14 @@ fun DatabaseScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             val isSql = state.extension == ".db"
-            var rowCountStr: String? by remember { mutableStateOf(null) }
+            var stats by remember { mutableStateOf(io.github.rumcajs.offlinewebsearch.data.DatabaseStats()) }
+            var isLoadingStats by remember { mutableStateOf(false) }
 
             LaunchedEffect(state) {
                 if (isSql) {
-                    try {
-                        withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            val file = File(context.filesDir, state.localFileName)
-                            if (file.exists()) {
-                                val db = android.database.sqlite.SQLiteDatabase.openDatabase(
-                                    file.absolutePath,
-                                    null,
-                                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY
-                                )
-                                db.use {
-                                    val cursor = it.rawQuery("SELECT COUNT(*) FROM linkdatamodel", null)
-                                    cursor.use { c ->
-                                        if (c.moveToFirst()) {
-                                            rowCountStr = c.getLong(0).toString()
-                                        }
-                                    }
-                                }
-                            } else {
-                                rowCountStr = "File not found"
-                            }
-                        }
-                    } catch (e: Exception) {
-                        rowCountStr = "Error (${e.message})"
-                    }
+                    isLoadingStats = true
+                    stats = io.github.rumcajs.offlinewebsearch.data.DatabaseStatsRepository.getStats(context, state)
+                    isLoadingStats = false
                 }
             }
 
@@ -272,7 +252,19 @@ fun DatabaseScreen(
             if (isSql) {
                 DatabasePropertyRow(
                     label = "linkdatamodel Count",
-                    value = rowCountStr ?: "Loading..."
+                    value = if (isLoadingStats) "Loading..." else stats.linkDataModelCount?.toString() ?: "N/A"
+                )
+                DatabasePropertyRow(
+                    label = "searchview Count",
+                    value = if (isLoadingStats) "Loading..." else stats.searchViewCount?.toString() ?: "N/A"
+                )
+                DatabasePropertyRow(
+                    label = "sourcedatamodel Count",
+                    value = if (isLoadingStats) "Loading..." else stats.sourceDataModelCount?.toString() ?: "N/A"
+                )
+                DatabasePropertyRow(
+                    label = "configurationentry Count",
+                    value = if (isLoadingStats) "Loading..." else stats.configurationEntryCount?.toString() ?: "N/A"
                 )
             }
             DatabasePropertyRow(label = "Status", value = state.status.name, isHighlight = true)

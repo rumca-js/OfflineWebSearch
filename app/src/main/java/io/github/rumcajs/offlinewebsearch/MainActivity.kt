@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -25,15 +26,17 @@ import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Home : io.github.rumcajs.offlinewebsearch.Screen("home", "Browse", Icons.Filled.Home)
-    object Databases : io.github.rumcajs.offlinewebsearch.Screen("databases", "Databases", Icons.Filled.Storage)
-    object About : io.github.rumcajs.offlinewebsearch.Screen("about", "About", Icons.Filled.Info)
-    object Options : io.github.rumcajs.offlinewebsearch.Screen("options", "Options", Icons.Filled.Settings)
-    object Detail : io.github.rumcajs.offlinewebsearch.Screen("detail", "Detail", Icons.Filled.Search)
-    object LinkPreview : io.github.rumcajs.offlinewebsearch.Screen("link_preview", "Link Preview", Icons.Filled.Search)
-    object LinkData : io.github.rumcajs.offlinewebsearch.Screen("link_data", "Link Data", Icons.Filled.Search)
-    object DatabaseDetail : io.github.rumcajs.offlinewebsearch.Screen("database_detail", "Database Detail", Icons.Filled.Storage)
-    object Edit : io.github.rumcajs.offlinewebsearch.Screen("edit", "Edit Entry", Icons.Filled.Edit)
+    object Home : Screen("home", "Browse", Icons.Filled.Home)
+    object Databases : Screen("databases", "Databases", Icons.Filled.Storage)
+    object Sources : Screen("sources", "Sources", Icons.Filled.List)
+    object About : Screen("about", "About", Icons.Filled.Info)
+    object Options : Screen("options", "Options", Icons.Filled.Settings)
+    object Detail : Screen("detail", "Detail", Icons.Filled.Search)
+    object LinkPreview : Screen("link_preview", "Link Preview", Icons.Filled.Search)
+    object LinkData : Screen("link_data", "Link Data", Icons.Filled.Search)
+    object DatabaseDetail : Screen("database_detail", "Database Detail", Icons.Filled.Storage)
+    object Edit : Screen("edit", "Edit Entry", Icons.Filled.Edit)
+    object SourceDetail : Screen("source_detail", "Source Detail", Icons.Filled.List)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
@@ -46,9 +49,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.theme.OfflineWebSearchTheme {
                 val navController = rememberNavController()
                 val items = listOf(
-                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Home,
-                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.About,
-                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Options,
+                    Screen.Home,
+                    Screen.Sources,
+                    Screen.Options,
                 )
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -77,19 +80,35 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = _root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Home.route,
+                        startDestination = Screen.Home.route,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Home.route) {
+                        composable(Screen.Home.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryListScreen(
                                 viewModel = searchViewModel,
                                 onNavigateToDetail = { entry ->
                                     searchViewModel.selectedEntry = entry
-                                    navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Detail.route)
+                                    navController.navigate(Screen.Detail.route)
                                 }
                             )
                         }
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Databases.route) {
+                        composable(Screen.Sources.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourcesScreen(
+                                onNavigateToSource = { source ->
+                                    searchViewModel.selectedSource = source
+                                    navController.navigate(Screen.SourceDetail.route)
+                                }
+                            )
+                        }
+                        composable(Screen.SourceDetail.route) {
+                            searchViewModel.selectedSource?.let { source ->
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceScreen(
+                                    source = source,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                        }
+                        composable(Screen.Databases.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabasesScreen(
                                 onNavigateToDatabaseDetail = { url, state ->
                                     searchViewModel.selectedDatabaseUrl = url
@@ -135,6 +154,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     searchViewModel.selectedDatabaseUrl = url
                                     searchViewModel.selectedDatabaseState = state
                                     navController.navigate(Screen.DatabaseDetail.route)
+                                },
+                                onNavigateToAbout = {
+                                    navController.navigate(Screen.About.route)
                                 }
                             )
                         }
@@ -185,7 +207,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     onBack = { navController.popBackStack() },
                                     onNavigateToDetail = { entry ->
                                         searchViewModel.selectedEntry = entry
-                                        navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Detail.route)
+                                        navController.navigate(Screen.Detail.route)
                                     }
                                 )
                             }

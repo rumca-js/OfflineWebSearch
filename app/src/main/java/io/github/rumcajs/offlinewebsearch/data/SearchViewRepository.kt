@@ -3,7 +3,7 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.database.sqlite.SQLiteDatabase
 import java.io.File
 
-data class SearchViewEntry(
+data class SearchViewRepository(
     val name: String? = null,
     val isDefault: Boolean = false,
     val orderByStr: String? = null
@@ -20,7 +20,7 @@ data class SearchViewEntry(
         }
 
     companion object {
-        fun readDefaultFromDatabase(file: File): SearchViewEntry? {
+        fun readDefaultFromDatabase(file: File): SearchViewRepository? {
             if (!file.exists()) return null
             try {
                 val db = SQLiteDatabase.openDatabase(
@@ -51,7 +51,7 @@ data class SearchViewEntry(
                             val isDefault = if (defaultIndex != -1 && !c.isNull(defaultIndex)) c.getInt(defaultIndex) == 1 else false
                             val orderByStr = if (orderByIndex != -1 && !c.isNull(orderByIndex)) c.getString(orderByIndex) else null
 
-                            SearchViewEntry(
+                            SearchViewRepository(
                                 name = name,
                                 isDefault = isDefault,
                                 orderByStr = orderByStr
@@ -69,7 +69,7 @@ data class SearchViewEntry(
                                     val isDefault = if (defaultIndex != -1 && !fc.isNull(defaultIndex)) fc.getInt(defaultIndex) == 1 else false
                                     val orderByStr = if (orderByIndex != -1 && !fc.isNull(orderByIndex)) fc.getString(orderByIndex) else null
 
-                                    SearchViewEntry(
+                                    SearchViewRepository(
                                         name = name,
                                         isDefault = isDefault,
                                         orderByStr = orderByStr
