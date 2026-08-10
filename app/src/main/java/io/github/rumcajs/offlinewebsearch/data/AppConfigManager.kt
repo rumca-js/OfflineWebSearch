@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
@@ -152,6 +151,17 @@ object AppConfigManager {
                 dbConfigs = newDbConfigs,
                 activeDatabase = if (it.activeDatabase == url) null else it.activeDatabase
             )
+        }
+    }
+
+    /**
+     * Removes database entry from config and deletes its files from local storage.
+     */
+    fun removeDatabaseAndFiles(context: Context, url: String, localFileName: String? = null) {
+        val fileName = localFileName ?: config.value.databases[url]?.localFileName
+        removeDatabase(url)
+        if (!fileName.isNullOrBlank()) {
+            removeDatabaseFiles(context, fileName)
         }
     }
 

@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
+import java.io.File
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
@@ -32,8 +34,6 @@ import io.github.rumcajs.offlinewebsearch.ui.components.DatabaseDetailDialog
 import io.github.rumcajs.offlinewebsearch.ui.components.ReadOnlyBadge
 import io.github.rumcajs.offlinewebsearch.ui.components.StatusBadge
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
-import kotlinx.coroutines.launch
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -220,8 +220,7 @@ fun DatabasesScreen(
                     showAddDialogMode = "url"
                 },
                 onDelete = {
-                    AppConfigManager.removeDatabase(url)
-                    AppConfigManager.removeDatabaseFiles(context, state.localFileName)
+                    AppConfigManager.removeDatabaseAndFiles(context, url, state.localFileName)
                 },
                 onUpdate = if (!state.isLocal) {
                     {

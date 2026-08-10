@@ -24,13 +24,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
+import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +50,7 @@ fun DatabasesContainer(
     var presetUrls by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoadingPresets by remember { mutableStateOf(false) }
     var selectedPresetUrl by remember { mutableStateOf("") }
+    var refreshingDb by remember { mutableStateOf<Pair<String, DatabaseState>?>(null) }
 
     suspend fun handleSaveDatabaseLocal(
         urlInput: String,
@@ -94,6 +94,23 @@ fun DatabasesContainer(
             AppConfigManager.saveDatabaseFromInternet(context, urlInput, editingUrl)
         } catch (e: Exception) {
             verificationError = e.message ?: "Failed to download database files"
+        }
+    }
+
+    fun refreshDatabase(url: String, state: DatabaseState) {
+        if (!state.isLocal) {
+            scope.launch {
+                try {
+                    AppConfigManager.saveDatabaseFromInternet(context, url, oldUrl = url)
+                    Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(
+                        context,
+                        "Failed to update database",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
     }
 
@@ -197,70 +214,42 @@ fun DatabasesContainer(
                 showAddDialogMode = "url"
             },
             onDelete = { url, state ->
-                AppConfigManager.removeDatabase(url)
-                AppConfigManager.removeDatabaseFiles(context, state.localFileName)
+                AppConfigManager.removeDatabaseAndFiles(context, url, state.localFileName)
             },
             onUpdate = { url, state ->
-                if (!state.isLocal) {
-                    scope.launch {
-                        try {
-                            AppConfigManager.saveDatabaseFromInternet(context, url, oldUrl = url)
-                            Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(
-                                context,
-                                "Failed to update database",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                }
+                refreshingDb = Pair(url, state)
             }
         )
 
+        // Refresh Confirmation Dialog
+        refreshingDb?.let { (url, state) ->
+            RefreshConfirmationDialog(
+                url = url,
+                state = state,
+                onDismiss = { refreshingDb = null },
+                onConfirm = { targetUrl, targetState ->
+                    refreshingDb = null
+                    refreshDatabase(targetUrl, targetState)
+                }
+            )
+        }
+
         // Add by URL Dialog
         if (showAddDialogMode == "url") {
-            AlertDialog(
-                onDismissRequest = { if (!isVerifying) showAddDialogMode = null },
-                title = { Text(if (editingUrl == null) "Add Database by URL" else "Edit Database URL") },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = urlInput,
-                            onValueChange = {
-                                urlInput = it
-                                verificationError = null
-                            },
-                            label = { Text("Web URL") },
-                            modifier = Modifier.fillMaxWidth(),
-                            isError = verificationError != null,
-                            supportingText = verificationError?.let { { Text(it) } }
-                        )
-                        if (isVerifying) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .padding(top = 8.dp)
-                                    .align(Alignment.CenterHorizontally)
-                            )
-                        }
-                    }
+            AddByUrlDialog(
+                urlInput = urlInput,
+                editingUrl = editingUrl,
+                isVerifying = isVerifying,
+                verificationError = verificationError,
+                onUrlInputChange = {
+                    urlInput = it
+                    verificationError = null
                 },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                handleSaveDatabase(urlInput, editingUrl, null)
-                                if (verificationError == null) showAddDialogMode = null
-                            }
-                        },
-                        enabled = urlInput.isNotBlank() && !isVerifying
-                    ) {
-                        Text("Save")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddDialogMode = null }, enabled = !isVerifying) {
-                        Text("Cancel")
+                onDismiss = { if (!isVerifying) showAddDialogMode = null },
+                onSave = {
+                    scope.launch {
+                        handleSaveDatabase(urlInput, editingUrl, null)
+                        if (verificationError == null) showAddDialogMode = null
                     }
                 }
             )
@@ -268,86 +257,22 @@ fun DatabasesContainer(
 
         // Add from Preselected List Dialog
         if (showAddDialogMode == "preset") {
-            var dropdownExpanded by remember { mutableStateOf(false) }
-
-            AlertDialog(
-                onDismissRequest = { if (!isVerifying) showAddDialogMode = null },
-                title = { Text("Preselected Databases") },
-                text = {
-                    Column {
-                        Text("Select a database from rumca-js repository list:")
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        if (isLoadingPresets) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                        } else if (presetUrls.isEmpty()) {
-                            Text("Failed to load preselected list. Please check network connection.")
-                        } else {
-                            ExposedDropdownMenuBox(
-                                expanded = dropdownExpanded,
-                                onExpandedChange = { dropdownExpanded = !dropdownExpanded }
-                            ) {
-                                OutlinedTextField(
-                                    value = selectedPresetUrl.ifEmpty { "Select a database..." },
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                                    modifier = Modifier
-                                        .menuAnchor()
-                                        .fillMaxWidth()
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = dropdownExpanded,
-                                    onDismissRequest = { dropdownExpanded = false }
-                                ) {
-                                    presetUrls.forEach { pUrl ->
-                                        DropdownMenuItem(
-                                            text = { Text(pUrl) },
-                                            onClick = {
-                                                selectedPresetUrl = pUrl
-                                                urlInput = pUrl
-                                                dropdownExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        if (verificationError != null) {
-                            Text(
-                                text = verificationError!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-
-                        if (isVerifying) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .padding(top = 8.dp)
-                                    .align(Alignment.CenterHorizontally)
-                            )
-                        }
-                    }
+            AddFromPresetDialog(
+                isLoadingPresets = isLoadingPresets,
+                presetUrls = presetUrls,
+                selectedPresetUrl = selectedPresetUrl,
+                isVerifying = isVerifying,
+                verificationError = verificationError,
+                urlInput = urlInput,
+                onSelectPreset = { pUrl ->
+                    selectedPresetUrl = pUrl
+                    urlInput = pUrl
                 },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                handleSaveDatabase(urlInput, null, null)
-                                if (verificationError == null) showAddDialogMode = null
-                            }
-                        },
-                        enabled = urlInput.isNotBlank() && !isVerifying
-                    ) {
-                        Text("Add Database")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddDialogMode = null }, enabled = !isVerifying) {
-                        Text("Cancel")
+                onDismiss = { if (!isVerifying) showAddDialogMode = null },
+                onAdd = {
+                    scope.launch {
+                        handleSaveDatabase(urlInput, null, null)
+                        if (verificationError == null) showAddDialogMode = null
                     }
                 }
             )
@@ -495,4 +420,170 @@ private fun DatabaseActionButton(
             maxLines = 1
         )
     }
+}
+
+@Composable
+fun RefreshConfirmationDialog(
+    url: String,
+    state: DatabaseState,
+    onDismiss: () -> Unit,
+    onConfirm: (String, DatabaseState) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Refresh Database") },
+        text = { Text("Are you sure you want to refresh '${state.displayName}'? This will replace the current local version of the database.") },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(url, state) }
+            ) {
+                Text("Refresh")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun AddByUrlDialog(
+    urlInput: String,
+    editingUrl: String?,
+    isVerifying: Boolean,
+    verificationError: String?,
+    onUrlInputChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (editingUrl == null) "Add Database by URL" else "Edit Database URL") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = urlInput,
+                    onValueChange = onUrlInputChange,
+                    label = { Text("Web URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = verificationError != null,
+                    supportingText = verificationError?.let { { Text(it) } }
+                )
+                if (isVerifying) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSave,
+                enabled = urlInput.isNotBlank() && !isVerifying
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isVerifying) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddFromPresetDialog(
+    isLoadingPresets: Boolean,
+    presetUrls: List<String>,
+    selectedPresetUrl: String,
+    isVerifying: Boolean,
+    verificationError: String?,
+    urlInput: String,
+    onSelectPreset: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onAdd: () -> Unit
+) {
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Preselected Databases") },
+        text = {
+            Column {
+                Text("Select a database from rumca-js repository list:")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (isLoadingPresets) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else if (presetUrls.isEmpty()) {
+                    Text("Failed to load preselected list. Please check network connection.")
+                } else {
+                    ExposedDropdownMenuBox(
+                        expanded = dropdownExpanded,
+                        onExpandedChange = { dropdownExpanded = !dropdownExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedPresetUrl.ifEmpty { "Select a database..." },
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false }
+                        ) {
+                            presetUrls.forEach { pUrl ->
+                                DropdownMenuItem(
+                                    text = { Text(pUrl) },
+                                    onClick = {
+                                        onSelectPreset(pUrl)
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (verificationError != null) {
+                    Text(
+                        text = verificationError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                if (isVerifying) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onAdd,
+                enabled = urlInput.isNotBlank() && !isVerifying
+            ) {
+                Text("Add Database")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isVerifying) {
+                Text("Cancel")
+            }
+        }
+    )
 }

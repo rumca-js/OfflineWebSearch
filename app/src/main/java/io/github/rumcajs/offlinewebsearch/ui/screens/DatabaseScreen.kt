@@ -11,21 +11,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import kotlinx.coroutines.launch
+import java.io.File
+import java.text.DecimalFormat
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.ui.components.DatabasePropertyRow
-import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
-import kotlinx.coroutines.launch
-import java.io.File
-import java.text.DecimalFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +41,87 @@ fun DatabaseScreen(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
+    var showRefreshDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    var urlInput by remember { mutableStateOf(url ?: "") }
+    var isVerifying by remember { mutableStateOf(false) }
+    var verificationError by remember { mutableStateOf<String?>(null) }
+
+    if (showRefreshDialog && !state.isLocal && url != null) {
+        io.github.rumcajs.offlinewebsearch.ui.components.RefreshConfirmationDialog(
+            url = url,
+            state = state,
+            onDismiss = { showRefreshDialog = false },
+            onConfirm = { targetUrl, _ ->
+                showRefreshDialog = false
+                scope.launch {
+                    try {
+                        AppConfigManager.saveDatabaseFromInternet(context, targetUrl, oldUrl = targetUrl)
+                        Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Failed to update database", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        )
+    }
+
+    if (showEditDialog && url != null) {
+        io.github.rumcajs.offlinewebsearch.ui.components.AddByUrlDialog(
+            urlInput = urlInput,
+            editingUrl = url,
+            isVerifying = isVerifying,
+            verificationError = verificationError,
+            onUrlInputChange = {
+                urlInput = it
+                verificationError = null
+            },
+            onDismiss = { if (!isVerifying) showEditDialog = false },
+            onSave = {
+                scope.launch {
+                    isVerifying = true
+                    verificationError = null
+                    try {
+                        AppConfigManager.saveDatabaseFromInternet(context, urlInput, oldUrl = url)
+                        showEditDialog = false
+                        Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        verificationError = e.message ?: "Failed to update database"
+                    } finally {
+                        isVerifying = false
+                    }
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog && url != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Database") },
+            text = { Text("Are you sure you want to delete '${state.displayName}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        AppConfigManager.removeDatabaseAndFiles(context, url, state.localFileName)
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -52,17 +133,20 @@ fun DatabaseScreen(
                 },
                 actions = {
                     if (!state.isLocal && url != null) {
-                        IconButton(onClick = {
-                            scope.launch {
-                                try {
-                                    AppConfigManager.saveDatabaseFromInternet(context, url, oldUrl = url)
-                                    Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Failed to update database", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }) {
+                        IconButton(onClick = { showRefreshDialog = true }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh Database")
+                        }
+                    }
+                    if (url != null) {
+                        IconButton(onClick = {
+                            urlInput = url
+                            verificationError = null
+                            showEditDialog = true
+                        }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Database")
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Database")
                         }
                     }
                 }
