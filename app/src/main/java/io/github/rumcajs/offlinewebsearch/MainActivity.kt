@@ -37,6 +37,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object DatabaseDetail : Screen("database_detail", "Database Detail", Icons.Filled.Storage)
     object Edit : Screen("edit", "Edit Entry", Icons.Filled.Edit)
     object SourceDetail : Screen("source_detail", "Source Detail", Icons.Filled.List)
+    object SourceEdit : Screen("source_edit", "Source Edit", Icons.Filled.Edit)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
@@ -97,6 +98,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToSource = { source ->
                                     searchViewModel.selectedSource = source
                                     navController.navigate(Screen.SourceDetail.route)
+                                },
+                                onNavigateToEditSource = { source ->
+                                    searchViewModel.selectedSource = source
+                                    navController.navigate(Screen.SourceEdit.route)
                                 }
                             )
                         }
@@ -104,6 +109,18 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             searchViewModel.selectedSource?.let { source ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceScreen(
                                     source = source,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                        }
+                        composable(Screen.SourceEdit.route) {
+                            searchViewModel.selectedSource?.let { source ->
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceEditScreen(
+                                    source = source,
+                                    onSourceUpdated = { updatedSource ->
+                                        searchViewModel.selectedSource = updatedSource
+                                        navController.popBackStack()
+                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }

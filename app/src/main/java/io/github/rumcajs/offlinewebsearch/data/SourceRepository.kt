@@ -54,4 +54,58 @@ object SourceRepository {
 
         sources
     }
+
+    suspend fun updateSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long,
+        title: String,
+        url: String,
+        enabled: Boolean
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext false
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val values = android.content.ContentValues().apply {
+                put("title", title)
+                put("url", url)
+                put("enabled", if (enabled) 1 else 0)
+            }
+            val rows = db.update("sourcedatamodel", values, "id = ?", arrayOf(id.toString()))
+            db.close()
+            rows > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun deleteSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext false
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val rows = db.delete("sourcedatamodel", "id = ?", arrayOf(id.toString()))
+            db.close()
+            rows > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 }
