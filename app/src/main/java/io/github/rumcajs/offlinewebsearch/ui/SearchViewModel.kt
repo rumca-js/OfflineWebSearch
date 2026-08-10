@@ -143,4 +143,18 @@ class SearchViewModel : ViewModel() {
         val start = currentPage * pageSize
         allSearchResults.drop(start).take(pageSize)
     }
+
+    fun updateEntryInMemory(updatedEntry: io.github.rumcajs.offlinewebsearch.data.Entry) {
+        allEntries = allEntries.map { entry ->
+            if (entry.id != null && entry.id == updatedEntry.id) {
+                updatedEntry
+            } else if (entry.link != null && entry.link == updatedEntry.link) {
+                updatedEntry
+            } else if (entry == selectedEntry) {
+                updatedEntry
+            } else {
+                entry
+            }
+        }
+    }
 }

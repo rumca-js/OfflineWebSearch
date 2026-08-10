@@ -6,11 +6,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.File
 import kotlin.collections.forEach
+import java.io.File
 
 @Serializable
 data class Entry(
+    val id: Long? = null,
     val link: String? = null,
     val title: String? = null,
     val description: String? = null,
@@ -98,7 +99,7 @@ object EntryListRepository {
 
                     val sqlText = """
                             SELECT 
-                                l.title, l.description, l.thumbnail, l.link, l.page_rating_votes, l.page_rating, l.date_created, l.date_published, l.date_dead_since,
+                                l.id, l.title, l.description, l.thumbnail, l.link, l.page_rating_votes, l.page_rating, l.date_created, l.date_published, l.date_dead_since,
                                 l.age, l.author, l.album, l.language, l.status_code, l.manual_status_code, l.bookmarked,
                                 t.tag 
                             FROM linkdatamodel l 
@@ -108,6 +109,7 @@ object EntryListRepository {
                     val cursor = db.rawQuery(sqlText, null)
                     cursor.use {
                         while (it.moveToNext()) {
+                            val id = it.getLong(it.getColumnIndexOrThrow("id"))
                             val title = it.getString(it.getColumnIndexOrThrow("title"))
                             val description = it.getString(it.getColumnIndexOrThrow("description"))
                             val thumbnail = it.getString(it.getColumnIndexOrThrow("thumbnail"))
@@ -129,6 +131,7 @@ object EntryListRepository {
 
                             loadedPlaces.add(
                                 Entry(
+                                    id = id,
                                     link = link,
                                     title = title,
                                     description = description,
@@ -226,6 +229,57 @@ object EntryListRepository {
                 db.endTransaction()
                 db.close()
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * Updates an existing entry's title and description in the database.
+     * Entry is identified by its primary key `id` (or `link` if `id` is null).
+     */
+    suspend fun updateEntryInSql(
+        context: Context,
+        activeDatabaseState: DatabaseState,
+        id: Long?,
+        originalLink: String?,
+        newTitle: String?,
+        newDescription: String?
+    ): Boolean = withContext(Dispatchers.IO) {
+        val extension = activeDatabaseState.extension
+        if (extension != ".db") return@withContext false
+        if (activeDatabaseState.isReadOnly) return@withContext false
+
+        val fileName = activeDatabaseState.localFileName
+        val file = File(context.filesDir, fileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val values = android.content.ContentValues().apply {
+                put("title", newTitle)
+                put("description", newDescription)
+            }
+            val rows = if (id != null) {
+                db.update(
+                    "linkdatamodel",
+                    values,
+                    "id = ?",
+                    arrayOf(id.toString())
+                )
+            } else if (!originalLink.isNullOrEmpty()) {
+                db.update(
+                    "linkdatamodel",
+                    values,
+                    "link = ?",
+                    arrayOf(originalLink)
+                )
+            } else {
+                0
+            }
+            db.close()
+            rows > 0
         } catch (e: Exception) {
             e.printStackTrace()
             false

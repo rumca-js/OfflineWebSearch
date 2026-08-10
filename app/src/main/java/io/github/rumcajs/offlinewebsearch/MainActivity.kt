@@ -6,10 +6,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -22,8 +24,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-import androidx.compose.material.icons.filled.Storage
-
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : io.github.rumcajs.offlinewebsearch.Screen("home", "Browse", Icons.Filled.Home)
     object Databases : io.github.rumcajs.offlinewebsearch.Screen("databases", "Databases", Icons.Filled.Storage)
@@ -33,6 +33,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object LinkPreview : io.github.rumcajs.offlinewebsearch.Screen("link_preview", "Link Preview", Icons.Filled.Search)
     object LinkData : io.github.rumcajs.offlinewebsearch.Screen("link_data", "Link Data", Icons.Filled.Search)
     object DatabaseDetail : io.github.rumcajs.offlinewebsearch.Screen("database_detail", "Database Detail", Icons.Filled.Storage)
+    object Edit : io.github.rumcajs.offlinewebsearch.Screen("edit", "Edit Entry", Icons.Filled.Edit)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
@@ -144,6 +145,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     onNavigateToLinkPreview = { url ->
                                         searchViewModel.previewUrl = url
                                         navController.navigate(Screen.LinkPreview.route)
+                                    },
+                                    onNavigateToEdit = {
+                                        navController.navigate(Screen.Edit.route)
+                                    },
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                        }
+                        composable(Screen.Edit.route) {
+                            searchViewModel.selectedEntry?.let { place ->
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryEditScreen(
+                                    entry = place,
+                                    onEntryUpdated = { updatedEntry ->
+                                        searchViewModel.selectedEntry = updatedEntry
+                                        searchViewModel.updateEntryInMemory(updatedEntry)
+                                        navController.popBackStack()
                                     },
                                     onBack = { navController.popBackStack() }
                                 )

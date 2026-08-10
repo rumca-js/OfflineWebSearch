@@ -1,25 +1,26 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
-import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import android.widget.Toast
+import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
 import io.github.rumcajs.offlinewebsearch.webtoolkit.OdyseeChannelHandler
 import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeChannelHandler
@@ -30,6 +31,7 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.RedditChannelHandler
 fun EntryDetailScreen(
     entry: io.github.rumcajs.offlinewebsearch.data.Entry,
     onNavigateToLinkPreview: (String) -> Unit,
+    onNavigateToEdit: () -> Unit,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -44,6 +46,11 @@ fun EntryDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
                 }
             )
@@ -196,54 +203,54 @@ fun EntryDetailScreen(
 
             // Entry detail properties, metadata
 
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Created",
                 value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedDate(
                     entry.date_created
                 )
             )
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Dead",
                 value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedDate(
                     entry.date_dead_since
                 )
             )
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Bookmarked",
                 value = if (entry.bookmarked == true) "Yes" else "No"
             )
 
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Author",
                 value = entry.author ?: "NA"
             )
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Album",
                 value = entry.album ?: "NA"
             )
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Language",
                 value = entry.language ?: "NA"
             )
 
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Rating",
                 value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedRating(
                     entry
                 )
             )
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Votes",
                 value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedVotes(
                     entry
                 )
             )
 
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Status Code",
                 value = (entry.status_code ?: 0).toString()
             )
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow(
+            DetailRow(
                 label = "Manual Status Code",
                 value = (entry.manual_status_code ?: 0).toString()
             )
