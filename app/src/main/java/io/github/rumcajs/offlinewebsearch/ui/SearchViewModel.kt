@@ -95,11 +95,30 @@ class SearchViewModel : ViewModel() {
         if (activeSearchQuery.isBlank()) {
             allEntries
         } else {
-            allEntries.filter { entry ->
-                entry.title?.contains(activeSearchQuery, ignoreCase = true) == true ||
-                entry.description?.contains(activeSearchQuery, ignoreCase = true) == true ||
-                entry.link?.contains(activeSearchQuery, ignoreCase = true) == true ||
-                entry.tags?.any { it.contains(activeSearchQuery, ignoreCase = true) } == true
+            val query = activeSearchQuery.trim()
+            val likeRegex = Regex("^(title|link|description|tag|tags)\\s+LIKE\\s+['\"]?%?([^%'\"]+)%?['\"]?$", RegexOption.IGNORE_CASE)
+            val match = likeRegex.find(query)
+
+            if (match != null) {
+                val field = match.groupValues[1].lowercase()
+                val searchTerm = match.groupValues[2].trim()
+
+                allEntries.filter { entry ->
+                    when (field) {
+                        "title" -> entry.title?.contains(searchTerm, ignoreCase = true) == true
+                        "link" -> entry.link?.contains(searchTerm, ignoreCase = true) == true
+                        "description" -> entry.description?.contains(searchTerm, ignoreCase = true) == true
+                        "tag", "tags" -> entry.tags?.any { it.contains(searchTerm, ignoreCase = true) } == true
+                        else -> false
+                    }
+                }
+            } else {
+                allEntries.filter { entry ->
+                    entry.title?.contains(query, ignoreCase = true) == true ||
+                    entry.description?.contains(query, ignoreCase = true) == true ||
+                    entry.link?.contains(query, ignoreCase = true) == true ||
+                    entry.tags?.any { it.contains(query, ignoreCase = true) } == true
+                }
             }
         }
     }

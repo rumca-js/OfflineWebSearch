@@ -1,0 +1,68 @@
+package io.github.rumcajs.offlinewebsearch.data
+
+import android.database.sqlite.SQLiteDatabase
+import java.io.File
+
+data class ConfigurationEntry(
+    val showIcons: Boolean? = null,
+    val displayType: String? = null
+) {
+    val isShowIcons: Boolean
+        get() = showIcons == true
+
+    val viewStyle: ViewStyle?
+        get() = when (displayType?.lowercase()) {
+            "gallery" -> ViewStyle.GALLERY
+            "search-engine", "search_engine", "searchengine", "search engine" -> ViewStyle.SEARCH_ENGINE
+            "standard", "news" -> ViewStyle.STANDARD
+            else -> null
+        }
+
+    companion object {
+        fun readFromDatabase(file: File): ConfigurationEntry? {
+            if (!file.exists()) return null
+            try {
+                val db = SQLiteDatabase.openDatabase(
+                    file.absolutePath,
+                    null,
+                    SQLiteDatabase.OPEN_READONLY
+                )
+                return db.use { sqliteDb ->
+                    val tableCursor = sqliteDb.rawQuery(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='configurationentry'",
+                        null
+                    )
+                    val tableExists = tableCursor.use { c -> c.moveToFirst() }
+                    if (tableExists) {
+                        val cursor = sqliteDb.rawQuery("SELECT * FROM configurationentry LIMIT 1", null)
+                        cursor.use { c ->
+                            if (c.moveToFirst()) {
+                                val showIconsIndex = c.getColumnIndex("show_icons")
+                                val showIcons = if (showIconsIndex != -1 && !c.isNull(showIconsIndex)) {
+                                    c.getInt(showIconsIndex) == 1
+                                } else null
+
+                                val displayTypeIndex = c.getColumnIndex("display_type")
+                                val displayType = if (displayTypeIndex != -1 && !c.isNull(displayTypeIndex)) {
+                                    c.getString(displayTypeIndex)
+                                } else null
+
+                                ConfigurationEntry(
+                                    showIcons = showIcons,
+                                    displayType = displayType
+                                )
+                            } else {
+                                ConfigurationEntry()
+                            }
+                        }
+                    } else {
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return null
+            }
+        }
+    }
+}

@@ -162,7 +162,7 @@ fun DatabaseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.displayName) },
+                title = { Text("") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

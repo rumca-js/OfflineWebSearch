@@ -33,17 +33,15 @@ Contains state of database, name of local files, and remote path
  - Provides search widget
  - Search suggestion are scrollable, with rows
  - scrolling list allows to load more entries
+ 
+### Search Operators
+
+title LIKE %something%
+description LIKE %something%
 
 ## EntryPreviewScreen
 
  - Uses generics, builder
-
-### Search Operators
-
- - & - and
- - | - or
- - = - contains string
- - == - matches string
 
 ## OptionsScreen
 

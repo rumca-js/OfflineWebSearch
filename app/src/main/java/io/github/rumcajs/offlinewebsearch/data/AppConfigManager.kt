@@ -223,7 +223,12 @@ object AppConfigManager {
                 output.write(content)
             }
 
-            // 2. Perform old file cleanup and configuration state transition
+            // 2. Inspect database for configurationentry & searchview tables using domain models
+            val dbFile = if (newState.extension == ".db") File(context.filesDir, newState.localFileName) else null
+            val configEntry = if (dbFile != null) ConfigurationEntry.readFromDatabase(dbFile) else null
+            val searchViewEntry = if (dbFile != null) SearchViewEntry.readDefaultFromDatabase(dbFile) else null
+
+            // 3. Perform old file cleanup and configuration state transition
             updateConfig { config ->
                 // Clean up old file if the URL actually changed
                 if (oldUrl != null && oldUrl != url) {
@@ -249,9 +254,18 @@ object AppConfigManager {
                 }
 
                 val newDbConfigs = config.dbConfigs.toMutableMap().apply {
-                    if (oldUrl != null) {
-                        remove(oldUrl)?.let { dbConfig -> put(url, dbConfig) }
+                    val existingConfig = if (oldUrl != null) remove(oldUrl) else get(url)
+                    var updatedConfig = existingConfig ?: config.defaultDbConfig
+                    if (configEntry?.showIcons != null) {
+                        updatedConfig = updatedConfig.copy(showIcons = configEntry.showIcons)
                     }
+                    if (configEntry?.viewStyle != null) {
+                        updatedConfig = updatedConfig.copy(viewStyle = configEntry.viewStyle!!)
+                    }
+                    if (searchViewEntry?.orderBy != null) {
+                        updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
+                    }
+                    put(url, updatedConfig)
                 }
 
                 config.copy(
@@ -458,6 +472,11 @@ object AppConfigManager {
                 }
             }
 
+            // Inspect unpacked database for configurationentry & searchview tables using domain models
+            val dbFile = if (newState.extension == ".db") File(context.filesDir, newState.localFileName) else null
+            val configEntry = if (dbFile != null) ConfigurationEntry.readFromDatabase(dbFile) else null
+            val searchViewEntry = if (dbFile != null) SearchViewEntry.readDefaultFromDatabase(dbFile) else null
+
             updateConfig { config ->
                 if (oldUrl != null && oldUrl != url) {
                     val oldState = DatabaseState.fromUrl(oldUrl)
@@ -481,9 +500,18 @@ object AppConfigManager {
                 }
 
                 val newDbConfigs = config.dbConfigs.toMutableMap().apply {
-                    if (oldUrl != null) {
-                        remove(oldUrl)?.let { dbConfig -> put(url, dbConfig) }
+                    val existingConfig = if (oldUrl != null) remove(oldUrl) else get(url)
+                    var updatedConfig = existingConfig ?: config.defaultDbConfig
+                    if (configEntry?.showIcons != null) {
+                        updatedConfig = updatedConfig.copy(showIcons = configEntry.showIcons)
                     }
+                    if (configEntry?.viewStyle != null) {
+                        updatedConfig = updatedConfig.copy(viewStyle = configEntry.viewStyle!!)
+                    }
+                    if (searchViewEntry?.orderBy != null) {
+                        updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
+                    }
+                    put(url, updatedConfig)
                 }
 
                 config.copy(
