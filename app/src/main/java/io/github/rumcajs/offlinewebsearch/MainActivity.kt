@@ -93,15 +93,25 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToDatabaseDetail = { url, state ->
                                     searchViewModel.selectedDatabaseUrl = url
                                     searchViewModel.selectedDatabaseState = state
-                                    navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.DatabaseDetail.route)
+                                    navController.navigate(Screen.DatabaseDetail.route)
                                 }
                             )
                         }
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.DatabaseDetail.route) {
-                            val state = searchViewModel.selectedDatabaseState
+                        composable(Screen.DatabaseDetail.route) {
                             val url = searchViewModel.selectedDatabaseUrl
+                            val config = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState().value
+                            val state = if (url == null) {
+                                searchViewModel.selectedDatabaseState ?: _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseState(
+                                    url = "",
+                                    localFileName = "places_0.json",
+                                    status = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY,
+                                    progress = 1.0f,
+                                    isReadOnly = true
+                                )
+                            } else {
+                                config.databases[url] ?: searchViewModel.selectedDatabaseState
+                            }
                             if (state != null) {
-                                val config = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState().value
                                 val dbConfig = if (url == null) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
                                 val isActive = if (url == null) config.activeDatabase == null else config.activeDatabase == url
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseScreen(
@@ -114,8 +124,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 )
                             }
                         }
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.About.route) { _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.AboutScreen() }
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Options.route) {
+                        composable(Screen.About.route) { _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.AboutScreen() }
+                        composable(Screen.Options.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionsScreen(
                                 onNavigateToDatabases = {
                                     navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Databases.route)
@@ -123,11 +133,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToDatabaseDetail = { url, state ->
                                     searchViewModel.selectedDatabaseUrl = url
                                     searchViewModel.selectedDatabaseState = state
-                                    navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.DatabaseDetail.route)
+                                    navController.navigate(Screen.DatabaseDetail.route)
                                 }
                             )
                         }
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Detail.route) {
+                        composable(Screen.Detail.route) {
                             searchViewModel.selectedEntry?.let { place ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryDetailScreen(
                                     entry = place,
@@ -139,7 +149,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 )
                             }
                         }
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.LinkPreview.route) {
+                        composable(Screen.LinkPreview.route) {
                             searchViewModel.previewUrl?.let { url ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryStatusScreen(
                                     url = url,
@@ -151,7 +161,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 )
                             }
                         }
-                        composable(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.LinkData.route) {
+                        composable(Screen.LinkData.route) {
                             searchViewModel.previewUrl?.let { url ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryPreviewScreen(
                                     url = url,

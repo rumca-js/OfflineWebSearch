@@ -86,30 +86,30 @@ fun DatabasesContainer(
         }
     }
 
-    suspend fun handleSaveDatabaseFromInternet(
+    fun handleSaveDatabaseFromInternet(
         urlInput: String,
         editingUrl: String?
     ) {
-        try {
-            AppConfigManager.saveDatabaseFromInternet(context, urlInput, editingUrl)
-        } catch (e: Exception) {
-            verificationError = e.message ?: "Failed to download database files"
+        val isZip = urlInput.endsWith(".db.zip", ignoreCase = true) || urlInput.endsWith(".zip", ignoreCase = true)
+        val state = DatabaseState.fromUrl(urlInput)
+        if (state.extension != ".json" && state.extension != ".db" && !isZip) {
+            verificationError = "URL must end with .json, .db, .zip, or .db.zip"
+            return
         }
+
+        // Close dialog immediately
+        showAddDialogMode = null
+        isVerifying = false
+
+        // Launch download in background scope so state updates in container reactively
+        AppConfigManager.refreshDatabaseInBackground(context, urlInput)
     }
 
     fun refreshDatabase(url: String, state: DatabaseState) {
         if (!state.isLocal) {
-            scope.launch {
-                try {
-                    AppConfigManager.saveDatabaseFromInternet(context, url, oldUrl = url)
-                    Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(
-                        context,
-                        "Failed to update database",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+            val started = AppConfigManager.refreshDatabaseInBackground(context, url)
+            if (started) {
+                Toast.makeText(context, "Database refresh started", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -126,10 +126,10 @@ fun DatabasesContainer(
 
         if (state.isLocal) {
             handleSaveDatabaseLocal(urlInput, editingUrl, selectedFileUri)
+            isVerifying = false
         } else {
             handleSaveDatabaseFromInternet(urlInput, editingUrl)
         }
-        isVerifying = false
     }
 
     LaunchedEffect(showAddDialogMode) {

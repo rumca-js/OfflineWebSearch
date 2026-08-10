@@ -15,17 +15,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import android.net.Uri
 import android.widget.Toast
-import kotlinx.coroutines.launch
-import java.io.File
-import java.text.DecimalFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.ui.components.DatabasePropertyRow
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.InputStream
+import java.text.DecimalFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +54,42 @@ fun DatabaseScreen(
     var isVerifying by remember { mutableStateOf(false) }
     var verificationError by remember { mutableStateOf<String?>(null) }
 
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("*/*")
+    ) { destinationUri: Uri? ->
+        if (destinationUri != null) {
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val inputStream: InputStream? = if (state.localFileName.isBlank()) {
+                        context.assets.open("places_0.json")
+                    } else {
+                        val dbFile = File(context.filesDir, state.localFileName)
+                        if (dbFile.exists()) dbFile.inputStream() else null
+                    }
+
+                    if (inputStream != null) {
+                        context.contentResolver.openOutputStream(destinationUri)?.use { outputStream ->
+                            inputStream.use { input ->
+                                input.copyTo(outputStream)
+                            }
+                        }
+                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            Toast.makeText(context, "Database exported successfully", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            Toast.makeText(context, "Failed to find database file", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
     if (showRefreshDialog && !state.isLocal && url != null) {
         io.github.rumcajs.offlinewebsearch.ui.components.RefreshConfirmationDialog(
             url = url,
@@ -56,13 +97,9 @@ fun DatabaseScreen(
             onDismiss = { showRefreshDialog = false },
             onConfirm = { targetUrl, _ ->
                 showRefreshDialog = false
-                scope.launch {
-                    try {
-                        AppConfigManager.saveDatabaseFromInternet(context, targetUrl, oldUrl = targetUrl)
-                        Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Failed to update database", Toast.LENGTH_SHORT).show()
-                    }
+                val started = AppConfigManager.refreshDatabaseInBackground(context, targetUrl)
+                if (started) {
+                    Toast.makeText(context, "Database refresh started", Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -132,6 +169,12 @@ fun DatabaseScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        val fileNameToExport = if (state.localFileName.isNotBlank()) state.localFileName else "places_0.json"
+                        exportLauncher.launch(fileNameToExport)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Export Database")
+                    }
                     if (!state.isLocal && url != null) {
                         IconButton(onClick = { showRefreshDialog = true }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh Database")

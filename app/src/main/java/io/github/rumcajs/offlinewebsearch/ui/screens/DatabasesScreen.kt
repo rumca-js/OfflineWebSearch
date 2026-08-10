@@ -52,21 +52,29 @@ fun DatabasesScreen(
     var verificationError by remember { mutableStateOf<String?>(null) }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
 
-    suspend fun handleSaveDatabase(url: String, editUrl: String?, fileUri: Uri?) {
-        isVerifying = true
-        verificationError = null
+    fun handleSaveDatabase(url: String, editUrl: String?, fileUri: Uri?) {
         val state = DatabaseState.fromUrl(url)
-        try {
-            if (state.isLocal && fileUri != null) {
-                AppConfigManager.saveDatabaseLocal(context, url, fileUri, editUrl)
-            } else if (!state.isLocal) {
-                AppConfigManager.saveDatabaseFromInternet(context, url, editUrl)
+        if (state.isLocal && fileUri != null) {
+            isVerifying = true
+            verificationError = null
+            scope.launch {
+                try {
+                    AppConfigManager.saveDatabaseLocal(context, url, fileUri, editUrl)
+                    showAddDialog = false
+                } catch (e: Exception) {
+                    verificationError = e.message ?: "Failed to save database"
+                } finally {
+                    isVerifying = false
+                }
+            }
+        } else if (!state.isLocal) {
+            val isZip = url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)
+            if (state.extension != ".json" && state.extension != ".db" && !isZip) {
+                verificationError = "URL must end with .json, .db, .zip, or .db.zip"
+                return
             }
             showAddDialog = false
-        } catch (e: Exception) {
-            verificationError = e.message ?: "Failed to save database"
-        } finally {
-            isVerifying = false
+            AppConfigManager.refreshDatabaseInBackground(context, url)
         }
     }
 
@@ -77,9 +85,7 @@ fun DatabasesScreen(
             val fileName = getFileName(context, uri) ?: "local_db.json"
             if (config.isSupportedFileName(fileName)) {
                 val url = DatabaseState.toLocalUrl(fileName)
-                scope.launch {
-                    handleSaveDatabase(url, null, uri)
-                }
+                handleSaveDatabase(url, null, uri)
             } else {
                 Toast.makeText(context, "Unsupported file extension. Supported: ${config.supportedDatabasesExtensions.joinToString(", ")}", Toast.LENGTH_LONG).show()
             }

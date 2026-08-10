@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +17,8 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 
 
@@ -339,6 +342,37 @@ object AppConfigManager {
             updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
             throw e
         }
+    }
+
+    // Mutex to ensure only one database is downloaded/unpacked at a time
+    private val downloadMutex = Mutex()
+
+    /**
+     * Enqueues database refresh on an application-level CoroutineScope (configScope)
+     * so that only one database is downloaded/unpacked at a time in sequence.
+     * Returns false if this database is already queued or downloading.
+     */
+    fun refreshDatabaseInBackground(context: Context, url: String): Boolean {
+        val currentDbState = config.value.databases[url]
+        if (currentDbState?.status == DatabaseStatus.DOWNLOADING || currentDbState?.status == DatabaseStatus.UNPACKING) {
+            Toast.makeText(context, "Database is already downloading or unpacking", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        // Add to configuration map immediately so UI shows it in list
+        addDatabase(url)
+
+        val appContext = context.applicationContext
+        configScope.launch {
+            downloadMutex.withLock {
+                try {
+                    saveDatabaseFromInternet(appContext, url, oldUrl = url)
+                } catch (_: Exception) {
+                    // Status is updated to FAILED inside saveDatabaseFromInternet
+                }
+            }
+        }
+        return true
     }
 
     /**
