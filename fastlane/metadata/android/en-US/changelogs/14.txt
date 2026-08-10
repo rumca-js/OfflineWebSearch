@@ -1,0 +1,1 @@
+Added database share button. Better UI for adding new database. Some settings can be read from SQLite table: view style, order, etc.
