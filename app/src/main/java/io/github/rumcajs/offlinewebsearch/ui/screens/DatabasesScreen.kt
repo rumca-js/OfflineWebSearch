@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -26,11 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import java.io.File
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.ui.components.DatabaseDetailDialog
 import io.github.rumcajs.offlinewebsearch.ui.components.ReadOnlyBadge
 import io.github.rumcajs.offlinewebsearch.ui.components.StatusBadge
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
@@ -51,6 +47,7 @@ fun DatabasesScreen(
     var isVerifying by remember { mutableStateOf(false) }
     var verificationError by remember { mutableStateOf<String?>(null) }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
+    var deletingDb by remember { mutableStateOf<Pair<String, DatabaseState>?>(null) }
 
     fun handleSaveDatabase(url: String, editUrl: String?, fileUri: Uri?) {
         val state = DatabaseState.fromUrl(url)
@@ -226,7 +223,7 @@ fun DatabasesScreen(
                     showAddDialogMode = "url"
                 },
                 onDelete = {
-                    AppConfigManager.removeDatabaseAndFiles(context, url, state.localFileName)
+                    deletingDb = Pair(url, state)
                 },
                 onUpdate = if (!state.isLocal) {
                     {
@@ -243,6 +240,19 @@ fun DatabasesScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
+    }
+
+    // Delete Confirmation Dialog
+    deletingDb?.let { (url, state) ->
+        io.github.rumcajs.offlinewebsearch.ui.components.RemoveConfirmationDialog(
+            url = url,
+            state = state,
+            onDismiss = { deletingDb = null },
+            onConfirm = { targetUrl, targetState ->
+                deletingDb = null
+                AppConfigManager.removeDatabaseAndFiles(context, targetUrl, targetState.localFileName)
+            }
+        )
     }
 
     // Add by URL Dialog

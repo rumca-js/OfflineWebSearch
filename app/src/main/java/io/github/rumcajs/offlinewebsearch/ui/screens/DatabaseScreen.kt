@@ -135,26 +135,14 @@ fun DatabaseScreen(
     }
 
     if (showDeleteDialog && url != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Database") },
-            text = { Text("Are you sure you want to delete '${state.displayName}'?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteDialog = false
-                        AppConfigManager.removeDatabaseAndFiles(context, url, state.localFileName)
-                        onBack()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
+        io.github.rumcajs.offlinewebsearch.ui.components.RemoveConfirmationDialog(
+            url = url,
+            state = state,
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = { targetUrl, targetState ->
+                showDeleteDialog = false
+                AppConfigManager.removeDatabaseAndFiles(context, targetUrl, targetState.localFileName)
+                onBack()
             }
         )
     }

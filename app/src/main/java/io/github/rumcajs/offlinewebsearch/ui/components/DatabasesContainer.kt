@@ -51,6 +51,7 @@ fun DatabasesContainer(
     var isLoadingPresets by remember { mutableStateOf(false) }
     var selectedPresetUrl by remember { mutableStateOf("") }
     var refreshingDb by remember { mutableStateOf<Pair<String, DatabaseState>?>(null) }
+    var deletingDb by remember { mutableStateOf<Pair<String, DatabaseState>?>(null) }
 
     suspend fun handleSaveDatabaseLocal(
         urlInput: String,
@@ -214,7 +215,7 @@ fun DatabasesContainer(
                 showAddDialogMode = "url"
             },
             onDelete = { url, state ->
-                AppConfigManager.removeDatabaseAndFiles(context, url, state.localFileName)
+                deletingDb = Pair(url, state)
             },
             onUpdate = { url, state ->
                 refreshingDb = Pair(url, state)
@@ -230,6 +231,19 @@ fun DatabasesContainer(
                 onConfirm = { targetUrl, targetState ->
                     refreshingDb = null
                     refreshDatabase(targetUrl, targetState)
+                }
+            )
+        }
+
+        // Delete Confirmation Dialog
+        deletingDb?.let { (url, state) ->
+            RemoveConfirmationDialog(
+                url = url,
+                state = state,
+                onDismiss = { deletingDb = null },
+                onConfirm = { targetUrl, targetState ->
+                    deletingDb = null
+                    AppConfigManager.removeDatabaseAndFiles(context, targetUrl, targetState.localFileName)
                 }
             )
         }
@@ -422,6 +436,9 @@ private fun DatabaseActionButton(
     }
 }
 
+/**
+ * Confirmation dialog shown before refreshing a database.
+ */
 @Composable
 fun RefreshConfirmationDialog(
     url: String,
@@ -447,6 +464,47 @@ fun RefreshConfirmationDialog(
         }
     )
 }
+
+/**
+ * Confirmation dialog shown before removing/deleting a database.
+ */
+@Composable
+fun RemoveConfirmationDialog(
+    url: String,
+    state: DatabaseState,
+    onDismiss: () -> Unit,
+    onConfirm: (String, DatabaseState) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete Database") },
+        text = { Text("Are you sure you want to delete '${state.displayName}'?") },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(url, state) },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+/**
+ * Alias for RemoveConfirmationDialog.
+ */
+@Composable
+fun DeleteConfirmationDialog(
+    url: String,
+    state: DatabaseState,
+    onDismiss: () -> Unit,
+    onConfirm: (String, DatabaseState) -> Unit
+) = RemoveConfirmationDialog(url, state, onDismiss, onConfirm)
 
 @Composable
 fun AddByUrlDialog(
