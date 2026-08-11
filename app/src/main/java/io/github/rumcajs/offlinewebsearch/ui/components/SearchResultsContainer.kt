@@ -38,8 +38,9 @@ fun SearchResultsContainer(
                 CircularProgressIndicator()
             }
         } else {
+            // Scrollable entry list
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f),
                 state = listState
             ) {
                 if (showSuggestions && suggestions.isNotEmpty()) {
@@ -54,9 +55,7 @@ fun SearchResultsContainer(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable {
-                                                onSuggestionClick(suggestion)
-                                            }
+                                            .clickable { onSuggestionClick(suggestion) }
                                             .padding(16.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -85,35 +84,35 @@ fun SearchResultsContainer(
                         Text("No results found for \"$activeSearchQuery\"")
                     }
                 }
-                if (filteredData.isNotEmpty()) {
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (currentPage > 0) {
-                                TextButton(onClick = onPreviousPage) {
-                                    Text("Previous")
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.width(1.dp))
-                            }
+            }
 
-                            Text(
-                                text = "Page ${currentPage + 1} of $totalPages",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+            // Pagination bar — always visible at the bottom
+            if (filteredData.isNotEmpty() && totalPages > 1) {
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = onPreviousPage,
+                        enabled = currentPage > 0
+                    ) {
+                        Text("Previous")
+                    }
 
-                            if ((currentPage + 1) < totalPages) {
-                                TextButton(onClick = onNextPage) {
-                                    Text("Next")
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.width(1.dp))
-                            }
-                        }
+                    Text(
+                        text = "Page ${currentPage + 1} of $totalPages",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    TextButton(
+                        onClick = onNextPage,
+                        enabled = (currentPage + 1) < totalPages
+                    ) {
+                        Text("Next")
                     }
                 }
             }
