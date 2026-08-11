@@ -36,6 +36,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object LinkData : Screen("link_data", "Link Data", Icons.Filled.Search)
     object DatabaseDetail : Screen("database_detail", "Database Detail", Icons.Filled.Storage)
     object Edit : Screen("edit", "Edit Entry", Icons.Filled.Edit)
+    object EntryAdd : Screen("entry_add", "Add Entry", Icons.Filled.Edit)
     object SourceDetail : Screen("source_detail", "Source Detail", Icons.Filled.List)
     object SourceEdit : Screen("source_edit", "Source Edit", Icons.Filled.Edit)
 }
@@ -90,6 +91,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToDetail = { entry ->
                                     searchViewModel.selectedEntry = entry
                                     navController.navigate(Screen.Detail.route)
+                                },
+                                onNavigateToAddEntry = {
+                                    navController.navigate(Screen.EntryAdd.route)
                                 }
                             )
                         }
@@ -197,17 +201,29 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             }
                         }
                         composable(Screen.Edit.route) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
                             searchViewModel.selectedEntry?.let { place ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryEditScreen(
                                     entry = place,
                                     onEntryUpdated = { updatedEntry ->
                                         searchViewModel.selectedEntry = updatedEntry
-                                        searchViewModel.updateEntryInMemory(updatedEntry)
+                                        searchViewModel.refreshPage(context)
                                         navController.popBackStack()
                                     },
                                     onBack = { navController.popBackStack() }
                                 )
                             }
+                        }
+                        composable(Screen.EntryAdd.route) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryEditScreen(
+                                entry = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(),
+                                onEntryUpdated = { newEntry ->
+                                    searchViewModel.refreshPage(context)
+                                    navController.popBackStack()
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                         composable(Screen.LinkPreview.route) {
                             searchViewModel.previewUrl?.let { url ->

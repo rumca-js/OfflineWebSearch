@@ -12,7 +12,8 @@ data class Source(
     val id: Long? = null,
     val enabled: Boolean = true,
     val url: String = "",
-    val title: String = ""
+    val title: String = "",
+    val thumbnail: String = ""
 )
 
 object SourceRepository {
@@ -28,7 +29,7 @@ object SourceRepository {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title FROM sourcedatamodel"
+            val sqlText = "SELECT id, enabled, url, title, thumbnail FROM sourcedatamodel"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -36,13 +37,15 @@ object SourceRepository {
                     val enabledVal = it.getInt(it.getColumnIndexOrThrow("enabled"))
                     val url = it.getString(it.getColumnIndexOrThrow("url")) ?: ""
                     val title = it.getString(it.getColumnIndexOrThrow("title")) ?: ""
+                    val thumbnail = it.getString(it.getColumnIndexOrThrow("thumbnail")) ?: ""
 
                     sources.add(
                         Source(
                             id = id,
                             enabled = enabledVal == 1,
                             url = url,
-                            title = title
+                            title = title,
+                            thumbnail = thumbnail
                         )
                     )
                 }

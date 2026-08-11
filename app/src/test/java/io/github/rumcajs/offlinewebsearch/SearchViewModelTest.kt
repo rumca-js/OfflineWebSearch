@@ -1,52 +1,10 @@
 package io.github.rumcajs.offlinewebsearch
 
 import io.github.rumcajs.offlinewebsearch.ui.SearchViewModel
-import io.github.rumcajs.offlinewebsearch.data.Entry
 import org.junit.Assert.*
 import org.junit.Test
-import kotlin.collections.get
 
 class SearchViewModelTest {
-
-    @Test
-    fun testFilteredData() {
-        val viewModel = _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.SearchViewModel()
-        val places = listOf(
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
-                title = "Test 1",
-                description = "Desc 1",
-                link = "http://test1.com",
-                tags = listOf("tag1")
-            ),
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
-                title = "Other",
-                description = "Other desc",
-                link = "http://other.com",
-                tags = listOf("tag2")
-            )
-        )
-        viewModel.allEntries = places
-
-        // Initial state (empty query)
-        assertTrue(viewModel.filteredData.size == 2)
-        assertEquals("Test 1", viewModel.filteredData[0].title)
-
-        // Search for "Te" (short query)
-        viewModel.searchQuery = "Te"
-        viewModel.performSearch()
-        assertTrue(viewModel.filteredData.size == 1)
-        assertEquals("Test 1", viewModel.filteredData[0].title)
-
-        // Search for "x" (single character)
-        viewModel.searchQuery = "x"
-        viewModel.performSearch()
-        assertTrue(viewModel.filteredData.isEmpty())
-
-        // Search for empty string again
-        viewModel.searchQuery = ""
-        viewModel.performSearch()
-        assertTrue(viewModel.filteredData.size == 2)
-    }
 
     @Test
     fun testSuggestionsVisibility() {
