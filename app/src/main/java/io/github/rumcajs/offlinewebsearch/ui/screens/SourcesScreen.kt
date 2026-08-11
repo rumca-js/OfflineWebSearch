@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 fun SourcesScreen(
     onNavigateToSource: (Source) -> Unit,
     onNavigateToEditSource: (Source) -> Unit,
+    onNavigateToAddSource: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -96,6 +98,13 @@ fun SourcesScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            if (isEditable && onNavigateToAddSource != null) {
+                FloatingActionButton(onClick = onNavigateToAddSource) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Source")
+                }
+            }
         }
     ) { innerPadding ->
         Box(

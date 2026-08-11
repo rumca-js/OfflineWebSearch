@@ -102,6 +102,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToEditSource = { source ->
                                     searchViewModel.selectedSource = source
                                     navController.navigate(Screen.SourceEdit.route)
+                                },
+                                onNavigateToAddSource = {
+                                    searchViewModel.selectedSource = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Source()
+                                    navController.navigate(Screen.SourceEdit.route)
                                 }
                             )
                         }
