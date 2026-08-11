@@ -266,11 +266,11 @@ object EntryListRepository {
                         l.status_code, l.manual_status_code, l.bookmarked,
                         GROUP_CONCAT(t.tag, ',') AS tag
                     FROM (
-                        SELECT DISTINCT l2.id
-                        FROM linkdatamodel l2
-                        LEFT JOIN entrycompactedtags t2 ON l2.id = t2.entry_id
+                        SELECT DISTINCT l.id
+                        FROM linkdatamodel l
+                        LEFT JOIN entrycompactedtags t ON l.id = t.entry_id
                         $whereSql
-                        ORDER BY l2.$orderSql
+                        ORDER BY l.$orderSql
                         LIMIT ? OFFSET ?
                     ) AS paged
                     JOIN linkdatamodel l ON l.id = paged.id
