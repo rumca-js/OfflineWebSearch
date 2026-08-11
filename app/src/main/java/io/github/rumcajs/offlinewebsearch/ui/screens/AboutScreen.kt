@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,8 +17,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutScreen() {
+fun AboutScreen(onBack: () -> Unit = {}) {
     val uriHandler = LocalUriHandler.current
     val projectUrl = "https://github.com/rumca-js/OfflineWebSearch"
     val scrollState = rememberScrollState()
@@ -33,12 +36,25 @@ fun AboutScreen() {
         "1.0"
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp)
-    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("About") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(scrollState)
+                .padding(16.dp)
+        ) {
         Text(
             text = "Offline Web Search",
             style = MaterialTheme.typography.headlineMedium,
@@ -129,6 +145,7 @@ fun AboutScreen() {
         )
         
         Spacer(modifier = Modifier.height(32.dp))
+        }
     }
 }
 

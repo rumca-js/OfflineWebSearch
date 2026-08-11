@@ -161,7 +161,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 )
                             }
                         }
-                        composable(Screen.About.route) { _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.AboutScreen() }
+                        composable(Screen.About.route) { _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.AboutScreen(onBack = { navController.popBackStack() }) }
                         composable(Screen.Options.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionsScreen(
                                 onNavigateToDatabases = {
