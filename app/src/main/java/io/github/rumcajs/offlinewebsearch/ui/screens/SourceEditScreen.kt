@@ -34,17 +34,45 @@ fun SourceEditScreen(
     val config by AppConfigManager.config.collectAsState()
     val activeDbState = config.activeDatabaseState
 
+    val isAddMode = source.id == null
     val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
 
     var title by remember { mutableStateOf(source.title) }
     var url by remember { mutableStateOf(source.url) }
     var enabled by remember { mutableStateOf(source.enabled) }
     var isSaving by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    /** Runs the appropriate insert or update and returns whether it succeeded. */
+    suspend fun saveSource(): Boolean {
+        return if (isAddMode) {
+            val (success, err) = SourceRepository.insertSource(
+                context = context,
+                activeDatabaseState = activeDbState,
+                title = title,
+                url = url,
+                enabled = enabled
+            )
+            errorMessage = if (!success) err else null
+            success
+        } else {
+            val (success, err) = SourceRepository.updateSource(
+                context = context,
+                activeDatabaseState = activeDbState,
+                id = source.id!!,
+                title = title,
+                url = url,
+                enabled = enabled
+            )
+            errorMessage = if (!success) err else null
+            success
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Source") },
+                title = { Text(if (isAddMode) "Add Source" else "Edit Source") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -54,20 +82,13 @@ fun SourceEditScreen(
                     if (isEditable) {
                         IconButton(
                             onClick = {
-                                if (isSaving || source.id == null) return@IconButton
+                                if (isSaving) return@IconButton
                                 isSaving = true
                                 coroutineScope.launch {
-                                    val success = SourceRepository.updateSource(
-                                        context = context,
-                                        activeDatabaseState = activeDbState,
-                                        id = source.id,
-                                        title = title,
-                                        url = url,
-                                        enabled = enabled
-                                    )
+                                    val success = saveSource()
                                     isSaving = false
                                     if (success) {
-                                        Toast.makeText(context, "Source updated successfully", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, if (isAddMode) "Source added" else "Source updated successfully", Toast.LENGTH_SHORT).show()
                                         onSourceUpdated(
                                             source.copy(
                                                 title = title,
@@ -76,7 +97,8 @@ fun SourceEditScreen(
                                             )
                                         )
                                     } else {
-                                        Toast.makeText(context, "Failed to update source", Toast.LENGTH_SHORT).show()
+                                        val msg = errorMessage ?: "Failed to save source"
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                     }
                                 }
                             },
@@ -153,22 +175,32 @@ fun SourceEditScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             if (isEditable) {
+                // Show any SQL error inline
+                errorMessage?.let { msg ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Text(
+                            text = msg,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+
                 Button(
                     onClick = {
-                        if (isSaving || source.id == null) return@Button
+                        if (isSaving) return@Button
                         isSaving = true
                         coroutineScope.launch {
-                            val success = SourceRepository.updateSource(
-                                context = context,
-                                activeDatabaseState = activeDbState,
-                                id = source.id,
-                                title = title,
-                                url = url,
-                                enabled = enabled
-                            )
+                            val success = saveSource()
                             isSaving = false
                             if (success) {
-                                Toast.makeText(context, "Source updated successfully", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, if (isAddMode) "Source added" else "Source updated successfully", Toast.LENGTH_SHORT).show()
                                 onSourceUpdated(
                                     source.copy(
                                         title = title,
@@ -177,7 +209,8 @@ fun SourceEditScreen(
                                     )
                                 )
                             } else {
-                                Toast.makeText(context, "Failed to update source", Toast.LENGTH_SHORT).show()
+                                val msg2 = errorMessage ?: "Failed to save source"
+                                Toast.makeText(context, msg2, Toast.LENGTH_LONG).show()
                             }
                         }
                     },
@@ -191,7 +224,7 @@ fun SourceEditScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Save Changes")
+                        Text(if (isAddMode) "Add Source" else "Save Changes")
                     }
                 }
             }

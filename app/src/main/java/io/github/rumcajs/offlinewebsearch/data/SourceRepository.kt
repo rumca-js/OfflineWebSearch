@@ -58,6 +58,44 @@ object SourceRepository {
         sources
     }
 
+    /**
+     * Inserts a new source into the database.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    suspend fun insertSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        title: String,
+        url: String,
+        enabled: Boolean
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val values = android.content.ContentValues().apply {
+                put("title", title)
+                put("url", url)
+                put("enabled", if (enabled) 1 else 0)
+            }
+            val newId = db.insert("sourcedatamodel", null, values)
+            db.close()
+            if (newId != -1L) Pair(true, null) else Pair(false, "Insert returned -1; check table schema")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Updates an existing source.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
     suspend fun updateSource(
         context: Context,
         activeDatabaseState: DatabaseState?,
@@ -65,13 +103,13 @@ object SourceRepository {
         title: String,
         url: String,
         enabled: Boolean
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
-            return@withContext false
+            return@withContext Pair(false, "Database is not writable")
         }
 
         val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext false
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
@@ -82,33 +120,37 @@ object SourceRepository {
             }
             val rows = db.update("sourcedatamodel", values, "id = ?", arrayOf(id.toString()))
             db.close()
-            rows > 0
+            if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            Pair(false, e.message ?: "Unknown SQL error")
         }
     }
 
+    /**
+     * Deletes a source by ID.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
     suspend fun deleteSource(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
-            return@withContext false
+            return@withContext Pair(false, "Database is not writable")
         }
 
         val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext false
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             val rows = db.delete("sourcedatamodel", "id = ?", arrayOf(id.toString()))
             db.close()
-            rows > 0
+            if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted; source may not exist")
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            Pair(false, e.message ?: "Unknown SQL error")
         }
     }
 }

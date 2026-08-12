@@ -69,14 +69,15 @@ fun SourcesScreen(
                         sourceToDelete = null
                         if (target?.id != null) {
                             scope.launch {
-                                val success = SourceRepository.deleteSource(context, activeDbState, target.id)
-                                if (success) {
-                                    Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
-                                    sources = SourceRepository.loadSources(context, activeDbState)
-                                } else {
-                                    Toast.makeText(context, "Failed to delete source", Toast.LENGTH_SHORT).show()
+                                    val (success, err) = SourceRepository.deleteSource(context, activeDbState, target.id)
+                                    if (success) {
+                                        Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
+                                        sources = SourceRepository.loadSources(context, activeDbState)
+                                    } else {
+                                        val msg = err ?: "Failed to delete source"
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    }
                                 }
-                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)

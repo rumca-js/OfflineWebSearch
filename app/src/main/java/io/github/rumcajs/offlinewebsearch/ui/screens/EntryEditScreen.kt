@@ -24,7 +24,7 @@ import java.util.Locale
  * Entry edit/add screen. When [entry] has a null id it operates in "add" mode
  * (calls [EntryListRepository.addEntryToSql]); otherwise it edits the existing
  * entry (calls [EntryListRepository.updateEntryInSql]).
- * Only enabled when the active database is read-write.
+ * Only enabled when the active database is read-write (.db).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +45,41 @@ fun EntryEditScreen(
     var link by remember { mutableStateOf(entry.link ?: "") }
     var description by remember { mutableStateOf(entry.description ?: "") }
     var isSaving by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    /** Runs the appropriate insert or update and returns whether it succeeded. */
+    suspend fun saveEntry(): Boolean {
+        return if (activeDbState == null) {
+            errorMessage = "No active database selected"
+            false
+        } else if (isAddMode) {
+            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+            val (success, err) = EntryListRepository.addEntryToSql(
+                context = context,
+                activeDatabaseState = activeDbState,
+                entry = entry.copy(
+                    link = link,
+                    title = title,
+                    description = description,
+                    date_created = now,
+                    date_published = now
+                )
+            )
+            errorMessage = if (!success) err else null
+            success
+        } else {
+            val success = EntryListRepository.updateEntryInSql(
+                context = context,
+                activeDatabaseState = activeDbState,
+                id = entry.id,
+                originalLink = entry.link,
+                newTitle = title,
+                newDescription = description
+            )
+            errorMessage = if (!success) "Failed to update entry" else null
+            success
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -62,45 +97,17 @@ fun EntryEditScreen(
                                 if (isSaving) return@IconButton
                                 isSaving = true
                                 coroutineScope.launch {
-                                    val success = if (activeDbState != null) {
-                                        if (isAddMode) {
-                                            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-                                            EntryListRepository.addEntryToSql(
-                                                context = context,
-                                                activeDatabaseState = activeDbState,
-                                                entry = entry.copy(
-                                                    link = link,
-                                                    title = title,
-                                                    description = description,
-                                                    date_created = now,
-                                                    date_published = now
-                                                )
-                                            )
-                                        } else {
-                                            EntryListRepository.updateEntryInSql(
-                                                context = context,
-                                                activeDatabaseState = activeDbState,
-                                                id = entry.id,
-                                                originalLink = entry.link,
-                                                newTitle = title,
-                                                newDescription = description
-                                            )
-                                        }
-                                    } else false
-
+                                    val success = saveEntry()
                                     isSaving = false
                                     if (success) {
                                         val msg = if (isAddMode) "Entry added successfully" else "Entry updated successfully"
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        val updatedEntry = entry.copy(
-                                            link = link,
-                                            title = title,
-                                            description = description
+                                        onEntryUpdated(
+                                            entry.copy(link = link, title = title, description = description)
                                         )
-                                        onEntryUpdated(updatedEntry)
                                     } else {
-                                        val msg = if (isAddMode) "Failed to add entry" else "Failed to update entry"
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        val msg = errorMessage ?: if (isAddMode) "Failed to add entry" else "Failed to update entry"
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                     }
                                 }
                             },
@@ -120,6 +127,26 @@ fun EntryEditScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            // ── SQLite source info banner ──────────────────────────────────────
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Text(
+                    text = if (activeDbState != null)
+                        "Source: ${activeDbState.displayName} (${activeDbState.localFileName})"
+                    else
+                        "Source: Default (Assets) – read-only",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+
+            // ── Read-only warning ─────────────────────────────────────────────
             if (!isEditable) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
@@ -136,6 +163,7 @@ fun EntryEditScreen(
                 }
             }
 
+            // ── Fields ────────────────────────────────────────────────────────
             OutlinedTextField(
                 value = title,
                 onValueChange = { if (isEditable) title = it },
@@ -172,50 +200,39 @@ fun EntryEditScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             if (isEditable) {
+                // ── Inline SQL error message ───────────────────────────────────
+                errorMessage?.let { msg ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Text(
+                            text = msg,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+
                 Button(
                     onClick = {
                         if (isSaving) return@Button
                         isSaving = true
                         coroutineScope.launch {
-                            val success = if (activeDbState != null) {
-                                if (isAddMode) {
-                                    val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-                                    EntryListRepository.addEntryToSql(
-                                        context = context,
-                                        activeDatabaseState = activeDbState,
-                                        entry = entry.copy(
-                                            link = link,
-                                            title = title,
-                                            description = description,
-                                            date_created = now,
-                                            date_published = now
-                                        )
-                                    )
-                                } else {
-                                    EntryListRepository.updateEntryInSql(
-                                        context = context,
-                                        activeDatabaseState = activeDbState,
-                                        id = entry.id,
-                                        originalLink = entry.link,
-                                        newTitle = title,
-                                        newDescription = description
-                                    )
-                                }
-                            } else false
-
+                            val success = saveEntry()
                             isSaving = false
                             if (success) {
                                 val msg = if (isAddMode) "Entry added successfully" else "Entry updated successfully"
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                val updatedEntry = entry.copy(
-                                    link = link,
-                                    title = title,
-                                    description = description
+                                onEntryUpdated(
+                                    entry.copy(link = link, title = title, description = description)
                                 )
-                                onEntryUpdated(updatedEntry)
                             } else {
-                                val msg = if (isAddMode) "Failed to add entry" else "Failed to update entry"
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                val msg2 = errorMessage ?: if (isAddMode) "Failed to add entry" else "Failed to update entry"
+                                Toast.makeText(context, msg2, Toast.LENGTH_LONG).show()
                             }
                         }
                     },

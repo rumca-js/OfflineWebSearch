@@ -105,18 +105,24 @@ object EntryListRepository {
     // Write operations
     // ──────────────────────────────────────────────────────────────────────────
 
-    /** Inserts a new entry (and its tags) into the SQLite database. */
+    /**
+     * Inserts a new entry (and its tags) into the SQLite database.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
     suspend fun addEntryToSql(
         context: Context,
         activeDatabaseState: DatabaseState,
         entry: Entry
-    ): Boolean = withContext(Dispatchers.IO) {
-        val extension = activeDatabaseState.extension
-        if (extension != ".db") return@withContext false
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState.extension != ".db") {
+            return@withContext Pair(false, "Database is not a SQLite .db file")
+        }
+        if (activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is read-only")
+        }
 
-        val fileName = activeDatabaseState.localFileName
-        val file = File(context.filesDir, fileName)
-        if (!file.exists()) return@withContext false
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found: ${activeDatabaseState.localFileName}")
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
@@ -144,7 +150,7 @@ object EntryListRepository {
             try {
                 val rowId = db.insert("linkdatamodel", null, values)
                 if (rowId == -1L) {
-                    throw android.database.SQLException("Failed to insert row into linkdatamodel")
+                    throw android.database.SQLException("Insert returned -1; check table schema")
                 }
 
                 if (!entry.tags.isNullOrEmpty()) {
@@ -158,14 +164,14 @@ object EntryListRepository {
                 }
 
                 db.setTransactionSuccessful()
-                true
+                Pair(true, null)
             } finally {
                 db.endTransaction()
                 db.close()
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            Pair(false, e.message ?: "Unknown SQL error")
         }
     }
 
