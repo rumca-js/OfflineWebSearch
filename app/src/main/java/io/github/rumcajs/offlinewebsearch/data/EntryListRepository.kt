@@ -128,7 +128,7 @@ object EntryListRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
 
             val values = android.content.ContentValues().apply {
-                put("link", entry.link)
+                put("link", entry.link ?: "")
                 put("title", entry.title)
                 put("description", entry.description)
                 put("author", entry.author)
@@ -144,6 +144,12 @@ object EntryListRepository {
                 put("status_code", entry.status_code ?: 0)
                 put("manual_status_code", entry.manual_status_code ?: 0)
                 put("bookmarked", if (entry.bookmarked == true) 1 else 0)
+                // NOT NULL columns required by the schema
+                put("source_url", "")
+                put("permanent", 0)
+                put("contents_type", 0)
+                put("page_rating_contents", 0)
+                put("page_rating_visits", 0)
             }
 
             db.beginTransaction()

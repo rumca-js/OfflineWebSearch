@@ -13,7 +13,7 @@ data class Source(
     val enabled: Boolean = true,
     val url: String = "",
     val title: String = "",
-    val thumbnail: String = ""
+    val favicon: String = ""
 )
 
 object SourceRepository {
@@ -29,7 +29,7 @@ object SourceRepository {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, thumbnail FROM sourcedatamodel"
+            val sqlText = "SELECT id, enabled, url, title, favicon FROM sourcedatamodel"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -37,7 +37,7 @@ object SourceRepository {
                     val enabledVal = it.getInt(it.getColumnIndexOrThrow("enabled"))
                     val url = it.getString(it.getColumnIndexOrThrow("url")) ?: ""
                     val title = it.getString(it.getColumnIndexOrThrow("title")) ?: ""
-                    val thumbnail = it.getString(it.getColumnIndexOrThrow("thumbnail")) ?: ""
+                    val favicon = it.getString(it.getColumnIndexOrThrow("favicon")) ?: ""
 
                     sources.add(
                         Source(
@@ -45,7 +45,7 @@ object SourceRepository {
                             enabled = enabledVal == 1,
                             url = url,
                             title = title,
-                            thumbnail = thumbnail
+                            favicon = favicon
                         )
                     )
                 }
@@ -82,6 +82,24 @@ object SourceRepository {
                 put("title", title)
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
+                put("source_type", "")
+                put("category_name", "")
+                put("subcategory_name", "")
+                put("export_to_cms", false)
+                put("remove_after_days", 0)
+                put("language", "")
+                put("age", 0)
+                put("favicon", "")
+                put("fetch_period", 3600)
+                put("auto_tag", "")
+                put("entries_backgroundcolor_alpha", 1.0)
+                put("entries_backgroundcolor", "")
+                put("entries_alpha", 1.0)
+                put("proxy_location", "")
+                put("auto_update_favicon", false)
+                put("category_id", 0)
+                put("subcategory_id", 0)
+                put("xpath", "")
             }
             val newId = db.insert("sourcedatamodel", null, values)
             db.close()

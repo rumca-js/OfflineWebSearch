@@ -172,10 +172,10 @@ private fun SourceItemRow(
             verticalAlignment = Alignment.Top
         ) {
             // Thumbnail
-            if (source.thumbnail.isNotBlank()) {
+            if (source.favicon.isNotBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(source.thumbnail)
+                        .data(source.favicon)
                         .crossfade(true)
                         .build(),
                     contentDescription = "Thumbnail for ${source.title}",

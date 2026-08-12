@@ -59,10 +59,10 @@ fun SourceScreen(
                 .padding(16.dp)
         ) {
             // Thumbnail
-            if (source.thumbnail.isNotBlank()) {
+            if (source.favicon.isNotBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(source.thumbnail)
+                        .data(source.favicon)
                         .crossfade(true)
                         .build(),
                     contentDescription = "Thumbnail for ${source.title}",
