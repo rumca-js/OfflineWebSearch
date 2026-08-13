@@ -23,6 +23,10 @@ Users can provide databases from:
  - Remote URL.
  - Preconfigured database list.
 
+# SQLite data model
+
+Model is described and maintained by https://github.com/rumca-js/linkarchivetools/blob/main/linkarchivetools/model/definitions.py
+
 # Database handling
  - .db files downloaded from a URL are stored in application storage.
  - Downloaded .db files are used as local SQLite databases.
