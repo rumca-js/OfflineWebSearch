@@ -1,95 +1,213 @@
 # Project
 
- - offline web search (focus on search). It is an android app
- - allows user to search and find links from SQLite databases (and in JSON files)
- - this project description should be written as simple statements. Preferably by lists
-  
- - user is able to provide databases:
-   -- .db file is a file that this application can use
-   -- .json file is a file that this application can use
-   -- .zip is archive of JSONs
-   -- .db.zip is an archive of SQLite file
+ - The project is an Android application.
+ - The application provides offline web search.
+ - The primary function of the application is searching.
+ - The application searches local SQLite databases and JSON files.
+ - Search results contain links to web pages.
+ - The application does not require an internet connection to search local databases.
+ - Internet access is required when fetching databases, sources, or web pages.
+ - This instruction should contain brief statements.
 
-# Databases
+Database = a searchable collection of entries, regardless of whether its source is SQLite or JSON.
 
-.db.zip files shall be downloaded from link, unpacked to app memory, and used from there as .db SQLite files
-.db files shall be downloaded from internet link, stored in app memory, and used from there as .db SQLite file
-local SQLite, or JSON files can be used as is
+ # Supported Database Files
+ The application supports the following file types:
+ - .db - SQLite database file.
+ - .json - JSON file containing entries.
+ - .zip - Archive containing JSON files.
+ - .db.zip - Archive containing an SQLite database file.
 
-## DatabaseState
+Users can provide databases from:
+ - Local filesystem.
+ - Remote URL.
+ - Preconfigured database list.
 
- - contains state of database, name of local files, and remote path
+# Database handling
+ - .db files downloaded from a URL are stored in application storage.
+ - Downloaded .db files are used as local SQLite databases.
+ - .db.zip files downloaded from a URL are downloaded to application storage.
+ - .db.zip files are unpacked into application storage.
+ - The unpacked .db file is used as a local SQLite database.
+ - .json files can be loaded from the local filesystem.
+ - .zip files containing JSON files can be loaded from the local filesystem.
+ - Local SQLite and JSON files can be used without copying them when Android permissions allow direct access.
+ - Downloaded databases can be downloaded again.
+ - Re-fetching a database replaces the current local copy.
+ - The user is notified before a local database is replaced.
+ - The application maintains the state of every configured database.
+
+# DatabaseState
+
+DatabaseState contains the state of a configured database.
+
+It contains:
+ - Database name.
+ - Local file path.
+ - Remote URL, if applicable.
+ - Database type.
+ - Current state.
+ - Download or update information, if applicable.
+
+Possible database states include:
+ - DOWNLOADING
+ - UNPACKING
+ - READY
+ - FAILED
 
 # Views
 
- - EntryListScreen - provides search widget, shows list of entries (in each row).
- - EntryDetailScreen - detail screen of an entry: title, description, date of publish, etc.
- - EntryStatusScreen - screen showing if entry page returns correct HTTP status
- - EntryPreviewScreen - fetches page and shows dynamic entry preview: title, description, date of publish, etc.
- - OptionsScreen - contains configuration and setup of databases
- - SourceScreen - contains source screen
- - SourcesScreen - contains list of sources
- - AboutScreen - screen with information about project
+ - EntryListScreen - Provides the search interface. Shows search results.
+ - EntryDetailScreen - Shows details of a selected entry.
+ - EntryStatusScreen - Checks the HTTP status of an entry URL.
+ - EntryPreviewScreen - Fetches and displays the current web page data.
+ - OptionsScreen - Configures databases and application settings.
+ - DatabaseScreen - Shows information and actions for a database.
+ - SourceScreen - Shows information and actions for a source.
+ - SourcesScreen - Shows the list of configured sources.
+ - AboutScreen - Shows information about the application.
 
 ## EntryListScreen
 
  - Provides search widget
+ - Search supports SQLite search capabilities.
  - Search suggestion are scrollable, with rows
- - scrolling list allows to load more entries
+ - The list supports loading additional results.
+ - Search results support page navigation (or dynamic loading of next / prev elements)
  - page navigation elements (prev, next button) are in scrollable area, after search results
  - after page navigation add new result button should be present
- - clicking on entry opens EntryDetailScreen
+ - Selecting an entry opens EntryDetailScreen.
+
+## Search
+ - Search is performed against the selected database.
+ - Search supports SQLite search capabilities.
+ - Search can match the entry title.
+ - Search can match the entry description.
+ - Search can support expressions such as:
+ - title LIKE '%something%'
+ - description LIKE '%something%'
+ - Search implementation should use appropriate SQLite indexes where possible.
+ - The search implementation should support large databases efficiently.
 
 ## EntryDetailScreen
-Provides bar on top with buttons: edit, share, preview, remove
+Displays the details of an entry.
+
+Provides a top bar with the following actions:
+ - Edit.
+ - Share.
+ - Preview.
+ - Remove.
+
+The screen displays, where available:
+ - Thumbnail, or video playback frame
+ - Title.
+ - Description.
+ - Link.
+ - Publication date.
+ - Other entry metadata.
 
 ## EntryStatusScreen
-Fetches page status from the internet. Provides button 'update entry data'. The button updates status code for the entry
+ - Fetches the entry URL from the internet.
+ - Displays the HTTP response status.
+ - Displays whether the page is reachable.
+ - Provides an Update entry data button.
+ - The button updates the stored HTTP status information for the entry.
 
 ## EntryPreviewScreen
-Fetches page dynamically from web. Provides button 'update entry data'. The button updates title, description, or other properties are updated for the entry
+ - Fetches the entry page from the internet.
+ - Displays a dynamic preview of the page.
+ - The preview can display:
+    -- Title.
+    -- Description.
+    -- Publication date.
+    -- Other available page metadata.
+ - Provides an Update entry data button.
+ - The button updates the stored entry metadata.
 
 ## OptionsScreen
-
+ - Displays the configured databases.
  - Database can be added from preconfigured list available at https://rumca-js.github.io/data/databases.txt
  - Database can be added from local filesystem
  - Database can be added from url
  - Database can be created empty (from assets SQLite table)
  - Database fetched from the internet can be re-fetched. User is notified that it destroys current local database
  - Database can be shared (to other apps), saved as a file
- - List of databases show state of database (DOWNLOADING, READY, FAILED)
- - each database in list contain button to refresh, remove
- - clicking on a database opens DatabaseScreen
+ - List of databases show state of database (DOWNLOADING, UNPACKING, READY, FAILED)
+ - each database in list contain button to Refresh, Remove
+ - Selecting a database opens DatabaseScreen.
 
 ## DatabaseScreen
-Provides bar on top with buttons: edit, share, refresh, remove
-
-Shows status of database, and count of table rows.
-
-Provides button to clear search, user visited elements.
+ - Displays information about the selected database.
+ - Provides a top bar with the following actions:
+    -- Edit.
+    -- Share.
+    -- Refresh.
+    -- Remove.
+ - Displays the current database state.
+ - Displays the database name.
+ - Displays the database type.
+ - Displays the local file information.
+ - Displays the remote URL, if applicable.
+ - Displays the number of rows in relevant tables.
+ - Provides an action to clear the search history.
+ - Provides an action to clear the user's visited entries.
 
 ## SourcesScreen
-Provides bar on top with buttons: edit, fetch, remove.
+ - Provides bar on top with buttons: edit, fetch, remove.
+ - Selecting source opens SourceScreen.
+ - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
 
-Selecting source opens SourceScreen.
+## SourceScreen
+ - Displays information about a source.
+ - Provides a top bar with the following actions:
+    -- Edit.
+    -- Fetch.
+    -- Remove.
+ - The Fetch action downloads the source content from the internet.
+ - The source content is expected to be RSS or a compatible feed.
+ - Entries are extracted from the source content.
+ - Extracted entries are inserted into the linkdatamodel table.
+ - Existing entries should not be duplicated.
 
-Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
+# Browsing
+ - Every entry visit is recorded (if configured so)
+ - Visit information is stored in the uservists table.
+ - The application can display the user's visited entries.
+ - The application can clear the user's visit history.
+ - When EntryDetailScreen is visited, it contains pane below to which entries user transitions to
 
-# Operations 
-## Search widget operators
+# Data Layer
+ - app/src/main/java/io/github/rumcajs/offlinewebsearch/data contains the data layer.
+ - The data layer provides access to application data.
+ - The data layer wraps SQLite tables and provides accessors for the model.
+ - Each repository is responsible for a specific data model or table.
+ - For example, SourceRepository provides access to the sourcedatamodel table.
+ - Database access should not be performed directly from UI screens.
+ - UI screens should access data through the appropriate repository or data-layer interface.
 
-SQLite search capabilities should be handled. For example:
- - title LIKE %something%
- - description LIKE %something%
+# Code Requirements
+ - Use small functions.
+ - Keep classes small and focused.
+ - Divide functionality into small files.
+ - Give each class a clear responsibility.
+ - Avoid duplicating database access logic.
+ - Keep UI code separate from database and networking code.
+ - Use repositories for database access.
+ - Use appropriate abstractions for downloading files and fetching web pages.
+ - Provide API documentation using Doxygen-style comments.
+ - Document public classes.
+ - Document public methods.
+ - Document non-obvious implementation decisions.
+ - Use descriptive names for classes, methods, and variables.
+ - Prefer simple implementations over unnecessary abstractions.
 
-## Browsing
-Every entry visit is maintained in table uservists.
-
-# Data
-
-app/src/main/java/io/github/rumcajs/offlinewebsearch/data maintains data files. The file wrap SQLite tables and provide assessors to model. For example SourceRepository is wrapper for sourcedatamodel table.
-
-# Code
-
- - write small functions, divide into small files
- - provide doxygen for API, and classes
+# General Requirements
+ - The application must remain usable when the device is offline.
+ - Network operations must not block the UI thread.
+ - Network failures must be handled gracefully.
+ - Database failures must be reported to the user.
+ - Long-running operations must expose their current state.
+ - Destructive operations must require user confirmation.
+ - The application must preserve locally available databases when network operations fail.
+ - The application must not modify a local database unless the user explicitly requests an update or refresh.
+ - if database is not read-write, but read-only, then if possible hide buttons that modify database (Edit)
