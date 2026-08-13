@@ -9,7 +9,8 @@
  - Internet access is required when fetching databases, sources, or web pages.
  - This instruction should contain brief statements.
 
-Database = a searchable collection of entries, regardless of whether its source is SQLite or JSON.
+A database is a searchable collection of entries.
+A database can be backed by SQLite or JSON files.
 
  # Supported Database Files
  The application supports the following file types:
@@ -25,20 +26,16 @@ Users can provide databases from:
 
 # SQLite data model
 
-Model is described and maintained by https://github.com/rumca-js/linkarchivetools/blob/main/linkarchivetools/model/definitions.py
-
+ - The SQLite data model is defined by linkarchivetools.
+ - The authoritative model definition is: https://github.com/rumca-js/linkarchivetools/blob/main/linkarchivetools/model/definitions.py
+ - The Android application must remain compatible with the defined SQLite schema.
  - Entries - linkdatamodel
  - Sources - sourcedatamodel
 
 # Database handling
- - .db files downloaded from a URL are stored in application storage.
- - Downloaded .db files are used as local SQLite databases.
- - .db.zip files downloaded from a URL are downloaded to application storage.
- - .db.zip files are unpacked into application storage.
- - The unpacked .db file is used as a local SQLite database.
- - .json files can be loaded from the local filesystem.
- - .zip files containing JSON files can be loaded from the local filesystem.
- - Local SQLite and JSON files can be used without copying them when Android permissions allow direct access.
+ - any internet database is downloaded to application storage, and used from there
+ - any archived database is unpacked, and used from unpacked file
+ - local files can be used without copying them when Android permissions allow direct access.
  - Downloaded databases can be downloaded again.
  - Re-fetching a database replaces the current local copy.
  - The user is notified before a local database is replaced.
@@ -55,6 +52,7 @@ It contains:
  - Database type.
  - Current state.
  - Download or update information, if applicable.
+ - Error information, if the state is FAILED.
 
 Possible database states include:
  - DOWNLOADING
@@ -77,7 +75,7 @@ Possible database states include:
 ## EntryListScreen
 
  - Provides search widget
- - Search supports SQLite search capabilities.
+ - Search supports advanced search capabilities (like SQLite syntax).
  - Search suggestion are scrollable, with rows
  - The list supports loading additional results.
  - Search results support page navigation (or dynamic loading of next / prev elements)
@@ -87,7 +85,9 @@ Possible database states include:
 
 ## Search
  - Search is performed against the selected database.
- - Search supports SQLite search capabilities.
+ - Search expressions are translated to the underlying database format.
+    -- SQLite databases use SQLite search capabilities.
+    -- JSON databases provide equivalent search behavior where possible.
  - Search can match the entry title.
  - Search can match the entry description.
  - Search can support expressions such as:
@@ -108,10 +108,11 @@ Provides a top bar with the following actions:
 The screen displays, where available:
  - Thumbnail, or video playback frame
  - Title.
- - Description.
  - Link.
+ - Description.
  - Publication date.
  - Other entry metadata.
+ - Entry transition pane. The pane shows entries that the user previously visited from the current entry. Entry transitions are stored in UserEntryTransitionHistory.
 
 ## EntryStatusScreen
  - Fetches the entry URL from the internet.
@@ -218,4 +219,7 @@ The screen displays, where available:
  - Destructive operations must require user confirmation.
  - The application must preserve locally available databases when network operations fail.
  - The application must not modify a local database unless the user explicitly requests an update or refresh.
- - if database is not read-write, but read-only, then if possible hide buttons that modify database (Edit)
+ - Read-only databases must not be modified.
+ - Modification controls should be hidden for read-only databases where possible.
+ - If a modification control cannot be hidden, it must be disabled.
+ - The application must not attempt a write operation against a read-only database.
