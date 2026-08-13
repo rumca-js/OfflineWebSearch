@@ -214,7 +214,7 @@ The screen displays, where available:
  - The application must remain usable when the device is offline.
  - Network operations must not block the UI thread.
  - Network failures must be handled gracefully.
- - Database failures must be reported to the user.
+ - Database failures must be reported to the user (eg. SQLite errors).
  - Long-running operations must expose their current state.
  - Destructive operations must require user confirmation.
  - The application must preserve locally available databases when network operations fail.
