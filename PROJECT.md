@@ -27,6 +27,9 @@ Users can provide databases from:
 
 Model is described and maintained by https://github.com/rumca-js/linkarchivetools/blob/main/linkarchivetools/model/definitions.py
 
+ - Entries - linkdatamodel
+ - Sources - sourcedatamodel
+
 # Database handling
  - .db files downloaded from a URL are stored in application storage.
  - Downloaded .db files are used as local SQLite databases.
@@ -175,10 +178,11 @@ The screen displays, where available:
 
 # Browsing
  - Every entry visit is recorded (if configured so)
- - Visit information is stored in the uservists table.
+ - Visit information is stored in the  UserEntryVisitHistory SQLite table.
  - The application can display the user's visited entries.
  - The application can clear the user's visit history.
  - When EntryDetailScreen is visited, it contains pane below to which entries user transitions to
+ - Entry transitions are maintained by UserEntryTransitionHistory SQLite table.
 
 # Data Layer
  - app/src/main/java/io/github/rumcajs/offlinewebsearch/data contains the data layer.
