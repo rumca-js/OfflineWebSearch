@@ -9,6 +9,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.data.EntryListRepository
@@ -40,7 +41,8 @@ class SearchViewModel : ViewModel() {
     var selectedSource by mutableStateOf<io.github.rumcajs.offlinewebsearch.data.Source?>(null)
 
     var currentPage by mutableIntStateOf(0)
-    private val pageSize = 20
+    var pageSize by mutableIntStateOf(DatabaseConfiguration.MIN_LINKS_PER_PAGE)
+        private set
 
     val isSearchButtonEnabled by derivedStateOf {
         searchQuery != activeSearchQuery
@@ -58,21 +60,27 @@ class SearchViewModel : ViewModel() {
 
     private var currentActiveDatabase: String? = null
     private var currentOrderBy: OrderBy? = null
+    private var currentLinksPerPage: Int? = null
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Config watcher – reload when database or order changes
+    // Config watcher – reload when database, order, or linksPerPage changes
     // ──────────────────────────────────────────────────────────────────────────
 
     fun loadDataIfNeeded(context: Context) {
         viewModelScope.launch {
             AppConfigManager.config.collect { config ->
+                val activeLinksPerPage = config.dbconfig.effectiveLinksPerPage
                 val dbChanged = config.activeDatabase != currentActiveDatabase
                 val orderChanged = config.dbconfig.orderBy != currentOrderBy
-                if (dbChanged || orderChanged) {
+                val linksPerPageChanged = activeLinksPerPage != currentLinksPerPage
+
+                if (dbChanged || orderChanged || linksPerPageChanged) {
                     currentActiveDatabase = config.activeDatabase
                     currentOrderBy = config.dbconfig.orderBy
+                    currentLinksPerPage = activeLinksPerPage
+                    pageSize = activeLinksPerPage
                     currentPage = 0
-                    fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy)
+                    fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, activeLinksPerPage)
                 }
             }
         }
@@ -95,7 +103,7 @@ class SearchViewModel : ViewModel() {
         if (context != null) {
             viewModelScope.launch {
                 val config = AppConfigManager.config.first()
-                fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy)
+                fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, config.dbconfig.effectiveLinksPerPage)
             }
         }
     }
@@ -112,6 +120,31 @@ class SearchViewModel : ViewModel() {
     /** Re-fetches the current page (e.g. after an add or edit). */
     fun refreshPage(context: Context) {
         refreshCurrentPage(context)
+    }
+
+    /**
+     * Deletes [entry] from the active database and refreshes the list.
+     * Calls [onResult] with true on success, false on failure.
+     */
+    fun deleteEntry(context: Context, entry: Entry, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val config = AppConfigManager.config.first()
+            val dbState = config.activeDatabaseState
+            if (dbState == null) {
+                onResult(false)
+                return@launch
+            }
+            val success = EntryListRepository.deleteEntryFromSql(
+                context = context,
+                activeDatabaseState = dbState,
+                id = entry.id,
+                link = entry.link
+            )
+            if (success) {
+                refreshCurrentPage(context)
+            }
+            onResult(success)
+        }
     }
 
     fun nextPage(context: Context) {
@@ -131,7 +164,7 @@ class SearchViewModel : ViewModel() {
     private fun refreshCurrentPage(context: Context) {
         viewModelScope.launch {
             val config = AppConfigManager.config.first()
-            fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy)
+            fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, config.dbconfig.effectiveLinksPerPage)
         }
     }
 
@@ -142,10 +175,12 @@ class SearchViewModel : ViewModel() {
     private suspend fun fetchPage(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        orderBy: OrderBy
+        orderBy: OrderBy,
+        effectivePageSize: Int = pageSize
     ) {
         isLoading = true
-        val offset = currentPage * pageSize
+        pageSize = effectivePageSize
+        val offset = currentPage * effectivePageSize
         val count = EntryListRepository.countEntries(
             context = context,
             activeDatabaseState = activeDatabaseState,
@@ -158,7 +193,7 @@ class SearchViewModel : ViewModel() {
             searchQuery = activeSearchQuery,
             orderBy = orderBy,
             offset = offset,
-            pageSize = pageSize
+            pageSize = effectivePageSize
         )
         totalSearchResults = count
         filteredData = page

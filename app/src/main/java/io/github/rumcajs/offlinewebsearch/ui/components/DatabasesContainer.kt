@@ -189,6 +189,17 @@ fun DatabasesContainer(
             )
 
             DatabaseActionButton(
+                text = "Create from asset",
+                onClick = {
+                    urlInput = "new_database.db"
+                    editingUrl = null
+                    verificationError = null
+                    selectedFileUri = null
+                    showAddDialogMode = "asset"
+                }
+            )
+
+            DatabaseActionButton(
                 text = "Add by URL",
                 onClick = {
                     urlInput = ""
@@ -264,6 +275,34 @@ fun DatabasesContainer(
                     scope.launch {
                         handleSaveDatabase(urlInput, editingUrl, null)
                         if (verificationError == null) showAddDialogMode = null
+                    }
+                }
+            )
+        }
+
+        // Create from Asset Dialog
+        if (showAddDialogMode == "asset") {
+            CreateFromAssetDialog(
+                databaseNameInput = urlInput,
+                isCreating = isVerifying,
+                creationError = verificationError,
+                onDatabaseNameChange = {
+                    urlInput = it
+                    verificationError = null
+                },
+                onDismiss = { if (!isVerifying) showAddDialogMode = null },
+                onCreate = {
+                    scope.launch {
+                        isVerifying = true
+                        verificationError = null
+                        try {
+                            AppConfigManager.createDatabaseFromAsset(context, customName = urlInput)
+                            showAddDialogMode = null
+                        } catch (e: Exception) {
+                            verificationError = e.message ?: "Failed to create database from asset"
+                        } finally {
+                            isVerifying = false
+                        }
                     }
                 }
             )
@@ -548,6 +587,55 @@ fun AddByUrlDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isVerifying) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun CreateFromAssetDialog(
+    databaseNameInput: String,
+    isCreating: Boolean,
+    creationError: String?,
+    onDatabaseNameChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onCreate: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Create Database from Asset") },
+        text = {
+            Column {
+                Text("Specify a filename for the new database created from assets/table.db:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = databaseNameInput,
+                    onValueChange = onDatabaseNameChange,
+                    label = { Text("Database Name (.db)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = creationError != null,
+                    supportingText = creationError?.let { { Text(it) } }
+                )
+                if (isCreating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onCreate,
+                enabled = databaseNameInput.isNotBlank() && !isCreating
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isCreating) {
                 Text("Cancel")
             }
         }

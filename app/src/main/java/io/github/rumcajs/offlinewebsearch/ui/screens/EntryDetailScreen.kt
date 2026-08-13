@@ -1,11 +1,14 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -19,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import android.content.Intent
 import android.widget.Toast
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
@@ -32,12 +36,18 @@ fun EntryDetailScreen(
     entry: io.github.rumcajs.offlinewebsearch.data.Entry,
     onNavigateToLinkPreview: (String) -> Unit,
     onNavigateToEdit: () -> Unit,
+    onDelete: (() -> Unit)? = null,
+    onTagClick: ((String) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val activeDbState = config.activeDatabaseState
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
 
     Scaffold(
         topBar = {
@@ -49,13 +59,51 @@ fun EntryDetailScreen(
                     }
                 },
                 actions = {
+                    entry.link?.let { url ->
+                        IconButton(onClick = {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, url)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share link"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+                    }
                     IconButton(onClick = onNavigateToEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    }
+                    if (isEditable && onDelete != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Remove")
+                        }
+                    }
+                }
+            )
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { innerPadding ->
+        if (showDeleteDialog && onDelete != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Remove entry") },
+                text = { Text("Are you sure you want to permanently remove this entry?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    }) {
+                        Text("Remove")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
                     }
                 }
             )
         }
-    ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -144,7 +192,10 @@ fun EntryDetailScreen(
                                 text = if (isRestricted) "#xXx" else "#$tag",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.tertiary,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clickable(enabled = !isRestricted && onTagClick != null) {
+                                    onTagClick?.invoke(tag)
+                                }
                             )
                         }
                     }

@@ -14,6 +14,7 @@ import io.github.rumcajs.offlinewebsearch.ui.components.EntryItem
 
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 
 @Composable
@@ -30,6 +31,7 @@ fun SearchResultsContainer(
     showSuggestions: Boolean = false,
     suggestions: List<String> = emptyList(),
     onSuggestionClick: (String) -> Unit = {},
+    onAddEntry: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -84,35 +86,57 @@ fun SearchResultsContainer(
                         Text("No results found for \"$activeSearchQuery\"")
                     }
                 }
-            }
 
-            // Pagination bar — always visible at the bottom
-            if (filteredData.isNotEmpty() && totalPages > 1) {
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(
-                        onClick = onPreviousPage,
-                        enabled = currentPage > 0
-                    ) {
-                        Text("Previous")
+                // Pagination — scrollable, after search results
+                if (filteredData.isNotEmpty() && totalPages > 1) {
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = onPreviousPage,
+                                enabled = currentPage > 0
+                            ) {
+                                Text("Previous")
+                            }
+
+                            Text(
+                                text = "Page ${currentPage + 1} of $totalPages",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
+                            TextButton(
+                                onClick = onNextPage,
+                                enabled = (currentPage + 1) < totalPages
+                            ) {
+                                Text("Next")
+                            }
+                        }
                     }
+                }
 
-                    Text(
-                        text = "Page ${currentPage + 1} of $totalPages",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    TextButton(
-                        onClick = onNextPage,
-                        enabled = (currentPage + 1) < totalPages
-                    ) {
-                        Text("Next")
+                // Add entry button — scrollable, after pagination
+                if (onAddEntry != null) {
+                    item {
+                        Button(
+                            onClick = onAddEntry,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize)
+                            )
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Add Entry")
+                        }
                     }
                 }
             }

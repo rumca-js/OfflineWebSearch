@@ -125,7 +125,7 @@ fun OptionsScreen(
             label = "Direct links",
             checked = config.dbconfig.directLinks,
             onCheckedChange = {
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setDirectLinks(
+                AppConfigManager.setDirectLinks(
                     it
                 )
             }
@@ -135,10 +135,24 @@ fun OptionsScreen(
             label = "Show icons",
             checked = config.dbconfig.showIcons,
             onCheckedChange = {
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setShowIcons(
+                AppConfigManager.setShowIcons(
                     it
                 )
             }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = config.dbconfig.linksPerPage.toString(),
+            onValueChange = { input ->
+                val newCount = input.toIntOrNull() ?: io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration.MIN_LINKS_PER_PAGE
+                AppConfigManager.setLinksPerPage(newCount)
+            },
+            label = { Text("Links Per Page (min 100)") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -171,7 +185,7 @@ fun OptionsScreen(
                     DropdownMenuItem(
                         text = { Text(orderByOption.displayName) },
                         onClick = {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setOrderBy(orderByOption)
+                            AppConfigManager.setOrderBy(orderByOption)
                             orderByExpanded = false
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -210,7 +224,7 @@ fun OptionsScreen(
                     DropdownMenuItem(
                         text = { Text(style.displayName) },
                         onClick = {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setViewStyle(style)
+                            AppConfigManager.setViewStyle(style)
                             viewStyleExpanded = false
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding

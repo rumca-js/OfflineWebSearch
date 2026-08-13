@@ -186,6 +186,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             )
                         }
                         composable(Screen.Detail.route) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
                             searchViewModel.selectedEntry?.let { place ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryDetailScreen(
                                     entry = place,
@@ -195,6 +196,19 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     },
                                     onNavigateToEdit = {
                                         navController.navigate(Screen.Edit.route)
+                                    },
+                                    onDelete = {
+                                        searchViewModel.deleteEntry(context, place) { success ->
+                                            if (success) {
+                                                searchViewModel.selectedEntry = null
+                                                navController.popBackStack()
+                                            }
+                                        }
+                                    },
+                                    onTagClick = { tag ->
+                                        searchViewModel.searchQuery = "tag LIKE '%$tag%'"
+                                        searchViewModel.performSearch(context)
+                                        navController.popBackStack(Screen.Home.route, false)
                                     },
                                     onBack = { navController.popBackStack() }
                                 )

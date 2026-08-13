@@ -97,7 +97,15 @@ data class DatabaseConfiguration(
     val videoPreview: Boolean = false,
     val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
     val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
-)
+    val linksPerPage: Int = MIN_LINKS_PER_PAGE
+) {
+    val effectiveLinksPerPage: Int
+        get() = kotlin.math.max(MIN_LINKS_PER_PAGE, linksPerPage)
+
+    companion object {
+        const val MIN_LINKS_PER_PAGE = 100
+    }
+}
 
 @Serializable
 data class NetworkConfig(

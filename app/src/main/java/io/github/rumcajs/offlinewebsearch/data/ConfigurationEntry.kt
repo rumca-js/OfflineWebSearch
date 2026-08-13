@@ -5,7 +5,8 @@ import java.io.File
 
 data class ConfigurationEntry(
     val showIcons: Boolean? = null,
-    val displayType: String? = null
+    val displayType: String? = null,
+    val linksPerPage: Int? = null
 ) {
     val isShowIcons: Boolean
         get() = showIcons == true
@@ -47,9 +48,15 @@ data class ConfigurationEntry(
                                     c.getString(displayTypeIndex)
                                 } else null
 
+                                val linksPerPageIndex = c.getColumnIndex("links_per_page")
+                                val linksPerPage = if (linksPerPageIndex != -1 && !c.isNull(linksPerPageIndex)) {
+                                    c.getInt(linksPerPageIndex)
+                                } else null
+
                                 ConfigurationEntry(
                                     showIcons = showIcons,
-                                    displayType = displayType
+                                    displayType = displayType,
+                                    linksPerPage = linksPerPage
                                 )
                             } else {
                                 ConfigurationEntry()

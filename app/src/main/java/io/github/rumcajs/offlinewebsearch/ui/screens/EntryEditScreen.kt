@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.data.EntryListRepository
+import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,9 +47,16 @@ fun EntryEditScreen(
     var description by remember { mutableStateOf(entry.description ?: "") }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var linkError by remember { mutableStateOf<String?>(null) }
+    val canSave = link.isNotBlank()
 
     /** Runs the appropriate insert or update and returns whether it succeeded. */
     suspend fun saveEntry(): Boolean {
+        if (isAddMode && !UrlLocation(link).isWebLink()) {
+            linkError = "URL must start with http://, https://, smb://, or ftp:// and have a valid domain"
+            return false
+        }
+        linkError = null
         return if (activeDbState == null) {
             errorMessage = "No active database selected"
             false
@@ -111,14 +119,15 @@ fun EntryEditScreen(
                                     }
                                 }
                             },
-                            enabled = !isSaving
+                            enabled = canSave && !isSaving
                         ) {
                             Icon(Icons.Default.Save, contentDescription = "Save")
                         }
                     }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -177,11 +186,18 @@ fun EntryEditScreen(
 
             OutlinedTextField(
                 value = link,
-                onValueChange = { if (isEditable) link = it },
+                onValueChange = {
+                    if (isEditable) {
+                        link = it
+                        linkError = null
+                    }
+                },
                 label = { Text("URL") },
                 enabled = isEditable,
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = linkError != null,
+                supportingText = linkError?.let { { Text(it) } }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -236,7 +252,7 @@ fun EntryEditScreen(
                             }
                         }
                     },
-                    enabled = !isSaving,
+                    enabled = canSave && !isSaving,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isSaving) {

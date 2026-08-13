@@ -2,8 +2,6 @@ package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -39,60 +37,47 @@ fun EntryListScreen(
         listState.scrollToItem(0)
     }
 
-    Scaffold(
-        floatingActionButton = {
-            if (isEditable && onNavigateToAddEntry != null) {
-                FloatingActionButton(onClick = onNavigateToAddEntry) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Entry")
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        SearchContainer(
+            searchQuery = viewModel.searchQuery,
+            onSearchQueryChange = {
+                viewModel.searchQuery = it
+                viewModel.showSuggestions = true
+            },
+            onClearSearch = {
+                viewModel.clearSearch()
+                viewModel.performSearch(context)
+            },
+            onPerformSearch = {
+                viewModel.performSearch(context)
+            },
+            isSearchButtonEnabled = viewModel.isSearchButtonEnabled
+        )
+        SearchResultsContainer(
+            isLoading = viewModel.isLoading,
+            filteredData = viewModel.filteredData,
+            activeSearchQuery = viewModel.activeSearchQuery,
+            currentPage = viewModel.currentPage,
+            totalPages = viewModel.totalPages,
+            onPreviousPage = { viewModel.previousPage(context) },
+            onNextPage = { viewModel.nextPage(context) },
+            onNavigateToDetail = onNavigateToDetail,
+            listState = listState,
+            showSuggestions = viewModel.showSuggestions,
+            suggestions = viewModel.suggestions,
+            onSuggestionClick = { suggestion ->
+                viewModel.searchQuery = suggestion
+                viewModel.performSearch(context)
+                coroutineScope.launch {
+                    listState.scrollToItem(0)
                 }
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-        ) {
-            SearchContainer(
-                searchQuery = viewModel.searchQuery,
-                onSearchQueryChange = {
-                    viewModel.searchQuery = it
-                    viewModel.showSuggestions = true
-                },
-                onClearSearch = {
-                    viewModel.clearSearch()
-                    viewModel.performSearch(context)
-                },
-                onPerformSearch = {
-                    viewModel.performSearch(context)
-                },
-                isSearchButtonEnabled = viewModel.isSearchButtonEnabled
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SearchResultsContainer(
-                isLoading = viewModel.isLoading,
-                filteredData = viewModel.filteredData,
-                activeSearchQuery = viewModel.activeSearchQuery,
-                currentPage = viewModel.currentPage,
-                totalPages = viewModel.totalPages,
-                onPreviousPage = { viewModel.previousPage(context) },
-                onNextPage = { viewModel.nextPage(context) },
-                onNavigateToDetail = onNavigateToDetail,
-                listState = listState,
-                showSuggestions = viewModel.showSuggestions,
-                suggestions = viewModel.suggestions,
-                onSuggestionClick = { suggestion ->
-                    viewModel.searchQuery = suggestion
-                    viewModel.performSearch(context)
-                    coroutineScope.launch {
-                        listState.scrollToItem(0)
-                    }
-                },
-                modifier = Modifier.weight(1f)
-            )
-        }
+            },
+            onAddEntry = if (isEditable && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

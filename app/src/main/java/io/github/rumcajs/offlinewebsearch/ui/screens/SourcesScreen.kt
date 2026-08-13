@@ -112,7 +112,8 @@ fun SourcesScreen(
                     Icon(Icons.Default.Add, contentDescription = "Add Source")
                 }
             }
-        }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Box(
             modifier = Modifier

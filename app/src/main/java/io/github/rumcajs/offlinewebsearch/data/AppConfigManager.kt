@@ -117,6 +117,13 @@ object AppConfigManager {
         }
     }
 
+    fun setLinksPerPage(count: Int) {
+        val validCount = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, count)
+        updateConfig { currentConfig ->
+            currentConfig.updateActiveDbConfig { it.copy(linksPerPage = validCount) }
+        }
+    }
+
     fun setVideoPreview(enabled: Boolean) {
         updateConfig { currentConfig ->
             currentConfig.updateActiveDbConfig { it.copy(videoPreview = enabled) }
@@ -262,6 +269,10 @@ object AppConfigManager {
                     if (configEntry?.viewStyle != null) {
                         updatedConfig = updatedConfig.copy(viewStyle = configEntry.viewStyle!!)
                     }
+                    if (configEntry?.linksPerPage != null) {
+                        val links = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, configEntry.linksPerPage)
+                        updatedConfig = updatedConfig.copy(linksPerPage = links)
+                    }
                     if (searchViewEntry?.orderBy != null) {
                         updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
                     }
@@ -352,6 +363,32 @@ object AppConfigManager {
             } else {
                 saveDatabaseSource(context, url, content, oldUrl)
             }
+        } catch (e: Exception) {
+            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
+            throw e
+        }
+    }
+
+    /**
+     * Creates a new database initialized from table.db asset.
+     */
+    suspend fun createDatabaseFromAsset(
+        context: Context,
+        assetFileName: String = "table.db",
+        customName: String? = null
+    ) {
+        val fileName = customName?.takeIf { it.isNotBlank() } ?: "new_database.db"
+        val formattedFileName = if (fileName.endsWith(".db", ignoreCase = true)) fileName else "$fileName.db"
+        val url = DatabaseState.toLocalUrl(formattedFileName)
+
+        addDatabase(url)
+        try {
+            val content = withContext(Dispatchers.IO) {
+                context.assets.open(assetFileName).use { inputStream ->
+                    inputStream.readBytes()
+                }
+            }
+            saveDatabaseSource(context, url, content)
         } catch (e: Exception) {
             updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
             throw e
@@ -507,6 +544,10 @@ object AppConfigManager {
                     }
                     if (configEntry?.viewStyle != null) {
                         updatedConfig = updatedConfig.copy(viewStyle = configEntry.viewStyle!!)
+                    }
+                    if (configEntry?.linksPerPage != null) {
+                        val links = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, configEntry.linksPerPage)
+                        updatedConfig = updatedConfig.copy(linksPerPage = links)
                     }
                     if (searchViewEntry?.orderBy != null) {
                         updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)

@@ -222,9 +222,52 @@ object EntryListRepository {
         }
     }
 
+    /**
+     * Deletes an entry (and its associated tags) from the SQLite database.
+     * Entry is identified by its primary key [id] (or [link] if [id] is null).
+     * @return true if at least one row was deleted, false otherwise.
+     */
+    suspend fun deleteEntryFromSql(
+        context: Context,
+        activeDatabaseState: DatabaseState,
+        id: Long?,
+        link: String?
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (activeDatabaseState.extension != ".db") return@withContext false
+        if (activeDatabaseState.isReadOnly) return@withContext false
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            db.beginTransaction()
+            try {
+                val rows = if (id != null) {
+                    // Remove associated tags first (foreign key enforcement may be off)
+                    db.delete("entrycompactedtags", "entry_id = ?", arrayOf(id.toString()))
+                    db.delete("linkdatamodel", "id = ?", arrayOf(id.toString()))
+                } else if (!link.isNullOrEmpty()) {
+                    db.delete("linkdatamodel", "link = ?", arrayOf(link))
+                } else {
+                    0
+                }
+                db.setTransactionSuccessful()
+                rows > 0
+            } finally {
+                db.endTransaction()
+                db.close()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Private helpers – SQLite
     // ──────────────────────────────────────────────────────────────────────────
+
 
     private fun countEntriesFromSql(
         context: Context,

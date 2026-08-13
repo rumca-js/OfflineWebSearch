@@ -160,4 +160,19 @@ class AppConfigManagerTest {
             assertEquals(OrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
             assertEquals(ViewStyle.GALLERY, configWithNoActive.dbconfig.viewStyle)
     }
+
+    @Test
+    fun testDatabaseConfigurationLinksPerPageMin100() {
+        val defaultConfig = DatabaseConfiguration()
+        assertEquals(100, defaultConfig.linksPerPage)
+        assertEquals(100, defaultConfig.effectiveLinksPerPage)
+
+        val smallConfig = DatabaseConfiguration(linksPerPage = 50)
+        assertEquals(50, smallConfig.linksPerPage)
+        assertEquals(100, smallConfig.effectiveLinksPerPage)
+
+        val largeConfig = DatabaseConfiguration(linksPerPage = 250)
+        assertEquals(250, largeConfig.linksPerPage)
+        assertEquals(250, largeConfig.effectiveLinksPerPage)
+    }
 }

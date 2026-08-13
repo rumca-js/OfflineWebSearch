@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.coroutines.launch
 
 /**
@@ -42,9 +43,16 @@ fun SourceEditScreen(
     var enabled by remember { mutableStateOf(source.enabled) }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var urlError by remember { mutableStateOf<String?>(null) }
+    val canSave = url.isNotBlank()
 
     /** Runs the appropriate insert or update and returns whether it succeeded. */
     suspend fun saveSource(): Boolean {
+        if (!UrlLocation(url).isWebLink()) {
+            urlError = "URL must start with http://, https://, smb://, or ftp:// and have a valid domain"
+            return false
+        }
+        urlError = null
         return if (isAddMode) {
             val (success, err) = SourceRepository.insertSource(
                 context = context,
@@ -102,14 +110,15 @@ fun SourceEditScreen(
                                     }
                                 }
                             },
-                            enabled = !isSaving
+                            enabled = canSave && !isSaving
                         ) {
                             Icon(Icons.Default.Save, contentDescription = "Save")
                         }
                     }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -147,11 +156,18 @@ fun SourceEditScreen(
 
             OutlinedTextField(
                 value = url,
-                onValueChange = { if (isEditable) url = it },
+                onValueChange = {
+                    if (isEditable) {
+                        url = it
+                        urlError = null
+                    }
+                },
                 label = { Text("URL") },
                 enabled = isEditable,
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = urlError != null,
+                supportingText = urlError?.let { { Text(it) } }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -214,7 +230,7 @@ fun SourceEditScreen(
                             }
                         }
                     },
-                    enabled = !isSaving,
+                    enabled = canSave && !isSaving,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isSaving) {
