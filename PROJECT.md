@@ -1,6 +1,7 @@
 # Project
 
  - The project is an Android application.
+ - It shall not contain dependencies toward google, nor its services (if possible)
  - The application provides offline web search.
  - The primary function of the application is searching.
  - The application searches local SQLite databases and JSON files.
@@ -40,6 +41,7 @@ Users can provide databases from:
  - Re-fetching a database replaces the current local copy.
  - The user is notified before a local database is replaced.
  - The application maintains the state of every configured database.
+ - Only one database is active at a time.
 
 # DatabaseState
 
