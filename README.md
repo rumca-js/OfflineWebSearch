@@ -20,7 +20,7 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
 
 # Databases
 
-The application is highly customizable and allows you to load different databases directly from a file. You can curate your own search indexes, share them, or swap between specialized databases depending on your current needs—all completely offline.
+The application is highly customizable and allows you to load different databases directly from a file. You can curate your own search indexes, share them, or swap between specialized databases depending on your current needs - all completely offline.
 
  - only one database can be active at a time
 
