@@ -11,7 +11,7 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
 
 # Links
 
-[F-droid App](https://f-droid.org/en/packages/io.github.rumcajs.offlinewebsearch)
+[![F-Droid](https://img.shields.io/badge/F--Droid-3DDC84?style=for-the-badge&logo=f-droid&logoColor=white)](https://f-droid.org/en/packages/io.github.rumcajs.offlinewebsearch)
 
 # Permissions
 
@@ -21,6 +21,8 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
 # Databases
 
 The application is highly customizable and allows you to load different databases directly from a file. You can curate your own search indexes, share them, or swap between specialized databases depending on your current needs—all completely offline.
+
+ - only one database can be active at a time
 
 ## Ready Databases
 
