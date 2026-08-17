@@ -162,6 +162,26 @@ fun OptionsScreen(
             }
         )
 
+        OptionItem(
+            label = "Track user searches",
+            checked = config.dbconfig.trackUserSearches,
+            onCheckedChange = {
+                AppConfigManager.setTrackUserSearches(
+                    it
+                )
+            }
+        )
+
+        OptionItem(
+            label = "Track user navigation",
+            checked = config.dbconfig.trackUserNavigation,
+            onCheckedChange = {
+                AppConfigManager.setTrackUserNavigation(
+                    it
+                )
+            }
+        )
+
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(

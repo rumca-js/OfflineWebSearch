@@ -117,6 +117,18 @@ object AppConfigManager {
         }
     }
 
+    fun setTrackUserSearches(enabled: Boolean) {
+        updateConfig { currentConfig ->
+            currentConfig.updateActiveDbConfig { it.copy(trackUserSearches = enabled) }
+        }
+    }
+
+    fun setTrackUserNavigation(enabled: Boolean) {
+        updateConfig { currentConfig ->
+            currentConfig.updateActiveDbConfig { it.copy(trackUserNavigation = enabled) }
+        }
+    }
+
     fun setLinksPerPage(count: Int) {
         val validCount = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, count)
         updateConfig { currentConfig ->
