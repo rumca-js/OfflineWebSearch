@@ -1,0 +1,1 @@
+Network communication can be disabled in options. Added support for search history, and entry browse history. Provided databases to clear history tables.
