@@ -211,7 +211,7 @@ The screen displays, where available:
  - Document non-obvious implementation decisions.
  - Use descriptive names for classes, methods, and variables.
  - Prefer simple implementations over unnecessary abstractions.
- - When handling SQLite tables, then apply some storage limits. For example we may store history of user searches. Do not allow for infinite growth, but allow only a fixed amount of entries to be added. New entries replace old ones. One exception is Entries. There is no limit for them
+ - When handling SQLite tables, then apply some storage limits. For example, we may store history of user searches. Do not allow for infinite growth, but allow only a fixed amount of entries to be added. New entries replace old ones. One exception is Entries. There is no limit for them
 
 # General Requirements
  - The application must remain usable when the device is offline.
@@ -226,3 +226,4 @@ The screen displays, where available:
  - Modification controls should be hidden for read-only databases where possible.
  - If a modification control cannot be hidden, it must be disabled.
  - The application must not attempt a write operation against a read-only database.
+ - if network is disabled network related widgets, like buttons should be not visible

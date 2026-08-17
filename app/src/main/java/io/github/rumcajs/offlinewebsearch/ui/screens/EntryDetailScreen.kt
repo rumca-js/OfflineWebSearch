@@ -210,14 +210,16 @@ fun EntryDetailScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
-                enabled = !isRestricted,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Check status")
+            if (!config.networkConfig.disabled) {
+                Button(
+                    onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
+                    enabled = !isRestricted,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Check status")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-            Spacer(modifier = Modifier.height(16.dp))
 
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.let {
                 Text(
