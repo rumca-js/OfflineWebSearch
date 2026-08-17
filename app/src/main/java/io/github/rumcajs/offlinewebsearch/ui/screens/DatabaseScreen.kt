@@ -209,8 +209,16 @@ fun DatabaseScreen(
                 }
             }
 
+            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseStatePane(state = state)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseConfigurationPane(dbConfig = dbConfig)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
-                text = "Database State",
+                text = "History Actions",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -218,99 +226,98 @@ fun DatabaseScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             val isSql = state.extension == ".db"
-            var stats by remember { mutableStateOf(io.github.rumcajs.offlinewebsearch.data.DatabaseStats()) }
-            var isLoadingStats by remember { mutableStateOf(false) }
+            var showClearSearchHistoryDialog by remember { mutableStateOf(false) }
+            var showClearTransitionHistoryDialog by remember { mutableStateOf(false) }
+            var isClearingSearch by remember { mutableStateOf(false) }
+            var isClearingTransitions by remember { mutableStateOf(false) }
 
-            LaunchedEffect(state) {
-                if (isSql) {
-                    isLoadingStats = true
-                    stats = io.github.rumcajs.offlinewebsearch.data.DatabaseStatsRepository.getStats(context, state)
-                    isLoadingStats = false
-                }
+            val canClearHistory = isSql && !state.isReadOnly
+
+            Button(
+                onClick = { showClearSearchHistoryDialog = true },
+                enabled = canClearHistory && !isClearingSearch,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(if (isClearingSearch) "Clearing Search History..." else "Clear Search History")
             }
 
-            DatabasePropertyRow(label = "Display Name", value = state.displayName)
-            DatabasePropertyRow(
-                label = "URL / Source",
-                value = if (state.url.isBlank()) "Assets (Bundled)" else state.url
-            )
-            DatabasePropertyRow(
-                label = "Local File",
-                value = if (state.localFileName.isBlank()) "places_0.json (Assets)" else state.localFileName
-            )
-            if (isSql) {
-                DatabasePropertyRow(
-                    label = "linkdatamodel Count",
-                    value = if (isLoadingStats) "Loading..." else stats.linkDataModelCount?.toString() ?: "N/A"
-                )
-                DatabasePropertyRow(
-                    label = "searchview Count",
-                    value = if (isLoadingStats) "Loading..." else stats.searchViewCount?.toString() ?: "N/A"
-                )
-                DatabasePropertyRow(
-                    label = "sourcedatamodel Count",
-                    value = if (isLoadingStats) "Loading..." else stats.sourceDataModelCount?.toString() ?: "N/A"
-                )
-                DatabasePropertyRow(
-                    label = "configurationentry Count",
-                    value = if (isLoadingStats) "Loading..." else stats.configurationEntryCount?.toString() ?: "N/A"
+            Button(
+                onClick = { showClearTransitionHistoryDialog = true },
+                enabled = canClearHistory && !isClearingTransitions,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(if (isClearingTransitions) "Clearing Entry Transition History..." else "Clear Entry Transition History")
+            }
+
+            if (showClearSearchHistoryDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearSearchHistoryDialog = false },
+                    title = { Text("Clear Search History") },
+                    text = { Text("Are you sure you want to clear the search history table?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showClearSearchHistoryDialog = false
+                                scope.launch {
+                                    isClearingSearch = true
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository.clearSearchHistory(context, state)
+                                    isClearingSearch = false
+                                    if (success) {
+                                        Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to clear search history: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Clear")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearSearchHistoryDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
                 )
             }
-            DatabasePropertyRow(label = "Status", value = state.status.name, isHighlight = true)
-            DatabasePropertyRow(
-                label = "Progress",
-                value = "${(state.progress * 100).toInt()}%"
-            )
-            DatabasePropertyRow(
-                label = "Access Mode",
-                value = if (state.isReadOnly) "READ-ONLY" else "READ-WRITE"
-            )
-            DatabasePropertyRow(label = "Extension", value = state.extension)
-            DatabasePropertyRow(
-                label = "Is Local File",
-                value = if (state.isLocal) "Yes" else if (state.url.isBlank()) "Asset" else "No"
-            )
-            DatabasePropertyRow(
-                label = "File Size",
-                value = formatFileSize(context, state)
-            )
-            DatabasePropertyRow(
-                label = "Error Message",
-                value = state.errorMessage ?: "None"
-            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            if (showClearTransitionHistoryDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearTransitionHistoryDialog = false },
+                    title = { Text("Clear Entry Transition History") },
+                    text = { Text("Are you sure you want to clear the entry transition history table?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showClearTransitionHistoryDialog = false
+                                scope.launch {
+                                    isClearingTransitions = true
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository.clearTransitionHistory(context, state)
+                                    isClearingTransitions = false
+                                    if (success) {
+                                        Toast.makeText(context, "Entry transition history cleared", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to clear entry transition history: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Clear")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearTransitionHistoryDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
 
-            Text(
-                text = "Database Configuration",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            DatabasePropertyRow(
-                label = "Direct Links",
-                value = if (dbConfig.directLinks) "Enabled" else "Disabled"
-            )
-            DatabasePropertyRow(
-                label = "Show Icons",
-                value = if (dbConfig.showIcons) "Enabled" else "Disabled"
-            )
-            DatabasePropertyRow(
-                label = "Video Preview",
-                value = if (dbConfig.videoPreview) "Enabled" else "Disabled"
-            )
-            DatabasePropertyRow(
-                label = "Order By",
-                value = dbConfig.orderBy.displayName
-            )
-            DatabasePropertyRow(
-                label = "View Style",
-                value = dbConfig.viewStyle.displayName
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (!isActive) {
                 Button(
@@ -319,32 +326,29 @@ fun DatabaseScreen(
                 ) {
                     Text("Set as Active Database")
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            var isDuplicating by remember { mutableStateOf(false) }
+
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        isDuplicating = true
+                        val success = AppConfigManager.duplicateDatabase(context, state)
+                        isDuplicating = false
+                        if (success) {
+                            Toast.makeText(context, "Database copy created", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Failed to create database copy", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
+                enabled = !isDuplicating,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isDuplicating) "Creating Copy..." else "Create a Copy")
             }
         }
-    }
-}
-
-private fun formatFileSize(context: Context, state: DatabaseState): String {
-    val bytes = if (state.sizeInBytes > 0L) {
-        state.sizeInBytes
-    } else if (state.localFileName.isNotBlank()) {
-        try {
-            val file = File(context.filesDir, state.localFileName)
-            if (file.exists()) file.length() else 0L
-        } catch (e: Exception) {
-            0L
-        }
-    } else {
-        0L
-    }
-
-    if (bytes <= 0L) return "Unknown"
-    val kbs = bytes / 1024.0
-    val mbs = kbs / 1024.0
-    val dec = DecimalFormat("#.##")
-    return when {
-        mbs >= 1.0 -> "${dec.format(mbs)} MB"
-        kbs >= 1.0 -> "${dec.format(kbs)} KB"
-        else -> "$bytes Bytes"
     }
 }

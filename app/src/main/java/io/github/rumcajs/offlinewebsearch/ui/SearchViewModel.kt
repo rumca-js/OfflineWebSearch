@@ -110,7 +110,7 @@ class SearchViewModel : ViewModel() {
         if (context != null) {
             viewModelScope.launch {
                 val config = AppConfigManager.config.first()
-                if (searchQuery.isNotBlank()) {
+                if (searchQuery.isNotBlank() && config.dbconfig.trackUserSearches) {
                     SearchHistoryRepository.recordSearch(context, config.activeDatabaseState, searchQuery)
                 }
                 fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, config.dbconfig.effectiveLinksPerPage)
@@ -156,7 +156,7 @@ class SearchViewModel : ViewModel() {
                 id = entry.id,
                 link = entry.link
             )
-            if (entry.id != null) {
+            if (entry.id != null && config.dbconfig.trackUserNavigation) {
                 EntryVisitHistoryRepository.recordVisit(
                     context = context,
                     activeDatabaseState = config.activeDatabaseState,

@@ -6,7 +6,9 @@ import java.io.File
 data class ConfigurationEntry(
     val showIcons: Boolean? = null,
     val displayType: String? = null,
-    val linksPerPage: Int? = null
+    val linksPerPage: Int? = null,
+    val trackUserSearches: Boolean? = null,
+    val trackUserNavigation: Boolean? = null
 ) {
     val isShowIcons: Boolean
         get() = showIcons == true
@@ -53,10 +55,22 @@ data class ConfigurationEntry(
                                     c.getInt(linksPerPageIndex)
                                 } else null
 
+                                val trackUserSearchesIndex = c.getColumnIndex("track_user_searches")
+                                val trackUserSearches = if (trackUserSearchesIndex != -1 && !c.isNull(trackUserSearchesIndex)) {
+                                    c.getInt(trackUserSearchesIndex) == 1
+                                } else null
+
+                                val trackUserNavigationIndex = c.getColumnIndex("track_user_navigation")
+                                val trackUserNavigation = if (trackUserNavigationIndex != -1 && !c.isNull(trackUserNavigationIndex)) {
+                                    c.getInt(trackUserNavigationIndex) == 1
+                                } else null
+
                                 ConfigurationEntry(
                                     showIcons = showIcons,
                                     displayType = displayType,
-                                    linksPerPage = linksPerPage
+                                    linksPerPage = linksPerPage,
+                                    trackUserSearches = trackUserSearches,
+                                    trackUserNavigation = trackUserNavigation
                                 )
                             } else {
                                 ConfigurationEntry()

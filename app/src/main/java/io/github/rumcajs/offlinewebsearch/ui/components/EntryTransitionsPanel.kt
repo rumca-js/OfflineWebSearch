@@ -75,7 +75,7 @@ fun EntryTransitionsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (activeDbState != null) {
+                            if (activeDbState != null && config.dbconfig.trackUserNavigation) {
                                 targetEntry.id?.let { targetId ->
                                     coroutineScope.launch {
                                         EntryTransitionHistoryRepository.recordTransition(

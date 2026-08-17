@@ -281,6 +281,12 @@ object AppConfigManager {
                         val links = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, configEntry.linksPerPage)
                         updatedConfig = updatedConfig.copy(linksPerPage = links)
                     }
+                    if (configEntry?.trackUserSearches != null) {
+                        updatedConfig = updatedConfig.copy(trackUserSearches = configEntry.trackUserSearches)
+                    }
+                    if (configEntry?.trackUserNavigation != null) {
+                        updatedConfig = updatedConfig.copy(trackUserNavigation = configEntry.trackUserNavigation)
+                    }
                     if (searchViewEntry?.orderBy != null) {
                         updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
                     }
@@ -557,6 +563,12 @@ object AppConfigManager {
                         val links = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, configEntry.linksPerPage)
                         updatedConfig = updatedConfig.copy(linksPerPage = links)
                     }
+                    if (configEntry?.trackUserSearches != null) {
+                        updatedConfig = updatedConfig.copy(trackUserSearches = configEntry.trackUserSearches)
+                    }
+                    if (configEntry?.trackUserNavigation != null) {
+                        updatedConfig = updatedConfig.copy(trackUserNavigation = configEntry.trackUserNavigation)
+                    }
                     if (searchViewEntry?.orderBy != null) {
                         updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
                     }
@@ -614,5 +626,70 @@ object AppConfigManager {
 
     fun setActiveDatabase(url: String?) {
         updateConfig { it.copy(activeDatabase = url) }
+    }
+
+    /**
+     * Creates a copy of the specified database and its configuration.
+     * Generates a new local:// URL with "Copy" in its display name/URL.
+     */
+    suspend fun duplicateDatabase(context: Context, state: DatabaseState): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val baseName = if (state.displayName.isNotBlank()) state.displayName else "Database"
+            var copyIndex = 1
+            var newUrl: String
+            var newLocalFileName: String
+
+            val ext = state.extension
+            val timestamp = System.currentTimeMillis()
+
+            do {
+                val candidateName = if (copyIndex == 1) "$baseName Copy" else "$baseName Copy $copyIndex"
+                newUrl = DatabaseState.toLocalUrl("$candidateName$ext")
+                newLocalFileName = "db_${timestamp}_$copyIndex$ext"
+                copyIndex++
+            } while (config.value.databases.containsKey(newUrl))
+
+            // Copy physical file if present
+            if (state.localFileName.isNotBlank()) {
+                val sourceFile = File(context.filesDir, state.localFileName)
+                if (sourceFile.exists()) {
+                    val destFile = File(context.filesDir, newLocalFileName)
+                    sourceFile.copyTo(destFile, overwrite = true)
+                }
+            } else {
+                // If it's a bundled asset like places_0.json
+                val destFile = File(context.filesDir, newLocalFileName)
+                context.assets.open("places_0.json").use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+
+            val destFile = File(context.filesDir, newLocalFileName)
+            val newSize = if (destFile.exists()) destFile.length() else 0L
+
+            val copyState = DatabaseState(
+                url = newUrl,
+                localFileName = newLocalFileName,
+                status = DatabaseStatus.READY,
+                progress = 1.0f,
+                errorMessage = null,
+                sizeInBytes = newSize,
+                isReadOnly = !newLocalFileName.endsWith(".db")
+            )
+
+            updateConfig { currentConfig ->
+                val existingDbConfig = currentConfig.dbConfigs[state.url] ?: currentConfig.defaultDbConfig
+                currentConfig.copy(
+                    databases = currentConfig.databases + (newUrl to copyState),
+                    dbConfigs = currentConfig.dbConfigs + (newUrl to existingDbConfig)
+                )
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

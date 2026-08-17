@@ -97,7 +97,9 @@ data class DatabaseConfiguration(
     val videoPreview: Boolean = false,
     val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
     val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
-    val linksPerPage: Int = MIN_LINKS_PER_PAGE
+    val linksPerPage: Int = MIN_LINKS_PER_PAGE,
+    val trackUserSearches: Boolean = true,
+    val trackUserNavigation: Boolean = true
 ) {
     val effectiveLinksPerPage: Int
         get() = kotlin.math.max(MIN_LINKS_PER_PAGE, linksPerPage)
