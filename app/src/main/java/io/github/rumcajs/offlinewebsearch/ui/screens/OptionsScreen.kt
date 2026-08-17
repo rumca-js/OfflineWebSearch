@@ -45,7 +45,7 @@ fun OptionsScreen(
             value = if (config.userAge == 0) "" else config.userAge.toString(),
             onValueChange = {
                 val newAge = it.toIntOrNull() ?: 0
-                _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setUserAge(newAge)
+                AppConfigManager.setUserAge(newAge)
             },
             label = { Text("Your Age") },
             modifier = Modifier.fillMaxWidth(),
@@ -53,6 +53,27 @@ fun OptionsScreen(
             singleLine = true,
             placeholder = { Text("0") }
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Checkbox(
+                checked = config.networkConfig.disabled,
+                onCheckedChange = { checked ->
+                    AppConfigManager.setNetworkDisabled(checked)
+                }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Disable Network Communication",
+                fontSize = 16.sp
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

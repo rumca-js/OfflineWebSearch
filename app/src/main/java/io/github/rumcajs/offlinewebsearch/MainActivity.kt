@@ -189,7 +189,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val context = androidx.compose.ui.platform.LocalContext.current
                             searchViewModel.selectedEntry?.let { place ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryDetailScreen(
-                                    entry = place,
+                                    entry = searchViewModel.selectedEntry ?: place,
                                     onNavigateToLinkPreview = { url ->
                                         searchViewModel.previewUrl = url
                                         navController.navigate(Screen.LinkPreview.route)
@@ -209,6 +209,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                         searchViewModel.searchQuery = "tag LIKE '%$tag%'"
                                         searchViewModel.performSearch(context)
                                         navController.popBackStack(Screen.Home.route, false)
+                                    },
+                                    onVisit = {
+                                        searchViewModel.recordVisit(context, place)
+                                    },
+                                    onSelectEntry = { targetEntry ->
+                                        searchViewModel.selectedEntry = targetEntry
                                     },
                                     onBack = { navController.popBackStack() }
                                 )

@@ -42,6 +42,13 @@ object EntryUtils {
     }
 
     /**
+     * Returns a formatted visits string.
+     */
+    fun getFormattedVisits(entry: io.github.rumcajs.offlinewebsearch.data.Entry): String {
+        return (entry.page_rating_visits ?: 0).toString()
+    }
+
+    /**
      * Returns a formatted date string or "N/A" if null.
      */
     fun getFormattedDate(date: String?): String {

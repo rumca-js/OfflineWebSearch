@@ -146,6 +146,14 @@ object AppConfigManager {
         updateConfig { it.copy(userAge = age) }
     }
 
+    fun setNetworkDisabled(disabled: Boolean) {
+        updateConfig { currentConfig ->
+            currentConfig.copy(
+                networkConfig = currentConfig.networkConfig.copy(disabled = disabled)
+            )
+        }
+    }
+
     fun addDatabase(url: String) {
         updateConfig {
             it.copy(databases = it.databases + (url to DatabaseState.fromUrl(url)))

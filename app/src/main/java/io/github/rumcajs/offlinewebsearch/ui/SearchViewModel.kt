@@ -12,8 +12,10 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.data.EntryListRepository
+import io.github.rumcajs.offlinewebsearch.data.EntryRepository
+import io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -80,6 +82,11 @@ class SearchViewModel : ViewModel() {
                     currentLinksPerPage = activeLinksPerPage
                     pageSize = activeLinksPerPage
                     currentPage = 0
+                    val activeState = config.activeDatabaseState
+                    if (activeState != null && activeState.extension == ".db") {
+                        val historyList = SearchHistoryRepository.loadSearchHistory(context, activeState)
+                        searchHistory = historyList.map { it.search_query }
+                    }
                     fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, activeLinksPerPage)
                 }
             }
@@ -103,6 +110,9 @@ class SearchViewModel : ViewModel() {
         if (context != null) {
             viewModelScope.launch {
                 val config = AppConfigManager.config.first()
+                if (searchQuery.isNotBlank()) {
+                    SearchHistoryRepository.recordSearch(context, config.activeDatabaseState, searchQuery)
+                }
                 fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, config.dbconfig.effectiveLinksPerPage)
             }
         }
@@ -123,6 +133,40 @@ class SearchViewModel : ViewModel() {
     }
 
     /**
+     * Increments the visit count for [entry] in memory and in SQLite DB (if editable).
+     */
+    fun recordVisit(context: Context, entry: Entry) {
+        val updatedVisits = (entry.page_rating_visits ?: 0) + 1
+        val updatedEntry = entry.copy(page_rating_visits = updatedVisits)
+        selectedEntry = updatedEntry
+
+        filteredData = filteredData.map {
+            if ((entry.id != null && it.id == entry.id) || (!entry.link.isNullOrEmpty() && it.link == entry.link)) {
+                it.copy(page_rating_visits = updatedVisits)
+            } else {
+                it
+            }
+        }
+
+        viewModelScope.launch {
+            val config = AppConfigManager.config.first()
+            EntryRepository.incrementVisitInSql(
+                context = context,
+                activeDatabaseState = config.activeDatabaseState,
+                id = entry.id,
+                link = entry.link
+            )
+            if (entry.id != null) {
+                EntryVisitHistoryRepository.recordVisit(
+                    context = context,
+                    activeDatabaseState = config.activeDatabaseState,
+                    entryId = entry.id
+                )
+            }
+        }
+    }
+
+    /**
      * Deletes [entry] from the active database and refreshes the list.
      * Calls [onResult] with true on success, false on failure.
      */
@@ -134,7 +178,7 @@ class SearchViewModel : ViewModel() {
                 onResult(false)
                 return@launch
             }
-            val success = EntryListRepository.deleteEntryFromSql(
+            val success = EntryRepository.deleteEntryFromSql(
                 context = context,
                 activeDatabaseState = dbState,
                 id = entry.id,
@@ -181,13 +225,13 @@ class SearchViewModel : ViewModel() {
         isLoading = true
         pageSize = effectivePageSize
         val offset = currentPage * effectivePageSize
-        val count = EntryListRepository.countEntries(
+        val count = EntryRepository.countEntries(
             context = context,
             activeDatabaseState = activeDatabaseState,
             searchQuery = activeSearchQuery,
             orderBy = orderBy
         )
-        val page = EntryListRepository.loadEntriesPage(
+        val page = EntryRepository.loadEntriesPage(
             context = context,
             activeDatabaseState = activeDatabaseState,
             searchQuery = activeSearchQuery,

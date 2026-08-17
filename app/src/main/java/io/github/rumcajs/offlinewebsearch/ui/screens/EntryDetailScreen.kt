@@ -38,6 +38,8 @@ fun EntryDetailScreen(
     onNavigateToEdit: () -> Unit,
     onDelete: (() -> Unit)? = null,
     onTagClick: ((String) -> Unit)? = null,
+    onVisit: (() -> Unit)? = null,
+    onSelectEntry: ((io.github.rumcajs.offlinewebsearch.data.Entry) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -45,6 +47,10 @@ fun EntryDetailScreen(
     val context = LocalContext.current
     val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(entry.id ?: entry.link) {
+        onVisit?.invoke()
+    }
 
     val activeDbState = config.activeDatabaseState
     val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
@@ -222,133 +228,21 @@ fun EntryDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Display channel
-            entry.link?.let { link ->
-                val handler = HandlerBuilder(link).build()
-                val channel = handler?.getChannel() ?: ""
-                val isChannel = handler is YouTubeChannelHandler || handler is RedditChannelHandler || handler is OdyseeChannelHandler
-                if (channel.isNotEmpty() && !isChannel) {
-                    DetailRow(
-                        label = "Channel",
-                        value = channel
-                    )
+            // Entry detail properties and metadata pane
+            io.github.rumcajs.offlinewebsearch.ui.components.EntryMetadataPane(
+                entry = entry,
+                isRestricted = isRestricted
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Entry transition history links panel
+            io.github.rumcajs.offlinewebsearch.ui.components.EntryTransitionsPanel(
+                fromEntryId = entry.id,
+                onSelectEntry = { targetEntry ->
+                    onSelectEntry?.invoke(targetEntry)
                 }
-            }
-
-            // Resolve and display feeds
-            entry.link?.let { link ->
-                val handler = HandlerBuilder(link).build()
-                val feeds = handler?.getFeeds()?.filter { it != link } ?: emptyList()
-                if (feeds.isNotEmpty()) {
-                    feeds.forEach { feedUrl ->
-                        LinkRow(
-                            label = "Feed Link",
-                            url = feedUrl,
-                            isRestricted = isRestricted,
-                            toastMessage = "Feed link copied"
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
-            // Entry detail properties, metadata
-
-            DetailRow(
-                label = "Created",
-                value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedDate(
-                    entry.date_created
-                )
             )
-            DetailRow(
-                label = "Dead",
-                value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedDate(
-                    entry.date_dead_since
-                )
-            )
-            DetailRow(
-                label = "Bookmarked",
-                value = if (entry.bookmarked == true) "Yes" else "No"
-            )
-
-            DetailRow(
-                label = "Author",
-                value = entry.author ?: "NA"
-            )
-            DetailRow(
-                label = "Album",
-                value = entry.album ?: "NA"
-            )
-            DetailRow(
-                label = "Language",
-                value = entry.language ?: "NA"
-            )
-
-            DetailRow(
-                label = "Rating",
-                value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedRating(
-                    entry
-                )
-            )
-            DetailRow(
-                label = "Votes",
-                value = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedVotes(
-                    entry
-                )
-            )
-
-            DetailRow(
-                label = "Status Code",
-                value = (entry.status_code ?: 0).toString()
-            )
-            DetailRow(
-                label = "Manual Status Code",
-                value = (entry.manual_status_code ?: 0).toString()
-            )
-
-            entry.thumbnail?.let { thumbUrl ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .pointerInput(thumbUrl) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    clipboardManager.setText(AnnotatedString(thumbUrl))
-                                    Toast.makeText(context, "Thumbnail link copied", Toast.LENGTH_SHORT).show()
-                                },
-                                onTap = {
-                                    uriHandler.openUri(thumbUrl)
-                                }
-                            )
-                        },
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "Thumbnail", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
-                    Text(
-                        text = "Link (Long press to copy)",
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-
-            // Resolve and display UrlServices links
-            entry.link?.let { link ->
-                val urlServices = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.UrlServices()
-                val serviceLinks = urlServices.getServiceLinks(link)
-                if (serviceLinks.isNotEmpty()) {
-                    serviceLinks.forEach { (serviceName, serviceUrl) ->
-                        LinkRow(
-                            label = serviceName,
-                            url = serviceUrl,
-                            isRestricted = isRestricted,
-                            toastMessage = "$serviceName link copied"
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
         }

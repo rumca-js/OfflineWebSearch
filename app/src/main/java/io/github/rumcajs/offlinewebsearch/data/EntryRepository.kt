@@ -19,6 +19,7 @@ data class Entry(
     val language: String? = null,
     val tags: List<String>? = null,
     val page_rating_votes: Int? = 0,
+    val page_rating_visits: Int? = 0,
     val page_rating: Int? = 0,
     val thumbnail: String? = null,
     val date_created: String? = null,
@@ -49,7 +50,7 @@ private val defaultAssets = listOf(
     "places_10.json",
 )
 
-object EntryListRepository {
+object EntryRepository {
 
     // ──────────────────────────────────────────────────────────────────────────
     // Public API – paginated queries
@@ -135,6 +136,7 @@ object EntryListRepository {
                 put("album", entry.album)
                 put("language", entry.language)
                 put("page_rating_votes", entry.page_rating_votes ?: 0)
+                put("page_rating_visits", entry.page_rating_visits ?: 0)
                 put("page_rating", entry.page_rating ?: 0)
                 put("thumbnail", entry.thumbnail)
                 put("date_created", entry.date_created)
@@ -149,7 +151,6 @@ object EntryListRepository {
                 put("permanent", 0)
                 put("contents_type", 0)
                 put("page_rating_contents", 0)
-                put("page_rating_visits", 0)
             }
 
             db.beginTransaction()
@@ -216,6 +217,37 @@ object EntryListRepository {
             }
             db.close()
             rows > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * Increments the page_rating_visits count for an entry in the SQLite database.
+     */
+    suspend fun incrementVisitInSql(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long?,
+        link: String?
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null) return@withContext false
+        if (activeDatabaseState.extension != ".db") return@withContext false
+        if (activeDatabaseState.isReadOnly) return@withContext false
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            if (id != null) {
+                db.execSQL("UPDATE linkdatamodel SET page_rating_visits = COALESCE(page_rating_visits, 0) + 1 WHERE id = ?", arrayOf(id.toString()))
+            } else if (!link.isNullOrEmpty()) {
+                db.execSQL("UPDATE linkdatamodel SET page_rating_visits = COALESCE(page_rating_visits, 0) + 1 WHERE link = ?", arrayOf(link))
+            }
+            db.close()
+            true
         } catch (e: Exception) {
             e.printStackTrace()
             false
@@ -315,10 +347,7 @@ object EntryListRepository {
                 // Inner subquery pages on distinct entry IDs, outer join fetches data + tags.
                 val sql = """
                     SELECT
-                        l.id, l.title, l.description, l.thumbnail, l.link,
-                        l.page_rating_votes, l.page_rating, l.date_created, l.date_published,
-                        l.date_dead_since, l.age, l.author, l.album, l.language,
-                        l.status_code, l.manual_status_code, l.bookmarked,
+                        $ENTRY_SELECT_COLUMNS,
                         GROUP_CONCAT(t.tag, ',') AS tag
                     FROM (
                         SELECT DISTINCT l.id
@@ -377,14 +406,18 @@ object EntryListRepository {
         }
     }
 
+    /** Standard column selection list for queries on `linkdatamodel` (aliased as `l`). */
+    const val ENTRY_SELECT_COLUMNS = "l.id, l.link, l.title, l.description, l.author, l.album, l.language, l.page_rating_votes, l.page_rating_visits, l.page_rating, l.thumbnail, l.date_created, l.date_published, l.date_dead_since, l.age, l.status_code, l.manual_status_code, l.bookmarked"
+
     /** Maps a cursor row to an [Entry]. */
-    private fun cursorToEntry(c: android.database.Cursor): Entry {
+    fun cursorToEntry(c: android.database.Cursor): Entry {
         val id = c.getLong(c.getColumnIndexOrThrow("id"))
         val title = c.getString(c.getColumnIndexOrThrow("title"))
         val description = c.getString(c.getColumnIndexOrThrow("description"))
         val thumbnail = c.getString(c.getColumnIndexOrThrow("thumbnail"))
         val link = c.getString(c.getColumnIndexOrThrow("link"))
         val votes = c.getInt(c.getColumnIndexOrThrow("page_rating_votes"))
+        val visits = c.getInt(c.getColumnIndexOrThrow("page_rating_visits"))
         val rating = c.getInt(c.getColumnIndexOrThrow("page_rating"))
         val dateCreated = c.getString(c.getColumnIndexOrThrow("date_created"))
         val datePublished = c.getString(c.getColumnIndexOrThrow("date_published"))
@@ -409,6 +442,7 @@ object EntryListRepository {
             album = album,
             language = language,
             page_rating_votes = votes,
+            page_rating_visits = visits,
             page_rating = rating,
             date_created = dateCreated,
             date_published = datePublished,

@@ -44,6 +44,7 @@ object NetworkUtils {
     suspend fun verifyUrl(urlString: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val config = AppConfigManager.config.value
+            if (config.networkConfig.disabled) return@withContext false
             val url = URL(urlString)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "HEAD"
@@ -63,6 +64,13 @@ object NetworkUtils {
     ): PageResponseObject = withContext(Dispatchers.IO) {
         try {
             val config = AppConfigManager.config.value
+            if (config.networkConfig.disabled) {
+                return@withContext PageResponseObject(
+                    statusCode = -1,
+                    headers = emptyMap(),
+                    error = "Network communication is disabled in settings"
+                )
+            }
 
             val requestBuilder = Request.Builder()
                 .url(urlString)
@@ -95,6 +103,14 @@ object NetworkUtils {
     ): PageResponseObject = withContext(Dispatchers.IO) {
         try {
             val config = AppConfigManager.config.value
+            if (config.networkConfig.disabled) {
+                return@withContext PageResponseObject(
+                    statusCode = -1,
+                    headers = emptyMap(),
+                    text = null,
+                    error = "Network communication is disabled in settings"
+                )
+            }
 
             val requestBuilder = Request.Builder()
                 .url(urlString)
@@ -131,6 +147,15 @@ object NetworkUtils {
 
         try {
             val config = AppConfigManager.config.value
+            if (config.networkConfig.disabled) {
+                return@withContext PageResponseObject(
+                    statusCode = -1,
+                    headers = emptyMap(),
+                    bytes = null,
+                    text = null,
+                    error = "Network communication is disabled in settings"
+                )
+            }
 
             val requestBuilder = Request.Builder()
                 .url(urlString)

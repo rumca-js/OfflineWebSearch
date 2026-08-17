@@ -7,6 +7,8 @@ import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
@@ -21,6 +23,8 @@ fun EntryListScreen(
     onNavigateToAddEntry: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val config by AppConfigManager.config.collectAsState()
@@ -70,6 +74,8 @@ fun EntryListScreen(
             showSuggestions = viewModel.showSuggestions,
             suggestions = viewModel.suggestions,
             onSuggestionClick = { suggestion ->
+                keyboardController?.hide()
+                focusManager.clearFocus()
                 viewModel.searchQuery = suggestion
                 viewModel.performSearch(context)
                 coroutineScope.launch {

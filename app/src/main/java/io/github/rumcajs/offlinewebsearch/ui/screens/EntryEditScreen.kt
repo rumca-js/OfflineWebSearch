@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.data.EntryListRepository
+import io.github.rumcajs.offlinewebsearch.data.EntryRepository
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -23,8 +23,8 @@ import java.util.Locale
 
 /**
  * Entry edit/add screen. When [entry] has a null id it operates in "add" mode
- * (calls [EntryListRepository.addEntryToSql]); otherwise it edits the existing
- * entry (calls [EntryListRepository.updateEntryInSql]).
+ * (calls [EntryRepository.addEntryToSql]); otherwise it edits the existing
+ * entry (calls [EntryRepository.updateEntryInSql]).
  * Only enabled when the active database is read-write (.db).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,7 +62,7 @@ fun EntryEditScreen(
             false
         } else if (isAddMode) {
             val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-            val (success, err) = EntryListRepository.addEntryToSql(
+            val (success, err) = EntryRepository.addEntryToSql(
                 context = context,
                 activeDatabaseState = activeDbState,
                 entry = entry.copy(
@@ -76,7 +76,7 @@ fun EntryEditScreen(
             errorMessage = if (!success) err else null
             success
         } else {
-            val success = EntryListRepository.updateEntryInSql(
+            val success = EntryRepository.updateEntryInSql(
                 context = context,
                 activeDatabaseState = activeDbState,
                 id = entry.id,
