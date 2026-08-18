@@ -1,0 +1,1 @@
+Provided entry social data, and entry transition history. Sources can fetch entries.
