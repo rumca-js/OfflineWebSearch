@@ -111,12 +111,12 @@ class UrlLocation(private val link: String?) {
 
     /**
      * Returns true if [domain] looks like a valid hostname:
-     * - Contains exactly one dot.
+     * - Contains less than one dot
      * - Contains only letters, digits, hyphens, and dots (no `&`, `?`, `=`, spaces, etc.).
      * - Neither part around the dot is empty.
      */
     private fun isValidDomain(domain: String): Boolean {
-        if (domain.count { it == '.' } != 1) return false
+        if (domain.count { it == '.' } < 1) return false
         if (!domain.all { it.isLetterOrDigit() || it == '-' || it == '.' }) return false
         val (left, right) = domain.split('.', limit = 2)
         return left.isNotEmpty() && right.isNotEmpty()
