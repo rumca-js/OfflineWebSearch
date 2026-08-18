@@ -10,7 +10,9 @@ data class DatabaseStats(
     val linkDataModelCount: Long? = null,
     val searchViewCount: Long? = null,
     val sourceDataModelCount: Long? = null,
-    val configurationEntryCount: Long? = null
+    val configurationEntryCount: Long? = null,
+    val entryTransitionHistoryCount: Long? = null,
+    val entryVisitHistoryCount: Long? = null
 )
 
 object DatabaseStatsRepository {
@@ -29,6 +31,8 @@ object DatabaseStatsRepository {
         var searchViewCount: Long? = null
         var sourceDataCount: Long? = null
         var configCount: Long? = null
+        var transitionHistoryCount: Long? = null
+        var visitHistoryCount: Long? = null
 
         try {
             val db = SQLiteDatabase.openDatabase(
@@ -41,6 +45,8 @@ object DatabaseStatsRepository {
                 searchViewCount = getTableCount(it, "searchview")
                 sourceDataCount = getTableCount(it, "sourcedatamodel")
                 configCount = getTableCount(it, "configurationentry")
+                transitionHistoryCount = getTableCount(it, "entrytransitionhistory")
+                visitHistoryCount = getTableCount(it, "entryvisithistory")
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -50,7 +56,9 @@ object DatabaseStatsRepository {
             linkDataModelCount = linkDataCount,
             searchViewCount = searchViewCount,
             sourceDataModelCount = sourceDataCount,
-            configurationEntryCount = configCount
+            configurationEntryCount = configCount,
+            entryTransitionHistoryCount = transitionHistoryCount,
+            entryVisitHistoryCount = visitHistoryCount
         )
     }
 

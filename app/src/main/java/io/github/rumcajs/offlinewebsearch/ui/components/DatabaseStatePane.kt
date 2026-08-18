@@ -71,6 +71,14 @@ fun DatabaseStatePane(
                 label = "configurationentry Count",
                 value = if (isLoadingStats) "Loading..." else stats.configurationEntryCount?.toString() ?: "N/A"
             )
+            DatabasePropertyRow(
+                label = "entrytransitionhistory Count",
+                value = if (isLoadingStats) "Loading..." else stats.entryTransitionHistoryCount?.toString() ?: "N/A"
+            )
+            DatabasePropertyRow(
+                label = "entryvisithistory Count",
+                value = if (isLoadingStats) "Loading..." else stats.entryVisitHistoryCount?.toString() ?: "N/A"
+            )
         }
         DatabasePropertyRow(label = "Status", value = state.status.name, isHighlight = true)
         DatabasePropertyRow(

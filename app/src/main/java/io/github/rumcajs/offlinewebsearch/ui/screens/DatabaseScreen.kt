@@ -253,6 +253,19 @@ fun DatabaseScreen(
                 Text(if (isClearingTransitions) "Clearing Entry Transition History..." else "Clear Entry Transition History")
             }
 
+            var showClearVisitHistoryDialog by remember { mutableStateOf(false) }
+            var isClearingVisits by remember { mutableStateOf(false) }
+
+            Button(
+                onClick = { showClearVisitHistoryDialog = true },
+                enabled = canClearHistory && !isClearingVisits,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(if (isClearingVisits) "Clearing Entry Visit History..." else "Clear Entry Visit History")
+            }
+
             if (showClearSearchHistoryDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearSearchHistoryDialog = false },
@@ -311,6 +324,38 @@ fun DatabaseScreen(
                     },
                     dismissButton = {
                         TextButton(onClick = { showClearTransitionHistoryDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            if (showClearVisitHistoryDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearVisitHistoryDialog = false },
+                    title = { Text("Clear Entry Visit History") },
+                    text = { Text("Are you sure you want to clear the entry visit history table?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showClearVisitHistoryDialog = false
+                                scope.launch {
+                                    isClearingVisits = true
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository.clearVisitHistory(context, state)
+                                    isClearingVisits = false
+                                    if (success) {
+                                        Toast.makeText(context, "Entry visit history cleared", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to clear entry visit history: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Clear")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearVisitHistoryDialog = false }) {
                             Text("Cancel")
                         }
                     }
