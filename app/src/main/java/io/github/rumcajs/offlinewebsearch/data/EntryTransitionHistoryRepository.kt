@@ -92,20 +92,33 @@ object EntryTransitionHistoryRepository {
     }
 
     /**
+     * Result wrapper for loading transitioned entries with potential error messaging.
+     */
+    data class TransitionLoadResult(
+        val entries: List<Pair<EntryTransitionHistory, Entry>> = emptyList(),
+        val error: String? = null
+    )
+
+    /**
      * Loads destination [Entry] objects that were transitioned to from [fromEntryId], ordered by transition counter descending.
      */
     suspend fun loadTransitionedEntriesFrom(
         context: Context,
         activeDatabaseState: DatabaseState?,
         fromEntryId: Long
-    ): List<Pair<EntryTransitionHistory, Entry>> = withContext(Dispatchers.IO) {
+    ): TransitionLoadResult = withContext(Dispatchers.IO) {
         val result = mutableListOf<Pair<EntryTransitionHistory, Entry>>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
-            return@withContext result
+        if (activeDatabaseState == null) {
+            return@withContext TransitionLoadResult(emptyList(), "No active database configured")
+        }
+        if (activeDatabaseState.extension != ".db") {
+            return@withContext TransitionLoadResult(emptyList(), null)
         }
 
         val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext result
+        if (!file.exists()) {
+            return@withContext TransitionLoadResult(emptyList(), "Database file '${activeDatabaseState.localFileName}' not found")
+        }
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
@@ -139,11 +152,11 @@ object EntryTransitionHistoryRepository {
                 }
             }
             db.close()
+            TransitionLoadResult(result, null)
         } catch (e: Exception) {
             e.printStackTrace()
+            TransitionLoadResult(emptyList(), e.message ?: "Unknown SQL error loading entry transitions")
         }
-
-        result
     }
 
     /**

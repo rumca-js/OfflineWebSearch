@@ -37,25 +37,33 @@ fun EntryTransitionsPanel(
     var transitions by remember(fromEntryId, activeDbState) {
         mutableStateOf<List<Pair<EntryTransitionHistory, Entry>>>(emptyList())
     }
+    var loadError by remember(fromEntryId, activeDbState) {
+        mutableStateOf<String?>(null)
+    }
 
     LaunchedEffect(fromEntryId, activeDbState) {
         if (activeDbState != null) {
-            transitions = EntryTransitionHistoryRepository.loadTransitionedEntriesFrom(
+            val res = EntryTransitionHistoryRepository.loadTransitionedEntriesFrom(
                 context = context,
                 activeDatabaseState = activeDbState,
                 fromEntryId = fromEntryId
             )
+            transitions = res.entries
+            loadError = res.error
+        } else {
+            transitions = emptyList()
+            loadError = null
         }
     }
 
-    if (transitions.isEmpty()) return
+    if (transitions.isEmpty() && loadError == null) return
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (loadError != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
@@ -65,41 +73,47 @@ fun EntryTransitionsPanel(
                 text = "Visited From This Entry",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (loadError != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
-            transitions.forEach { (transition, targetEntry) ->
-                val title = EntryUtils.getDisplayTitle(targetEntry, config.userAge)
-                val counterText = transition.counter?.let { " ($it visits)" } ?: ""
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            if (activeDbState != null && config.dbconfig.trackUserNavigation) {
-                                targetEntry.id?.let { targetId ->
-                                    coroutineScope.launch {
-                                        EntryTransitionHistoryRepository.recordTransition(
-                                            context,
-                                            activeDbState,
-                                            fromEntryId,
-                                            targetId
-                                        )
+
+            if (loadError != null) {
+                Text(
+                    text = "Error loading entry transitions: $loadError",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                transitions.forEach { (transition, targetEntry) ->
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        transition.counter?.let { visits ->
+                            Text(
+                                text = "$visits visits",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
+                        EntryItem(
+                            entry = targetEntry,
+                            onClick = { selectedEntry ->
+                                if (activeDbState != null && config.dbconfig.trackUserNavigation) {
+                                    selectedEntry.id?.let { targetId ->
+                                        coroutineScope.launch {
+                                            EntryTransitionHistoryRepository.recordTransition(
+                                                context,
+                                                activeDbState,
+                                                fromEntryId,
+                                                targetId
+                                            )
+                                        }
                                     }
                                 }
+                                onSelectEntry(selectedEntry)
                             }
-                            onSelectEntry(targetEntry)
-                        }
-                        .padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "• $title$counterText",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
+                        )
+                    }
                 }
             }
         }

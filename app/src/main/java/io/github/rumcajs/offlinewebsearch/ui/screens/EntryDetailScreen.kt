@@ -263,7 +263,9 @@ fun EntryDetailScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Entry transition history links panel
             io.github.rumcajs.offlinewebsearch.ui.components.EntryTransitionsPanel(

@@ -442,7 +442,8 @@ object EntryRepository {
         val statusCode = c.getInt(c.getColumnIndexOrThrow("status_code"))
         val manualStatusCode = c.getInt(c.getColumnIndexOrThrow("manual_status_code"))
         val bookmarked = c.getInt(c.getColumnIndexOrThrow("bookmarked")) == 1
-        val tagString = c.getString(c.getColumnIndexOrThrow("tag"))
+        val tagIndex = c.getColumnIndex("tag")
+        val tagString = if (tagIndex != -1 && !c.isNull(tagIndex)) c.getString(tagIndex) else null
         val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
 
         val sIdIndex = c.getColumnIndex("s_id")
