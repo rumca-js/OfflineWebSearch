@@ -26,7 +26,8 @@ import io.github.rumcajs.offlinewebsearch.util.EntryUtils
 fun EntryTransitionsPanel(
     fromEntryId: Long?,
     onSelectEntry: (Entry) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    maxEntries: Int = EntryTransitionHistoryRepository.MAX_NUMBER_OF_DISPLAYED_ENTRIES
 ) {
     if (fromEntryId == null) return
 
@@ -41,12 +42,13 @@ fun EntryTransitionsPanel(
         mutableStateOf<String?>(null)
     }
 
-    LaunchedEffect(fromEntryId, activeDbState) {
+    LaunchedEffect(fromEntryId, activeDbState, maxEntries) {
         if (activeDbState != null) {
             val res = EntryTransitionHistoryRepository.loadTransitionedEntriesFrom(
                 context = context,
                 activeDatabaseState = activeDbState,
-                fromEntryId = fromEntryId
+                fromEntryId = fromEntryId,
+                limit = maxEntries
             )
             transitions = res.entries
             loadError = res.error
@@ -58,62 +60,55 @@ fun EntryTransitionsPanel(
 
     if (transitions.isEmpty() && loadError == null) return
 
-    Card(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (loadError != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
-        )
+            .padding(vertical = 8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Visited From This Entry",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (loadError != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Visited From This Entry",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (loadError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
 
-            if (loadError != null) {
-                Text(
-                    text = "Error loading entry transitions: $loadError",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.error
-                )
-            } else {
-                transitions.forEach { (transition, targetEntry) ->
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        transition.counter?.let { visits ->
-                            Text(
-                                text = "$visits visits",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 2.dp)
-                            )
-                        }
-                        EntryItem(
-                            entry = targetEntry,
-                            onClick = { selectedEntry ->
-                                if (activeDbState != null && config.dbconfig.trackUserNavigation) {
-                                    selectedEntry.id?.let { targetId ->
-                                        coroutineScope.launch {
-                                            EntryTransitionHistoryRepository.recordTransition(
-                                                context,
-                                                activeDbState,
-                                                fromEntryId,
-                                                targetId
-                                            )
-                                        }
-                                    }
-                                }
-                                onSelectEntry(selectedEntry)
-                            }
+        if (loadError != null) {
+            Text(
+                text = "Error loading entry transitions: $loadError",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.error
+            )
+        } else {
+            transitions.forEach { (transition, targetEntry) ->
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    transition.counter?.let { visits ->
+                        Text(
+                            text = "$visits visits",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
+                    EntryItem(
+                        entry = targetEntry,
+                        onClick = { selectedEntry ->
+                            if (activeDbState != null && config.dbconfig.trackUserNavigation) {
+                                selectedEntry.id?.let { targetId ->
+                                    coroutineScope.launch {
+                                        EntryTransitionHistoryRepository.recordTransition(
+                                            context,
+                                            activeDbState,
+                                            fromEntryId,
+                                            targetId
+                                        )
+                                    }
+                                }
+                            }
+                            onSelectEntry(selectedEntry)
+                        }
+                    )
                 }
             }
         }

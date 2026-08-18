@@ -189,7 +189,7 @@ fun DatabasesContainer(
             )
 
             DatabaseActionButton(
-                text = "Create from asset",
+                text = "Create empty",
                 onClick = {
                     urlInput = "new_database.db"
                     editingUrl = null

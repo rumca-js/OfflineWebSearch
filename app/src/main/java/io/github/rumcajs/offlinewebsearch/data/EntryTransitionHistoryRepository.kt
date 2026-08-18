@@ -33,6 +33,8 @@ object EntryTransitionHistoryRepository {
 
     private const val TABLE_NAME = "entrytransitionhistory"
 
+    const val MAX_NUMBER_OF_DISPLAYED_ENTRIES = 50
+
     private fun ensureTableExists(db: SQLiteDatabase) {
         val createSql = """
             CREATE TABLE IF NOT EXISTS $TABLE_NAME (
@@ -51,7 +53,8 @@ object EntryTransitionHistoryRepository {
     suspend fun loadTransitionsFrom(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        fromEntryId: Long
+        fromEntryId: Long,
+        limit: Int = MAX_NUMBER_OF_DISPLAYED_ENTRIES
     ): List<EntryTransitionHistory> = withContext(Dispatchers.IO) {
         val transitions = mutableListOf<EntryTransitionHistory>()
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
@@ -64,8 +67,8 @@ object EntryTransitionHistoryRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, counter, entry_from_id, entry_to_id FROM $TABLE_NAME WHERE entry_from_id = ? ORDER BY counter DESC, id DESC"
-            val cursor = db.rawQuery(sqlText, arrayOf(fromEntryId.toString()))
+            val sqlText = "SELECT id, counter, entry_from_id, entry_to_id FROM $TABLE_NAME WHERE entry_from_id = ? ORDER BY counter DESC, id DESC LIMIT ?"
+            val cursor = db.rawQuery(sqlText, arrayOf(fromEntryId.toString(), limit.toString()))
             cursor.use { c ->
                 while (c.moveToNext()) {
                     val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))
@@ -105,7 +108,8 @@ object EntryTransitionHistoryRepository {
     suspend fun loadTransitionedEntriesFrom(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        fromEntryId: Long
+        fromEntryId: Long,
+        limit: Int = MAX_NUMBER_OF_DISPLAYED_ENTRIES
     ): TransitionLoadResult = withContext(Dispatchers.IO) {
         val result = mutableListOf<Pair<EntryTransitionHistory, Entry>>()
         if (activeDatabaseState == null) {
@@ -130,9 +134,10 @@ object EntryTransitionHistoryRepository {
                 INNER JOIN linkdatamodel l ON t.entry_to_id = l.id
                 WHERE t.entry_from_id = ?
                 ORDER BY t.counter DESC, t.id DESC
+                LIMIT ?
             """.trimIndent()
 
-            val cursor = db.rawQuery(sqlText, arrayOf(fromEntryId.toString()))
+            val cursor = db.rawQuery(sqlText, arrayOf(fromEntryId.toString(), limit.toString()))
             cursor.use { c ->
                 while (c.moveToNext()) {
                     val tId = if (c.isNull(c.getColumnIndexOrThrow("t_id"))) null else c.getLong(c.getColumnIndexOrThrow("t_id"))
