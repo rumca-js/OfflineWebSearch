@@ -196,8 +196,19 @@ object SourceRepository {
 
         try {
             val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
-            val entries = urlObj.getEntries()
+            val resp = urlObj.getResponse()
 
+            if (resp.error != null || !io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils.isStatusCodeValid(resp.statusCode)) {
+                val errorMsg = resp.error ?: "HTTP status ${resp.statusCode}"
+                return@withContext Pair(false, "Failed to fetch source: $errorMsg")
+            }
+
+            val page = urlObj.getPage()
+            if (page !is io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage) {
+                return@withContext Pair(false, "URL does not point to a valid RSS or Atom feed")
+            }
+
+            val entries = page.getEntries()
             if (entries.isEmpty()) {
                 return@withContext Pair(true, "No entries found in feed")
             }
