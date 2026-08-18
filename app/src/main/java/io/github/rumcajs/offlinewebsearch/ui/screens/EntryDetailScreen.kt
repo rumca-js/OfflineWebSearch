@@ -28,6 +28,9 @@ import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
 import io.github.rumcajs.offlinewebsearch.webtoolkit.OdyseeChannelHandler
 import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeChannelHandler
+import io.github.rumcajs.offlinewebsearch.ui.components.SocialDataPane
+import io.github.rumcajs.offlinewebsearch.ui.components.UrlServicesPane
+import io.github.rumcajs.offlinewebsearch.ui.components.isEmptyOrZero
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RedditChannelHandler
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -230,11 +233,35 @@ fun EntryDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // Social data pane (if social data exists for entry)
+            val socialData = entry.socialData
+            val hasSocialData = socialData != null && !socialData.isEmptyOrZero()
+            if (hasSocialData) {
+                SocialDataPane(
+                    socialData = socialData
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             // Entry detail properties and metadata pane
             io.github.rumcajs.offlinewebsearch.ui.components.EntryMetadataPane(
                 entry = entry,
                 isRestricted = isRestricted
             )
+
+            // UrlServices link services pane (divided by horizontal bar)
+            val hasServiceLinks = entry.link?.let { io.github.rumcajs.offlinewebsearch.util.UrlServices().getServiceLinks(it).isNotEmpty() } == true
+            if (hasServiceLinks) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
+                io.github.rumcajs.offlinewebsearch.ui.components.UrlServicesPane(
+                    entry = entry,
+                    isRestricted = isRestricted
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

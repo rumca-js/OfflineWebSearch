@@ -174,6 +174,16 @@ object EntryVisitHistoryRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
 
+            val lastVisitQuery = "SELECT entry_id FROM $TABLE_NAME WHERE entry_id IS NOT NULL ORDER BY date_last_visit DESC, id DESC LIMIT 1"
+            val lastVisitCursor = db.rawQuery(lastVisitQuery, null)
+            val lastVisitedEntryId = lastVisitCursor.use { c ->
+                if (c.moveToFirst() && !c.isNull(c.getColumnIndexOrThrow("entry_id"))) {
+                    c.getLong(c.getColumnIndexOrThrow("entry_id"))
+                } else {
+                    null
+                }
+            }
+
             val now = getCurrentIsoTimestamp()
             val query = "SELECT id, visits FROM $TABLE_NAME WHERE entry_id = ?"
             val cursor = db.rawQuery(query, arrayOf(entryId.toString()))
@@ -204,6 +214,16 @@ object EntryVisitHistoryRepository {
             }
 
             db.close()
+
+            if (lastVisitedEntryId != null && lastVisitedEntryId != entryId) {
+                EntryTransitionHistoryRepository.recordTransition(
+                    context = context,
+                    activeDatabaseState = activeDatabaseState,
+                    fromEntryId = lastVisitedEntryId,
+                    toEntryId = entryId
+                )
+            }
+
             Pair(true, null)
         } catch (e: Exception) {
             e.printStackTrace()

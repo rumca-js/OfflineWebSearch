@@ -171,4 +171,93 @@ object SourceRepository {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Fetches entries from [sourceUrl] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
+     * Existing entries (matching by link) are not duplicated.
+     * @return Pair(success, resultMessage)
+     */
+    suspend fun fetchAndInsertSourceEntries(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceUrl: String
+    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        if (sourceUrl.isBlank()) {
+            return@withContext Pair(false, "Source URL is empty")
+        }
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) {
+            return@withContext Pair(false, "Database file not found")
+        }
+
+        try {
+            val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
+            val entries = urlObj.getEntries()
+
+            if (entries.isEmpty()) {
+                return@withContext Pair(true, "No entries found in feed")
+            }
+
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            var insertedCount = 0
+
+            db.beginTransaction()
+            try {
+                for (entry in entries) {
+                    val link = entry.link ?: ""
+                    if (link.isNotBlank()) {
+                        val checkCursor = db.rawQuery("SELECT COUNT(*) FROM linkdatamodel WHERE link = ?", arrayOf(link))
+                        val exists = checkCursor.use { c ->
+                            if (c.moveToFirst()) c.getInt(0) > 0 else false
+                        }
+                        if (exists) {
+                            continue
+                        }
+                    }
+
+                    val values = android.content.ContentValues().apply {
+                        put("link", link)
+                        put("title", entry.title ?: "")
+                        put("description", entry.description ?: "")
+                        put("author", entry.author ?: "")
+                        put("album", entry.album ?: "")
+                        put("language", entry.language ?: "")
+                        put("page_rating_votes", entry.page_rating_votes ?: 0)
+                        put("page_rating_visits", entry.page_rating_visits ?: 0)
+                        put("page_rating", entry.page_rating ?: 0)
+                        put("thumbnail", entry.thumbnail ?: "")
+                        put("date_created", entry.date_created ?: "")
+                        put("date_published", entry.date_published ?: "")
+                        put("date_dead_since", entry.date_dead_since ?: "")
+                        put("age", entry.age ?: 0)
+                        put("status_code", entry.status_code ?: 0)
+                        put("manual_status_code", entry.manual_status_code ?: 0)
+                        put("bookmarked", if (entry.bookmarked == true) 1 else 0)
+                        put("source_url", sourceUrl)
+                        put("permanent", 0)
+                        put("contents_type", 0)
+                        put("page_rating_contents", 0)
+                    }
+
+                    val rowId = db.insert("linkdatamodel", null, values)
+                    if (rowId != -1L) {
+                        insertedCount++
+                    }
+                }
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+                db.close()
+            }
+
+            Pair(true, "Successfully inserted $insertedCount new entries")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Failed to fetch or insert entries")
+        }
+    }
 }

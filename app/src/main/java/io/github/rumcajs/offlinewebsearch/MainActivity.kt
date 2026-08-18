@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : Screen("home", "Browse", Icons.Filled.Home)
@@ -114,9 +115,33 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             )
                         }
                         composable(Screen.SourceDetail.route) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val scope = androidx.compose.runtime.rememberCoroutineScope()
+                            val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
                             searchViewModel.selectedSource?.let { source ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceScreen(
                                     source = source,
+                                    onNavigateToEdit = {
+                                        navController.navigate(Screen.SourceEdit.route)
+                                    },
+                                    onDelete = {
+                                        source.id?.let { sourceId ->
+                                            scope.launch {
+                                                val (success, err) = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.SourceRepository.deleteSource(
+                                                    context,
+                                                    config.activeDatabaseState,
+                                                    sourceId
+                                                )
+                                                if (success) {
+                                                    android.widget.Toast.makeText(context, "Source deleted", android.widget.Toast.LENGTH_SHORT).show()
+                                                    navController.popBackStack()
+                                                } else {
+                                                    val msg = err ?: "Failed to delete source"
+                                                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                        }
+                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }

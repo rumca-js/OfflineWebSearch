@@ -24,9 +24,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
+import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import kotlinx.coroutines.launch
 
 /**
  * Screen displaying details of a single Source.
@@ -35,11 +43,66 @@ import io.github.rumcajs.offlinewebsearch.data.Source
 @Composable
 fun SourceScreen(
     source: Source,
+    onNavigateToEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val config by AppConfigManager.config.collectAsState()
+    val activeDbState = config.activeDatabaseState
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+
+    var isRefreshing by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val performRefresh: () -> Unit = {
+        if (source.url.isBlank()) {
+            Toast.makeText(context, "Source URL is empty", Toast.LENGTH_SHORT).show()
+        } else if (config.networkConfig.disabled) {
+            Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
+        } else if (activeDbState == null || activeDbState.isReadOnly || activeDbState.extension != ".db") {
+            Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
+        } else {
+            isRefreshing = true
+            scope.launch {
+                val (success, msg) = SourceRepository.fetchAndInsertSourceEntries(
+                    context = context,
+                    activeDatabaseState = activeDbState,
+                    sourceUrl = source.url
+                )
+                isRefreshing = false
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    if (showDeleteDialog && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Source") },
+            text = { Text("Are you sure you want to delete source '${source.title.ifBlank { "Untitled" }}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -51,6 +114,14 @@ fun SourceScreen(
                     }
                 },
                 actions = {
+                    if (source.url.isNotBlank() && !config.networkConfig.disabled) {
+                        IconButton(
+                            onClick = performRefresh,
+                            enabled = !isRefreshing
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh Source")
+                        }
+                    }
                     if (source.url.isNotBlank()) {
                         IconButton(onClick = {
                             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -60,6 +131,16 @@ fun SourceScreen(
                             context.startActivity(Intent.createChooser(intent, "Share link"))
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+                    }
+                    if (onNavigateToEdit != null) {
+                        IconButton(onClick = onNavigateToEdit) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
+                    }
+                    if (isEditable && onDelete != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
                     }
                 }
@@ -139,6 +220,29 @@ fun SourceScreen(
                         fontSize = 14.sp,
                         modifier = Modifier.padding(start = 16.dp)
                     )
+                }
+            }
+
+            if (!config.networkConfig.disabled && source.url.isNotBlank()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = performRefresh,
+                    enabled = !isRefreshing,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Fetching entries...")
+                    } else {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Refresh entries from source")
+                    }
                 }
             }
         }

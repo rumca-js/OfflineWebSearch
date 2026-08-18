@@ -28,7 +28,8 @@ data class Entry(
     val age: Int? = 0,
     val status_code: Int? = 0,
     val manual_status_code: Int? = 0,
-    val bookmarked: Boolean? = false
+    val bookmarked: Boolean? = false,
+    val socialData: SocialData? = null
 )
 
 private val jsonConfig = Json {
@@ -276,10 +277,15 @@ object EntryRepository {
             db.beginTransaction()
             try {
                 val rows = if (id != null) {
-                    // Remove associated tags first (foreign key enforcement may be off)
+                    // Remove associated tags and socialdata first (foreign key enforcement may be off)
                     db.delete("entrycompactedtags", "entry_id = ?", arrayOf(id.toString()))
+                    db.delete("socialdata", "entry_id = ?", arrayOf(id.toString()))
                     db.delete("linkdatamodel", "id = ?", arrayOf(id.toString()))
                 } else if (!link.isNullOrEmpty()) {
+                    db.execSQL(
+                        "DELETE FROM socialdata WHERE entry_id IN (SELECT id FROM linkdatamodel WHERE link = ?)",
+                        arrayOf(link)
+                    )
                     db.delete("linkdatamodel", "link = ?", arrayOf(link))
                 } else {
                     0
@@ -315,6 +321,7 @@ object EntryRepository {
                 val whereSql = if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""
                 val sql = "SELECT COUNT(DISTINCT l.id) FROM linkdatamodel l" +
                     " LEFT JOIN entrycompactedtags t ON l.id = t.entry_id" +
+                    " LEFT JOIN socialdata s ON l.id = s.entry_id" +
                     whereSql
                 val cursor = it.rawQuery(sql, args.toTypedArray())
                 cursor.use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
@@ -344,21 +351,24 @@ object EntryRepository {
                 val orderSql = orderBy.toSqlColumn()
                 val whereSql = if (whereClause.isNotEmpty()) "WHERE $whereClause" else ""
 
-                // Inner subquery pages on distinct entry IDs, outer join fetches data + tags.
+                // Inner subquery pages on distinct entry IDs, outer join fetches data + tags + socialdata.
                 val sql = """
                     SELECT
                         $ENTRY_SELECT_COLUMNS,
+                        $SOCIAL_DATA_SELECT_COLUMNS,
                         GROUP_CONCAT(t.tag, ',') AS tag
                     FROM (
                         SELECT DISTINCT l.id
                         FROM linkdatamodel l
                         LEFT JOIN entrycompactedtags t ON l.id = t.entry_id
+                        LEFT JOIN socialdata s ON l.id = s.entry_id
                         $whereSql
                         ORDER BY l.$orderSql
                         LIMIT ? OFFSET ?
                     ) AS paged
                     JOIN linkdatamodel l ON l.id = paged.id
                     LEFT JOIN entrycompactedtags t ON l.id = t.entry_id
+                    LEFT JOIN socialdata s ON l.id = s.entry_id
                     GROUP BY l.id
                     ORDER BY l.$orderSql
                 """.trimIndent()
@@ -409,6 +419,9 @@ object EntryRepository {
     /** Standard column selection list for queries on `linkdatamodel` (aliased as `l`). */
     const val ENTRY_SELECT_COLUMNS = "l.id, l.link, l.title, l.description, l.author, l.album, l.language, l.page_rating_votes, l.page_rating_visits, l.page_rating, l.thumbnail, l.date_created, l.date_published, l.date_dead_since, l.age, l.status_code, l.manual_status_code, l.bookmarked"
 
+    /** Column selection list for `socialdata` (aliased as `s`). */
+    const val SOCIAL_DATA_SELECT_COLUMNS = "s.id AS s_id, s.entry_id AS s_entry_id, s.thumbs_up, s.thumbs_down, s.view_count, s.rating AS s_rating, s.upvote_ratio, s.upvote_diff, s.upvote_view_ratio, s.stars, s.date_updated"
+
     /** Maps a cursor row to an [Entry]. */
     fun cursorToEntry(c: android.database.Cursor): Entry {
         val id = c.getLong(c.getColumnIndexOrThrow("id"))
@@ -432,6 +445,23 @@ object EntryRepository {
         val tagString = c.getString(c.getColumnIndexOrThrow("tag"))
         val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
 
+        val sIdIndex = c.getColumnIndex("s_id")
+        val socialData = if (sIdIndex != -1 && !c.isNull(sIdIndex)) {
+            SocialData(
+                id = c.getLong(sIdIndex),
+                entryId = if (c.isNull(c.getColumnIndexOrThrow("s_entry_id"))) null else c.getLong(c.getColumnIndexOrThrow("s_entry_id")),
+                thumbsUp = if (c.isNull(c.getColumnIndexOrThrow("thumbs_up"))) null else c.getInt(c.getColumnIndexOrThrow("thumbs_up")),
+                thumbsDown = if (c.isNull(c.getColumnIndexOrThrow("thumbs_down"))) null else c.getInt(c.getColumnIndexOrThrow("thumbs_down")),
+                viewCount = if (c.isNull(c.getColumnIndexOrThrow("view_count"))) null else c.getInt(c.getColumnIndexOrThrow("view_count")),
+                rating = if (c.isNull(c.getColumnIndexOrThrow("s_rating"))) null else c.getInt(c.getColumnIndexOrThrow("s_rating")),
+                upvoteRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_ratio")),
+                upvoteDiff = if (c.isNull(c.getColumnIndexOrThrow("upvote_diff"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_diff")),
+                upvoteViewRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_view_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_view_ratio")),
+                stars = if (c.isNull(c.getColumnIndexOrThrow("stars"))) null else c.getInt(c.getColumnIndexOrThrow("stars")),
+                dateUpdated = c.getString(c.getColumnIndexOrThrow("date_updated"))
+            )
+        } else null
+
         return Entry(
             id = id,
             link = link,
@@ -451,7 +481,8 @@ object EntryRepository {
             status_code = statusCode,
             manual_status_code = manualStatusCode,
             bookmarked = bookmarked,
-            tags = tags
+            tags = tags,
+            socialData = socialData
         )
     }
 

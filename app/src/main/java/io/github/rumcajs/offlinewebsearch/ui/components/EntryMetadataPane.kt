@@ -146,21 +146,5 @@ fun EntryMetadataPane(
                 )
             }
         }
-
-        // Resolve and display UrlServices links
-        entry.link?.let { link ->
-            val urlServices = UrlServices()
-            val serviceLinks = urlServices.getServiceLinks(link)
-            if (serviceLinks.isNotEmpty()) {
-                serviceLinks.forEach { (serviceName, serviceUrl) ->
-                    LinkRow(
-                        label = serviceName,
-                        url = serviceUrl,
-                        isRestricted = isRestricted,
-                        toastMessage = "$serviceName link copied"
-                    )
-                }
-            }
-        }
     }
 }

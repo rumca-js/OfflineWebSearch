@@ -45,24 +45,17 @@ fun EntryPreviewScreen(
     LaunchedEffect(url, refreshTrigger) {
         isLoading = true
         error = null
-        val pageResponse = NetworkUtils.executeRequest(url)
-        if (pageResponse.text != null) {
-            val body = pageResponse.text
-            val inputType = if (url.contains(".html") || url.contains(".htm") ||
-                body.trim().startsWith("<html", ignoreCase = true) ||
-                body.trim().contains("<!doctype html", ignoreCase = true)) {
-                "html"
+        try {
+            val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(url)
+            val resp = urlObj.getResponse()
+            if (resp.text != null) {
+                page = urlObj.getPage()
             } else {
-                "rss"
-            }
-            try {
-                page = PageBuilder.build(url, body, inputType)
-            } catch (e: Exception) {
-                error = e.localizedMessage ?: "Failed to parse page"
+                error = resp.error ?: "Failed to download content"
                 page = null
             }
-        } else {
-            error = pageResponse.error ?: "Failed to download content"
+        } catch (e: Exception) {
+            error = e.localizedMessage ?: "Failed to load page"
             page = null
         }
         isLoading = false
