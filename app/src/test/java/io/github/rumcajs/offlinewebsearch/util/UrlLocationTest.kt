@@ -2,6 +2,8 @@ package io.github.rumcajs.offlinewebsearch.util
 
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UrlLocationTest {
@@ -68,5 +70,20 @@ class UrlLocationTest {
         assertEquals("", UrlLocation(null).getProtocolles())
         assertEquals("", UrlLocation("").getProtocolles())
         assertEquals("", UrlLocation("   ").getProtocolles())
+    }
+
+    @Test
+    fun testIsWebLinkDotScenarios() {
+        // No dot in domain -> false
+        assertFalse(UrlLocation("http://localhost").isWebLink())
+        assertFalse(UrlLocation("https://nodot").isWebLink())
+
+        // One dot in domain -> true
+        assertTrue(UrlLocation("http://google.com").isWebLink())
+        assertTrue(UrlLocation("https://example.org/path").isWebLink())
+
+        // Two dots in domain -> true
+        assertTrue(UrlLocation("http://www.google.com").isWebLink())
+        assertTrue(UrlLocation("https://sub.example.co.uk/path?q=1").isWebLink())
     }
 }
