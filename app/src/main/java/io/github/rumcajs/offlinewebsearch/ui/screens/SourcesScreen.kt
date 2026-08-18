@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -48,12 +49,42 @@ fun SourcesScreen(
 
     var sources by remember { mutableStateOf<List<Source>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshingAll by remember { mutableStateOf(false) }
     var sourceToDelete by remember { mutableStateOf<Source?>(null) }
 
     LaunchedEffect(config.activeDatabase) {
         isLoading = true
         sources = SourceRepository.loadSources(context, activeDbState)
         isLoading = false
+    }
+
+    val performRefreshAll: () -> Unit = {
+        if (config.networkConfig.disabled) {
+            Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
+        } else if (activeDbState == null || activeDbState.isReadOnly || activeDbState.extension != ".db") {
+            Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
+        } else if (sources.isEmpty()) {
+            Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
+        } else {
+            isRefreshingAll = true
+            scope.launch {
+                val enabledSources = sources.filter { it.enabled && it.url.isNotBlank() }
+                var fetchedCount = 0
+                for (src in enabledSources) {
+                    val (success, _) = SourceRepository.updateSource(
+                        context = context,
+                        activeDatabaseState = activeDbState,
+                        sourceUrl = src.url
+                    )
+                    if (success) {
+                        fetchedCount++
+                    }
+                }
+                sources = SourceRepository.loadSources(context, activeDbState)
+                isRefreshingAll = false
+                Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     if (sourceToDelete != null) {
@@ -101,6 +132,24 @@ fun SourcesScreen(
                     if (onBack != null) {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                },
+                actions = {
+                    if (isEditable && !config.networkConfig.disabled && sources.isNotEmpty()) {
+                        IconButton(
+                            onClick = performRefreshAll,
+                            enabled = !isRefreshingAll
+                        ) {
+                            if (isRefreshingAll) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Refresh, contentDescription = "Fetch all sources")
+                            }
                         }
                     }
                 }

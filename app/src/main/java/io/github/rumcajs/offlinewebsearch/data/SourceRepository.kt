@@ -173,16 +173,68 @@ object SourceRepository {
     }
 
     /**
-     * Fetches entries from [sourceUrl] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
+     * Updates source metadata (such as title and favicon) matching [sourceUrl] in `sourcedatamodel`.
+     */
+    suspend fun updateSourceMetadata(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceUrl: String
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (sourceUrl.isBlank()) {
+            return@withContext Pair(false, "Source URL is empty")
+        }
+        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
+        updateSourceMetadata(context, activeDatabaseState, urlObj)
+    }
+
+    /**
+     * Updates source metadata (such as title and favicon) matching [urlObj.url] in `sourcedatamodel` using [Url.getTitle] and [Url.getThumbnails].
+     */
+    suspend fun updateSourceMetadata(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val title = urlObj.getTitle()
+            val thumbnails = urlObj.getThumbnails()
+            val favicon = thumbnails.firstOrNull { it.isNotBlank() }
+
+            if (title.isNullOrBlank() && favicon.isNullOrBlank()) {
+                return@withContext Pair(true, null)
+            }
+
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val sourceValues = android.content.ContentValues()
+            if (!title.isNullOrBlank()) sourceValues.put("title", title)
+            if (!favicon.isNullOrBlank()) sourceValues.put("favicon", favicon)
+            val rows = db.update("sourcedatamodel", sourceValues, "url = ?", arrayOf(urlObj.url))
+            db.close()
+            if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source URL may not exist")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Fetches entries from [urlObj] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
      * Existing entries (matching by link) are not duplicated.
      * @return Pair(success, resultMessage)
      */
     suspend fun fetchAndInsertSourceEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        sourceUrl: String
+        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (sourceUrl.isBlank()) {
+        if (urlObj.url.isBlank()) {
             return@withContext Pair(false, "Source URL is empty")
         }
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
@@ -195,7 +247,6 @@ object SourceRepository {
         }
 
         try {
-            val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
             val resp = urlObj.getResponse()
 
             if (resp.error != null || !io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils.isStatusCodeValid(resp.statusCode)) {
@@ -218,6 +269,7 @@ object SourceRepository {
 
             db.beginTransaction()
             try {
+
                 for (entry in entries) {
                     val link = entry.link ?: ""
                     if (link.isNotBlank()) {
@@ -248,7 +300,7 @@ object SourceRepository {
                         put("status_code", entry.status_code ?: 0)
                         put("manual_status_code", entry.manual_status_code ?: 0)
                         put("bookmarked", if (entry.bookmarked == true) 1 else 0)
-                        put("source_url", sourceUrl)
+                        put("source_url", urlObj.url)
                         put("permanent", 0)
                         put("contents_type", 0)
                         put("page_rating_contents", 0)
@@ -265,10 +317,63 @@ object SourceRepository {
                 db.close()
             }
 
+            SourceOperationalDataRepository.recordSourceFetchByUrl(
+                context = context,
+                activeDatabaseState = activeDatabaseState,
+                sourceUrl = urlObj.url
+            )
+
             Pair(true, "Successfully inserted $insertedCount new entries")
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Failed to fetch or insert entries")
         }
+    }
+
+    /**
+     * Fetches entries from [sourceUrl] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
+     * Existing entries (matching by link) are not duplicated.
+     * @return Pair(success, resultMessage)
+     */
+    suspend fun fetchAndInsertSourceEntries(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceUrl: String
+    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        if (sourceUrl.isBlank()) {
+            return@withContext Pair(false, "Source URL is empty")
+        }
+        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
+        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj)
+    }
+
+    /**
+     * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [urlObj].
+     * @return Pair(success, resultMessage)
+     */
+    suspend fun updateSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url
+    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        updateSourceMetadata(context, activeDatabaseState, urlObj)
+        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj)
+    }
+
+    /**
+     * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [sourceUrl].
+     * Creates a single [Url] instance and passes it to metadata update and entry insertion.
+     * @return Pair(success, resultMessage)
+     */
+    suspend fun updateSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceUrl: String
+    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        if (sourceUrl.isBlank()) {
+            return@withContext Pair(false, "Source URL is empty")
+        }
+        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
+        updateSource(context, activeDatabaseState, urlObj)
     }
 }

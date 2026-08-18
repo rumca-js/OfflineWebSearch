@@ -33,6 +33,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
+import io.github.rumcajs.offlinewebsearch.data.SourceOperationalData
+import io.github.rumcajs.offlinewebsearch.data.SourceOperationalDataRepository
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
 import kotlinx.coroutines.launch
 
@@ -56,11 +58,20 @@ fun SourceScreen(
     val activeDbState = config.activeDatabaseState
     val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
 
+    var currentSource by remember(source) { mutableStateOf(source) }
+    var operationalData by remember { mutableStateOf<SourceOperationalData?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    LaunchedEffect(currentSource.id, activeDbState) {
+        val sourceId = currentSource.id
+        if (sourceId != null) {
+            operationalData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, sourceId)
+        }
+    }
+
     val performRefresh: () -> Unit = {
-        if (source.url.isBlank()) {
+        if (currentSource.url.isBlank()) {
             Toast.makeText(context, "Source URL is empty", Toast.LENGTH_SHORT).show()
         } else if (config.networkConfig.disabled) {
             Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
@@ -69,11 +80,22 @@ fun SourceScreen(
         } else {
             isRefreshing = true
             scope.launch {
-                val (success, msg) = SourceRepository.fetchAndInsertSourceEntries(
+                val (success, msg) = SourceRepository.updateSource(
                     context = context,
                     activeDatabaseState = activeDbState,
-                    sourceUrl = source.url
+                    sourceUrl = currentSource.url
                 )
+                if (success) {
+                    val updatedSources = SourceRepository.loadSources(context, activeDbState)
+                    val updated = updatedSources.firstOrNull { it.id == currentSource.id || it.url == currentSource.url }
+                    if (updated != null) {
+                        currentSource = updated
+                    }
+                    val sourceId = currentSource.id
+                    if (sourceId != null) {
+                        operationalData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, sourceId)
+                    }
+                }
                 isRefreshing = false
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
@@ -114,7 +136,7 @@ fun SourceScreen(
                     }
                 },
                 actions = {
-                    if (source.url.isNotBlank() && !config.networkConfig.disabled) {
+                    if (currentSource.url.isNotBlank() && !config.networkConfig.disabled) {
                         IconButton(
                             onClick = performRefresh,
                             enabled = !isRefreshing
@@ -122,11 +144,11 @@ fun SourceScreen(
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh Source")
                         }
                     }
-                    if (source.url.isNotBlank()) {
+                    if (currentSource.url.isNotBlank()) {
                         IconButton(onClick = {
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, source.url)
+                                putExtra(Intent.EXTRA_TEXT, currentSource.url)
                             }
                             context.startActivity(Intent.createChooser(intent, "Share link"))
                         }) {
@@ -156,13 +178,13 @@ fun SourceScreen(
                 .padding(16.dp)
         ) {
             // Thumbnail
-            if (source.favicon.isNotBlank()) {
+            if (currentSource.favicon.isNotBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(source.favicon)
+                        .data(currentSource.favicon)
                         .crossfade(true)
                         .build(),
-                    contentDescription = "Thumbnail for ${source.title}",
+                    contentDescription = "Thumbnail for ${currentSource.title}",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -173,7 +195,7 @@ fun SourceScreen(
             }
 
             Text(
-                text = source.title.ifBlank { "Untitled Source" },
+                text = currentSource.title.ifBlank { "Untitled Source" },
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -183,25 +205,30 @@ fun SourceScreen(
 
             DetailRow(
                 label = "ID",
-                value = source.id?.toString() ?: "N/A"
+                value = currentSource.id?.toString() ?: "N/A"
             )
 
             DetailRow(
                 label = "Status",
-                value = if (source.enabled) "Enabled" else "Disabled"
+                value = if (currentSource.enabled) "Enabled" else "Disabled"
             )
 
-            if (source.url.isNotBlank()) {
+            DetailRow(
+                label = "Last Fetched",
+                value = operationalData?.date_fetched ?: "Never"
+            )
+
+            if (currentSource.url.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .pointerInput(source.url) {
+                        .pointerInput(currentSource.url) {
                             detectTapGestures(
-                                onTap = { uriHandler.openUri(source.url) },
+                                onTap = { uriHandler.openUri(currentSource.url) },
                                 onLongPress = {
-                                    clipboardManager.setText(AnnotatedString(source.url))
+                                    clipboardManager.setText(AnnotatedString(currentSource.url))
                                     Toast.makeText(context, "Source URL copied to clipboard", Toast.LENGTH_SHORT).show()
                                 }
                             )
@@ -214,7 +241,7 @@ fun SourceScreen(
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
-                        text = source.url,
+                        text = currentSource.url,
                         color = MaterialTheme.colorScheme.primary,
                         textDecoration = TextDecoration.Underline,
                         fontSize = 14.sp,
@@ -223,7 +250,7 @@ fun SourceScreen(
                 }
             }
 
-            if (!config.networkConfig.disabled && source.url.isNotBlank()) {
+            if (!config.networkConfig.disabled && currentSource.url.isNotBlank()) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = performRefresh,
