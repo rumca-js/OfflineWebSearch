@@ -6,6 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Serializable
 data class Source(
@@ -294,12 +297,14 @@ object SourceRepository {
     /**
      * Fetches entries from [urlObj] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
      * Existing entries (matching by link) are not duplicated.
+     * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
      * @return Pair(success, resultMessage)
      */
     suspend fun fetchAndInsertSourceEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url
+        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url,
+        source: Source? = null
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         if (urlObj.url.isBlank()) {
             return@withContext Pair(false, "Source URL is empty")
@@ -335,6 +340,7 @@ object SourceRepository {
             var insertedCount = 0
 
             db.beginTransaction()
+            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
             try {
 
                 for (entry in entries) {
@@ -360,7 +366,7 @@ object SourceRepository {
                         put("page_rating_visits", entry.page_rating_visits ?: 0)
                         put("page_rating", entry.page_rating ?: 0)
                         put("thumbnail", entry.thumbnail ?: "")
-                        put("date_created", entry.date_created ?: "")
+                        put("date_created", entry.date_created?.takeIf { it.isNotBlank() } ?: now)
                         put("date_published", entry.date_published ?: "")
                         put("date_dead_since", entry.date_dead_since ?: "")
                         put("age", entry.age ?: 0)
@@ -368,6 +374,10 @@ object SourceRepository {
                         put("manual_status_code", entry.manual_status_code ?: 0)
                         put("bookmarked", if (entry.bookmarked == true) 1 else 0)
                         put("source_url", urlObj.url)
+                        val sourceId = source?.id
+                        if (sourceId != null && sourceId != 0L) {
+                            put("source_id", sourceId)
+                        }
                         put("permanent", 0)
                         put("contents_type", 0)
                         put("page_rating_contents", 0)
@@ -400,31 +410,52 @@ object SourceRepository {
     /**
      * Fetches entries from [sourceUrl] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
      * Existing entries (matching by link) are not duplicated.
+     * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
      * @return Pair(success, resultMessage)
      */
     suspend fun fetchAndInsertSourceEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        sourceUrl: String
+        sourceUrl: String,
+        source: Source? = null
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         if (sourceUrl.isBlank()) {
             return@withContext Pair(false, "Source URL is empty")
         }
         val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
-        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj)
+        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj, source)
     }
 
     /**
      * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [urlObj].
+     * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
      * @return Pair(success, resultMessage)
      */
     suspend fun updateSource(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url
+        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url,
+        source: Source? = null
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         updateSourceMetadata(context, activeDatabaseState, urlObj)
-        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj)
+        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj, source)
+    }
+
+    /**
+     * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [source].
+     * Uses [Source.url] for the fetch and [Source.id] for `source_id` on inserted entries.
+     * @return Pair(success, resultMessage)
+     */
+    suspend fun updateSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        source: Source
+    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        if (source.url.isBlank()) {
+            return@withContext Pair(false, "Source URL is empty")
+        }
+        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(source.url)
+        updateSource(context, activeDatabaseState, urlObj, source)
     }
 
     /**

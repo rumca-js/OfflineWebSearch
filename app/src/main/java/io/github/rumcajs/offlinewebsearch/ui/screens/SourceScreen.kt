@@ -86,7 +86,7 @@ fun SourceScreen(
                 val (success, msg) = SourceRepository.updateSource(
                     context = context,
                     activeDatabaseState = activeDbState,
-                    sourceUrl = currentSource.url
+                    source = currentSource
                 )
                 if (success) {
                     val updatedSources = SourceRepository.loadSources(context, activeDbState)

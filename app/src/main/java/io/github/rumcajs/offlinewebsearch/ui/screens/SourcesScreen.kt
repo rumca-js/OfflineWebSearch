@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
+import io.github.rumcajs.offlinewebsearch.ui.components.SourceSearchBar
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
@@ -66,7 +66,8 @@ fun SourcesScreen(
         } else {
             val query = searchQuery.trim().lowercase()
             sources.filter { source ->
-                source.title.lowercase().contains(query) || source.url.lowercase().contains(query)
+                source.title.lowercase().contains(query) ||
+                    source.url.lowercase().contains(query)
             }
         }
     }
@@ -87,7 +88,7 @@ fun SourcesScreen(
                     val (success, _) = SourceRepository.updateSource(
                         context = context,
                         activeDatabaseState = activeDbState,
-                        sourceUrl = src.url
+                        source = src
                     )
                     if (success) {
                         fetchedCount++
@@ -183,12 +184,10 @@ fun SourcesScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            SearchContainer(
-                searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
-                onClearSearch = { searchQuery = "" },
-                onPerformSearch = {},
-                isSearchButtonEnabled = false,
+            SourceSearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                onClear = { searchQuery = "" },
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 

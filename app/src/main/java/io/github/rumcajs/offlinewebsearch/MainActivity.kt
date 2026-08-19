@@ -143,7 +143,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                         }
                                     },
                                     onBrowseEntries = { src ->
-                                        val queryVal = if (src.id != null && src.id != 0L) "source_id LIKE '%${src.id}%'" else "source_url LIKE '%${src.url}%'"
+                                        val queryVal = if (src.id != null && src.id != 0L) "source_id = '${src.id}'" else "source_url = '${src.url}'"
                                         searchViewModel.searchQuery = queryVal
                                         searchViewModel.performSearch(context)
                                         navController.popBackStack(Screen.Home.route, false)

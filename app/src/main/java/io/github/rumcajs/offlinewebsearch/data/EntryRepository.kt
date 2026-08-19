@@ -392,18 +392,44 @@ object EntryRepository {
     /**
      * Builds a parameterised WHERE clause from [searchQuery].
      * Returns a pair of (clause string, list of bind args).
+     * Supports two expression forms:
+     *   - `field LIKE '%value%'`  → translated to a parameterised LIKE
+     *   - `field = 'value'`       → translated to a parameterised equality
+     * Unrecognised expressions fall back to a full-text LIKE across title/description/link/tag.
      */
     private fun buildWhereClause(searchQuery: String): Pair<String, List<String>> {
         if (searchQuery.isBlank()) return "" to emptyList()
         val query = searchQuery.trim()
+
+        // Match: field = 'value' or field = "value" or field = value
+        val eqRegex = Regex(
+            """^(title|link|description|tag|tags|source_id|source_url|source)\s*=\s*['""]?([^'""\s]+)['""]?$""",
+            RegexOption.IGNORE_CASE
+        )
+        val eqMatch = eqRegex.find(query)
+        if (eqMatch != null) {
+            val field = eqMatch.groupValues[1].lowercase()
+            val term = eqMatch.groupValues[2].trim()
+            return when (field) {
+                "title" -> "l.title = ?" to listOf(term)
+                "link" -> "l.link = ?" to listOf(term)
+                "description" -> "l.description = ?" to listOf(term)
+                "tag", "tags" -> "t.tag = ?" to listOf(term)
+                "source_id" -> "l.source_id = ?" to listOf(term)
+                "source_url", "source" -> "l.source_url = ?" to listOf(term)
+                else -> "" to emptyList()
+            }
+        }
+
+        // Match: field LIKE '%value%'
         val likeRegex = Regex(
             """^(title|link|description|tag|tags|source_id|source_url|source)\s+LIKE\s+['"]?%?([^%'"]+)%?['"]?$""",
             RegexOption.IGNORE_CASE
         )
-        val match = likeRegex.find(query)
-        return if (match != null) {
-            val field = match.groupValues[1].lowercase()
-            val term = "%${match.groupValues[2].trim()}%"
+        val likeMatch = likeRegex.find(query)
+        return if (likeMatch != null) {
+            val field = likeMatch.groupValues[1].lowercase()
+            val term = "%${likeMatch.groupValues[2].trim()}%"
             when (field) {
                 "title" -> "l.title LIKE ?" to listOf(term)
                 "link" -> "l.link LIKE ?" to listOf(term)
