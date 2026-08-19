@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
@@ -47,6 +48,7 @@ fun SourcesScreen(
     val activeDbState = config.activeDatabaseState
     val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
 
+    var searchQuery by remember { mutableStateOf("") }
     var sources by remember { mutableStateOf<List<Source>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isRefreshingAll by remember { mutableStateOf(false) }
@@ -56,6 +58,17 @@ fun SourcesScreen(
         isLoading = true
         sources = SourceRepository.loadSources(context, activeDbState)
         isLoading = false
+    }
+
+    val filteredSources = remember(sources, searchQuery) {
+        if (searchQuery.isBlank()) {
+            sources
+        } else {
+            val query = searchQuery.trim().lowercase()
+            sources.filter { source ->
+                source.title.lowercase().contains(query) || source.url.lowercase().contains(query)
+            }
+        }
     }
 
     val performRefreshAll: () -> Unit = {
@@ -164,34 +177,57 @@ fun SourcesScreen(
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .padding(horizontal = 16.dp)
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (sources.isEmpty()) {
-                Text(
-                    text = "No sources available in current database.",
-                    modifier = Modifier.align(Alignment.Center),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(sources) { source ->
-                        SourceItemRow(
-                            source = source,
-                            isEditable = isEditable,
-                            onClick = { onNavigateToSource(source) },
-                            onEditClick = { onNavigateToEditSource(source) },
-                            onDeleteClick = { sourceToDelete = source }
-                        )
+            SearchContainer(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onClearSearch = { searchQuery = "" },
+                onPerformSearch = {},
+                isSearchButtonEnabled = false,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else if (sources.isEmpty()) {
+                    Text(
+                        text = "No sources available in current database.",
+                        modifier = Modifier.align(Alignment.Center),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else if (filteredSources.isEmpty()) {
+                    Text(
+                        text = "No matching sources found.",
+                        modifier = Modifier.align(Alignment.Center),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredSources) { source ->
+                            SourceItemRow(
+                                source = source,
+                                isEditable = isEditable,
+                                onClick = { onNavigateToSource(source) },
+                                onEditClick = { onNavigateToEditSource(source) },
+                                onDeleteClick = { sourceToDelete = source }
+                            )
+                        }
                     }
                 }
             }

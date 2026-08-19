@@ -29,6 +29,8 @@ data class Entry(
     val status_code: Int? = 0,
     val manual_status_code: Int? = 0,
     val bookmarked: Boolean? = false,
+    val source_id: Long? = null,
+    val source_url: String? = null,
     val socialData: SocialData? = null
 )
 
@@ -395,7 +397,7 @@ object EntryRepository {
         if (searchQuery.isBlank()) return "" to emptyList()
         val query = searchQuery.trim()
         val likeRegex = Regex(
-            """^(title|link|description|tag|tags)\s+LIKE\s+['"]?%?([^%'"]+)%?['"]?$""",
+            """^(title|link|description|tag|tags|source_id|source_url|source)\s+LIKE\s+['"]?%?([^%'"]+)%?['"]?$""",
             RegexOption.IGNORE_CASE
         )
         val match = likeRegex.find(query)
@@ -407,6 +409,8 @@ object EntryRepository {
                 "link" -> "l.link LIKE ?" to listOf(term)
                 "description" -> "l.description LIKE ?" to listOf(term)
                 "tag", "tags" -> "t.tag LIKE ?" to listOf(term)
+                "source_id" -> "l.source_id LIKE ?" to listOf(term)
+                "source_url", "source" -> "l.source_url LIKE ?" to listOf(term)
                 else -> "" to emptyList()
             }
         } else {
@@ -417,7 +421,7 @@ object EntryRepository {
     }
 
     /** Standard column selection list for queries on `linkdatamodel` (aliased as `l`). */
-    const val ENTRY_SELECT_COLUMNS = "l.id, l.link, l.title, l.description, l.author, l.album, l.language, l.page_rating_votes, l.page_rating_visits, l.page_rating, l.thumbnail, l.date_created, l.date_published, l.date_dead_since, l.age, l.status_code, l.manual_status_code, l.bookmarked"
+    const val ENTRY_SELECT_COLUMNS = "l.id, l.link, l.title, l.description, l.author, l.album, l.language, l.page_rating_votes, l.page_rating_visits, l.page_rating, l.thumbnail, l.date_created, l.date_published, l.date_dead_since, l.age, l.status_code, l.manual_status_code, l.bookmarked, l.source_id, l.source_url"
 
     /** Column selection list for `socialdata` (aliased as `s`). */
     const val SOCIAL_DATA_SELECT_COLUMNS = "s.id AS s_id, s.entry_id AS s_entry_id, s.thumbs_up, s.thumbs_down, s.view_count, s.rating AS s_rating, s.upvote_ratio, s.upvote_diff, s.upvote_view_ratio, s.stars, s.date_updated"
@@ -442,6 +446,10 @@ object EntryRepository {
         val statusCode = c.getInt(c.getColumnIndexOrThrow("status_code"))
         val manualStatusCode = c.getInt(c.getColumnIndexOrThrow("manual_status_code"))
         val bookmarked = c.getInt(c.getColumnIndexOrThrow("bookmarked")) == 1
+        val sourceIdIndex = c.getColumnIndex("source_id")
+        val sourceId = if (sourceIdIndex != -1 && !c.isNull(sourceIdIndex)) c.getLong(sourceIdIndex) else null
+        val sourceUrlIndex = c.getColumnIndex("source_url")
+        val sourceUrl = if (sourceUrlIndex != -1 && !c.isNull(sourceUrlIndex)) c.getString(sourceUrlIndex) else null
         val tagIndex = c.getColumnIndex("tag")
         val tagString = if (tagIndex != -1 && !c.isNull(tagIndex)) c.getString(tagIndex) else null
         val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
@@ -482,6 +490,8 @@ object EntryRepository {
             status_code = statusCode,
             manual_status_code = manualStatusCode,
             bookmarked = bookmarked,
+            source_id = sourceId,
+            source_url = sourceUrl,
             tags = tags,
             socialData = socialData
         )

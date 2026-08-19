@@ -59,6 +59,67 @@ object SourceRepository {
     }
 
     /**
+     * Finds a source in `sourcedatamodel` matching [sourceId].
+     */
+    suspend fun findSourceById(context: Context, activeDatabaseState: DatabaseState?, sourceId: Long): Source? = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext null
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            db.use {
+                val sqlText = "SELECT id, enabled, url, title, favicon FROM sourcedatamodel WHERE id = ? LIMIT 1"
+                val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
+                cursor.use { c ->
+                    if (c.moveToFirst()) {
+                        val id = c.getLong(c.getColumnIndexOrThrow("id"))
+                        val enabledVal = c.getInt(c.getColumnIndexOrThrow("enabled"))
+                        val url = c.getString(c.getColumnIndexOrThrow("url")) ?: ""
+                        val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
+                        val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
+                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon)
+                    } else null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Finds a source in `sourcedatamodel` matching [sourceUrl].
+     */
+    suspend fun findSourceByUrl(context: Context, activeDatabaseState: DatabaseState?, sourceUrl: String): Source? = withContext(Dispatchers.IO) {
+        if (sourceUrl.isBlank()) return@withContext null
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext null
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            db.use {
+                val sqlText = "SELECT id, enabled, url, title, favicon FROM sourcedatamodel WHERE url = ? LIMIT 1"
+                val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
+                cursor.use { c ->
+                    if (c.moveToFirst()) {
+                        val id = c.getLong(c.getColumnIndexOrThrow("id"))
+                        val enabledVal = c.getInt(c.getColumnIndexOrThrow("enabled"))
+                        val url = c.getString(c.getColumnIndexOrThrow("url")) ?: ""
+                        val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
+                        val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
+                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon)
+                    } else null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
      * Inserts a new source into the database.
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
@@ -165,7 +226,13 @@ object SourceRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             val rows = db.delete("sourcedatamodel", "id = ?", arrayOf(id.toString()))
             db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted; source may not exist")
+
+            if (rows > 0) {
+                SourceOperationalDataRepository.deleteOperationalDataBySourceId(context, activeDatabaseState, id)
+                Pair(true, null)
+            } else {
+                Pair(false, "No rows deleted; source may not exist")
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")

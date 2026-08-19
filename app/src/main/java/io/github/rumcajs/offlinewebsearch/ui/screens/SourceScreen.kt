@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
@@ -47,6 +48,8 @@ fun SourceScreen(
     source: Source,
     onNavigateToEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    onBrowseEntries: ((Source) -> Unit)? = null,
+    onRefreshSuccess: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -95,6 +98,7 @@ fun SourceScreen(
                     if (sourceId != null) {
                         operationalData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, sourceId)
                     }
+                    onRefreshSuccess?.invoke()
                 }
                 isRefreshing = false
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -250,8 +254,20 @@ fun SourceScreen(
                 }
             }
 
+            if (onBrowseEntries != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { onBrowseEntries(currentSource) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Browse entries")
+                }
+            }
+
             if (!config.networkConfig.disabled && currentSource.url.isNotBlank()) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = performRefresh,
                     enabled = !isRefreshing,

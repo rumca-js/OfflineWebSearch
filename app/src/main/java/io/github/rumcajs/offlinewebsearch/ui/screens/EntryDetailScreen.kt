@@ -43,6 +43,7 @@ fun EntryDetailScreen(
     onTagClick: ((String) -> Unit)? = null,
     onVisit: (() -> Unit)? = null,
     onSelectEntry: ((io.github.rumcajs.offlinewebsearch.data.Entry) -> Unit)? = null,
+    onSelectSource: ((io.github.rumcajs.offlinewebsearch.data.Source) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -189,6 +190,16 @@ fun EntryDetailScreen(
                 )
             }
 
+            // Social data pane (if social data exists for entry)
+            val socialData = entry.socialData
+            val hasSocialData = socialData != null && !socialData.isEmptyOrZero()
+            if (hasSocialData) {
+                Spacer(modifier = Modifier.height(4.dp))
+                SocialDataPane(
+                    socialData = socialData
+                )
+            }
+
             entry.tags?.let { tags ->
                 if (tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -209,6 +220,16 @@ fun EntryDetailScreen(
                         }
                     }
                 }
+            }
+
+            // Source pane (if source_id or source_url is set)
+            if (entry.source_id != null || !entry.source_url.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                io.github.rumcajs.offlinewebsearch.ui.components.SourcePane(
+                    entry = entry,
+                    isRestricted = isRestricted,
+                    onSelectSource = onSelectSource
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -233,17 +254,7 @@ fun EntryDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Social data pane (if social data exists for entry)
-            val socialData = entry.socialData
-            val hasSocialData = socialData != null && !socialData.isEmptyOrZero()
-            if (hasSocialData) {
-                SocialDataPane(
-                    socialData = socialData
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+
 
             // Entry detail properties and metadata pane
             io.github.rumcajs.offlinewebsearch.ui.components.EntryMetadataPane(

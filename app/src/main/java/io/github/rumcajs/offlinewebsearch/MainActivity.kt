@@ -142,6 +142,15 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                             }
                                         }
                                     },
+                                    onBrowseEntries = { src ->
+                                        val queryVal = if (src.id != null && src.id != 0L) "source_id LIKE '%${src.id}%'" else "source_url LIKE '%${src.url}%'"
+                                        searchViewModel.searchQuery = queryVal
+                                        searchViewModel.performSearch(context)
+                                        navController.popBackStack(Screen.Home.route, false)
+                                    },
+                                    onRefreshSuccess = {
+                                        searchViewModel.refreshPage(context)
+                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }
@@ -240,6 +249,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     },
                                     onSelectEntry = { targetEntry ->
                                         searchViewModel.selectedEntry = targetEntry
+                                    },
+                                    onSelectSource = { source ->
+                                        searchViewModel.selectedSource = source
+                                        navController.navigate(Screen.SourceDetail.route)
                                     },
                                     onBack = { navController.popBackStack() }
                                 )

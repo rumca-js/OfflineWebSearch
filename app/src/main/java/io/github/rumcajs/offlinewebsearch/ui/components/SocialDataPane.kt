@@ -2,6 +2,10 @@ package io.github.rumcajs.offlinewebsearch.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarHalf
+import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Visibility
@@ -32,7 +36,7 @@ fun SocialData.isEmptyOrZero(): Boolean {
 }
 
 /**
- * Component that displays social data (thumbs, view count, rating, stars, upvote ratio, etc.) for an entry.
+ * Component that displays social data (thumbs, view count, stars rating, rating, upvote ratio, etc.) for an entry.
  */
 @Composable
 fun SocialDataPane(
@@ -42,12 +46,12 @@ fun SocialDataPane(
     if (socialData == null || socialData.isEmptyOrZero()) return
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Display thumbsUp, thumbsDown, viewCount in one line with icons
         val hasThumbsUp = socialData.thumbsUp?.takeIf { it != 0 } != null
         val hasThumbsDown = socialData.thumbsDown?.takeIf { it != 0 } != null
         val hasViewCount = socialData.viewCount?.takeIf { it != 0 } != null
+        val hasStars = socialData.stars?.takeIf { it != 0 } != null
 
-        if (hasThumbsUp || hasThumbsDown || hasViewCount) {
+        if (hasThumbsUp || hasThumbsDown || hasViewCount || hasStars) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -111,14 +115,75 @@ fun SocialDataPane(
                         )
                     }
                 }
+
+                if (hasStars) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Stars",
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = socialData.stars.toString(),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
         }
 
+        socialData.stars?.takeIf { it != 0 }?.let { starValue ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Stars",
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+
+                // If stars is a 1-5 rating (or similar small number), render star icons visually
+                if (starValue in 1..5) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        for (i in 1..5) {
+                            val icon = if (i <= starValue) Icons.Default.Star else Icons.Default.StarOutline
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(text = starValue.toString())
+                    }
+                }
+            }
+        }
+
+        /*
         socialData.rating?.takeIf { it != 0 }?.let {
             DetailRow(label = "Rating", value = it.toString())
-        }
-        socialData.stars?.takeIf { it != 0 }?.let {
-            DetailRow(label = "Stars", value = it.toString())
         }
         socialData.upvoteRatio?.takeIf { it != 0 }?.let {
             DetailRow(label = "Upvote Ratio", value = "$it%")
@@ -132,5 +197,7 @@ fun SocialDataPane(
         socialData.dateUpdated?.takeIf { it.isNotBlank() }?.let {
             DetailRow(label = "Updated", value = it)
         }
+        */
     }
 }
+

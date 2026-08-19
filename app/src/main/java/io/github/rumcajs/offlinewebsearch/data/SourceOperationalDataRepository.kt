@@ -181,4 +181,31 @@ object SourceOperationalDataRepository {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Deletes operational data associated with [sourceObjId].
+     */
+    suspend fun deleteOperationalDataBySourceId(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceObjId: Long
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext false
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            ensureTableExists(db)
+            db.delete(TABLE_NAME, "source_obj_id = ?", arrayOf(sourceObjId.toString()))
+            db.close()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 }
