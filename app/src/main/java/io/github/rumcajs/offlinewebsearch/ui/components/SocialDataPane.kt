@@ -70,7 +70,7 @@ fun SocialDataPane(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = socialData.thumbsUp.toString(),
+                            text = io.github.rumcajs.offlinewebsearch.util.EntryUtils.formatCount(socialData.thumbsUp),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -89,7 +89,7 @@ fun SocialDataPane(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = socialData.thumbsDown.toString(),
+                            text = io.github.rumcajs.offlinewebsearch.util.EntryUtils.formatCount(socialData.thumbsDown),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -108,7 +108,7 @@ fun SocialDataPane(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = socialData.viewCount.toString(),
+                            text = io.github.rumcajs.offlinewebsearch.util.EntryUtils.formatCount(socialData.viewCount),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -127,7 +127,7 @@ fun SocialDataPane(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = socialData.stars.toString(),
+                            text = io.github.rumcajs.offlinewebsearch.util.EntryUtils.formatCount(socialData.stars),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -146,7 +146,7 @@ fun SocialDataPane(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = socialData.followersCount.toString(),
+                            text = io.github.rumcajs.offlinewebsearch.util.EntryUtils.formatCount(socialData.followersCount),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )

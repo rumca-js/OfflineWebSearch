@@ -49,6 +49,35 @@ object EntryUtils {
     }
 
     /**
+     * Formats integer/long counts into compact, human-readable strings (e.g. 1.2K, 3.4M, 1.5B).
+     */
+    fun formatCount(count: Long?): String {
+        if (count == null) return "0"
+        val abs = kotlin.math.abs(count)
+        val sign = if (count < 0) "-" else ""
+        return when {
+            abs >= 1_000_000_000L -> {
+                val value = abs / 1_000_000_000.0
+                if (value >= 100) "${sign}${value.toLong()}B"
+                else "${sign}${String.format(java.util.Locale.US, "%.1f", value).removeSuffix(".0")}B"
+            }
+            abs >= 1_000_000L -> {
+                val value = abs / 1_000_000.0
+                if (value >= 100) "${sign}${value.toLong()}M"
+                else "${sign}${String.format(java.util.Locale.US, "%.1f", value).removeSuffix(".0")}M"
+            }
+            abs >= 1_000L -> {
+                val value = abs / 1_000.0
+                if (value >= 100) "${sign}${value.toLong()}K"
+                else "${sign}${String.format(java.util.Locale.US, "%.1f", value).removeSuffix(".0")}K"
+            }
+            else -> "$count"
+        }
+    }
+
+    fun formatCount(count: Int?): String = formatCount(count?.toLong())
+
+    /**
      * Returns a formatted date string or "N/A" if null.
      */
     fun getFormattedDate(date: String?): String {
