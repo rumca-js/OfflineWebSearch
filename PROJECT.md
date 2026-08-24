@@ -84,6 +84,7 @@ Possible database states include:
  - page navigation elements (prev, next button) are in scrollable area, after search results
  - after page navigation add new result button should be present
  - Selecting an entry opens EntryDetailScreen.
+ - Implement pull to refresh
 
 ## Search
  - Search is performed against the selected database.
@@ -97,6 +98,13 @@ Possible database states include:
  - description LIKE '%something%'
  - Search implementation should use appropriate SQLite indexes where possible.
  - The search implementation should support large databases efficiently.
+ - provide ability to support order (at least) by
+    -- page rating votes
+    -- date created
+    -- date published
+    -- followers count
+    -- stars
+    -- page rating visits
 
 ## EntryDetailScreen
 Displays the details of an entry.

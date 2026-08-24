@@ -21,6 +21,7 @@ import java.io.File
  * @property upvoteDiff Difference between upvotes and downvotes.
  * @property upvoteViewRatio Upvote to view ratio.
  * @property stars Star rating or star count.
+ * @property followersCount Count of followers.
  * @property dateUpdated Timestamp when the social data was last updated.
  */
 @Serializable
@@ -35,6 +36,7 @@ data class SocialData(
     val upvoteDiff: Int? = 0,
     val upvoteViewRatio: Int? = 0,
     val stars: Int? = 0,
+    val followersCount: Int? = 0,
     val dateUpdated: String? = null
 )
 
@@ -62,7 +64,7 @@ object SocialDataRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             val sqlText = """
                 SELECT id, entry_id, thumbs_up, thumbs_down, view_count, rating,
-                       upvote_ratio, upvote_diff, upvote_view_ratio, stars, date_updated
+                       upvote_ratio, upvote_diff, upvote_view_ratio, stars, followers_count, date_updated
                 FROM socialdata
                 WHERE entry_id = ?
                 LIMIT 1
@@ -83,6 +85,7 @@ object SocialDataRepository {
                         upvoteDiff = if (c.isNull(c.getColumnIndexOrThrow("upvote_diff"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_diff")),
                         upvoteViewRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_view_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_view_ratio")),
                         stars = if (c.isNull(c.getColumnIndexOrThrow("stars"))) null else c.getInt(c.getColumnIndexOrThrow("stars")),
+                        followersCount = if (c.isNull(c.getColumnIndexOrThrow("followers_count"))) null else c.getInt(c.getColumnIndexOrThrow("followers_count")),
                         dateUpdated = c.getString(c.getColumnIndexOrThrow("date_updated"))
                     )
                 }
@@ -123,6 +126,7 @@ object SocialDataRepository {
                 socialData.upvoteDiff?.let { put("upvote_diff", it) }
                 socialData.upvoteViewRatio?.let { put("upvote_view_ratio", it) }
                 socialData.stars?.let { put("stars", it) }
+                socialData.followersCount?.let { put("followers_count", it) }
                 socialData.dateUpdated?.let { put("date_updated", it) }
             }
             val newId = db.insert("socialdata", null, values)
@@ -165,6 +169,7 @@ object SocialDataRepository {
                 socialData.upvoteDiff?.let { put("upvote_diff", it) }
                 socialData.upvoteViewRatio?.let { put("upvote_view_ratio", it) }
                 socialData.stars?.let { put("stars", it) }
+                socialData.followersCount?.let { put("followers_count", it) }
                 socialData.dateUpdated?.let { put("date_updated", it) }
             }
             val rows = db.update("socialdata", values, "id = ?", arrayOf(socialData.id.toString()))

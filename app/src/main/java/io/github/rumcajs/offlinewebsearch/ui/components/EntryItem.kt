@@ -177,6 +177,14 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
                     }
                 }
 
+                val socialData = entry.socialData
+                if (socialData != null && !socialData.isEmptyOrZero()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    SocialDataPane(
+                        socialData = socialData
+                    )
+                }
+
                 entry.tags?.let { tags ->
                     if (tags.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))

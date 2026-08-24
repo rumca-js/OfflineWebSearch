@@ -83,6 +83,7 @@ fun EntryListScreen(
                 }
             },
             onAddEntry = if (isEditable && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
+            onRefresh = { viewModel.performSearch(context) },
             modifier = Modifier.weight(1f)
         )
     }

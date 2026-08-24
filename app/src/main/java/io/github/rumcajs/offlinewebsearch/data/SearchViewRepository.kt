@@ -12,9 +12,13 @@ data class SearchViewRepository(
         get() {
             val firstOrder = orderByStr?.split(",")?.firstOrNull()?.lowercase()?.trim()
             return when (firstOrder) {
-                "page_rating_votes","-page_rating_votes" -> OrderBy.PAGE_RATING_VOTES
+                "page_rating_votes", "-page_rating_votes" -> OrderBy.PAGE_RATING_VOTES
                 "date_created", "-date_created" -> OrderBy.DATE_CREATED
-                "date_published","-date_published" -> OrderBy.DATE_PUBLISHED
+                "date_published", "-date_published" -> OrderBy.DATE_PUBLISHED
+                "-stars", "stars desc" -> OrderBy.STARS_DESC
+                "stars", "+stars", "stars asc" -> OrderBy.STARS_ASC
+                "-followers_count", "followers_count desc" -> OrderBy.FOLLOWERS_COUNT_DESC
+                "followers_count", "+followers_count", "followers_count asc" -> OrderBy.FOLLOWERS_COUNT_ASC
                 else -> null
             }
         }

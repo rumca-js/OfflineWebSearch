@@ -232,9 +232,8 @@ fun EntryDetailScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             if (!config.networkConfig.disabled) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
                     enabled = !isRestricted,
@@ -242,16 +241,16 @@ fun EntryDetailScreen(
                 ) {
                     Text("Check status")
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.let {
+            _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.takeIf { it.isNotBlank() }?.let {
                 Text(
                     text = it,
                     fontSize = 16.sp,
                     lineHeight = 24.sp
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
 

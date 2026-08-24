@@ -365,14 +365,14 @@ object EntryRepository {
                         LEFT JOIN entrycompactedtags t ON l.id = t.entry_id
                         LEFT JOIN socialdata s ON l.id = s.entry_id
                         $whereSql
-                        ORDER BY l.$orderSql
+                        ORDER BY $orderSql, l.id DESC
                         LIMIT ? OFFSET ?
                     ) AS paged
                     JOIN linkdatamodel l ON l.id = paged.id
                     LEFT JOIN entrycompactedtags t ON l.id = t.entry_id
                     LEFT JOIN socialdata s ON l.id = s.entry_id
                     GROUP BY l.id
-                    ORDER BY l.$orderSql
+                    ORDER BY $orderSql, l.id DESC
                 """.trimIndent()
 
                 val queryArgs = args + listOf(pageSize.toString(), offset.toString())
@@ -450,7 +450,7 @@ object EntryRepository {
     const val ENTRY_SELECT_COLUMNS = "l.id, l.link, l.title, l.description, l.author, l.album, l.language, l.page_rating_votes, l.page_rating_visits, l.page_rating, l.thumbnail, l.date_created, l.date_published, l.date_dead_since, l.age, l.status_code, l.manual_status_code, l.bookmarked, l.source_id, l.source_url"
 
     /** Column selection list for `socialdata` (aliased as `s`). */
-    const val SOCIAL_DATA_SELECT_COLUMNS = "s.id AS s_id, s.entry_id AS s_entry_id, s.thumbs_up, s.thumbs_down, s.view_count, s.rating AS s_rating, s.upvote_ratio, s.upvote_diff, s.upvote_view_ratio, s.stars, s.date_updated"
+    const val SOCIAL_DATA_SELECT_COLUMNS = "s.id AS s_id, s.entry_id AS s_entry_id, s.thumbs_up, s.thumbs_down, s.view_count, s.rating AS s_rating, s.upvote_ratio, s.upvote_diff, s.upvote_view_ratio, s.stars, s.followers_count, s.date_updated"
 
     /** Maps a cursor row to an [Entry]. */
     fun cursorToEntry(c: android.database.Cursor): Entry {
@@ -493,6 +493,7 @@ object EntryRepository {
                 upvoteDiff = if (c.isNull(c.getColumnIndexOrThrow("upvote_diff"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_diff")),
                 upvoteViewRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_view_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_view_ratio")),
                 stars = if (c.isNull(c.getColumnIndexOrThrow("stars"))) null else c.getInt(c.getColumnIndexOrThrow("stars")),
+                followersCount = if (c.isNull(c.getColumnIndexOrThrow("followers_count"))) null else c.getInt(c.getColumnIndexOrThrow("followers_count")),
                 dateUpdated = c.getString(c.getColumnIndexOrThrow("date_updated"))
             )
         } else null
@@ -593,14 +594,22 @@ object EntryRepository {
 
 /** Returns the SQL column name + direction for this [OrderBy] value. */
 private fun OrderBy.toSqlColumn(): String = when (this) {
-    OrderBy.PAGE_RATING_VOTES -> "page_rating_votes DESC"
-    OrderBy.DATE_CREATED -> "date_created DESC"
-    OrderBy.DATE_PUBLISHED -> "date_published DESC"
+    OrderBy.PAGE_RATING_VOTES -> "l.page_rating_votes DESC"
+    OrderBy.DATE_CREATED -> "l.date_created DESC"
+    OrderBy.DATE_PUBLISHED -> "l.date_published DESC"
+    OrderBy.STARS_DESC -> "COALESCE(s.stars, 0) DESC"
+    OrderBy.STARS_ASC -> "COALESCE(s.stars, 0) ASC"
+    OrderBy.FOLLOWERS_COUNT_DESC -> "COALESCE(s.followers_count, 0) DESC"
+    OrderBy.FOLLOWERS_COUNT_ASC -> "COALESCE(s.followers_count, 0) ASC"
 }
 
-/** Sorts a list of [Entry] in descending order for this [OrderBy] value. */
+/** Sorts a list of [Entry] for this [OrderBy] value. */
 private fun List<Entry>.sortedByOrderBy(orderBy: OrderBy): List<Entry> = when (orderBy) {
     OrderBy.PAGE_RATING_VOTES -> sortedByDescending { it.page_rating_votes ?: 0 }
     OrderBy.DATE_CREATED -> sortedByDescending { it.date_created ?: "" }
     OrderBy.DATE_PUBLISHED -> sortedByDescending { it.date_published ?: "" }
+    OrderBy.STARS_DESC -> sortedByDescending { it.socialData?.stars ?: 0 }
+    OrderBy.STARS_ASC -> sortedBy { it.socialData?.stars ?: 0 }
+    OrderBy.FOLLOWERS_COUNT_DESC -> sortedByDescending { it.socialData?.followersCount ?: 0 }
+    OrderBy.FOLLOWERS_COUNT_ASC -> sortedBy { it.socialData?.followersCount ?: 0 }
 }
