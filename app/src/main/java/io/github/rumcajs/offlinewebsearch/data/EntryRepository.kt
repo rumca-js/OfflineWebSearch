@@ -595,6 +595,8 @@ object EntryRepository {
 /** Returns the SQL column name + direction for this [OrderBy] value. */
 private fun OrderBy.toSqlColumn(): String = when (this) {
     OrderBy.PAGE_RATING_VOTES -> "l.page_rating_votes DESC"
+    OrderBy.PAGE_RATING_VISITS_DESC -> "l.page_rating_visits DESC"
+    OrderBy.PAGE_RATING_VISITS_ASC -> "l.page_rating_visits ASC"
     OrderBy.DATE_CREATED -> "l.date_created DESC"
     OrderBy.DATE_PUBLISHED -> "l.date_published DESC"
     OrderBy.STARS_DESC -> "COALESCE(s.stars, 0) DESC"
@@ -606,6 +608,8 @@ private fun OrderBy.toSqlColumn(): String = when (this) {
 /** Sorts a list of [Entry] for this [OrderBy] value. */
 private fun List<Entry>.sortedByOrderBy(orderBy: OrderBy): List<Entry> = when (orderBy) {
     OrderBy.PAGE_RATING_VOTES -> sortedByDescending { it.page_rating_votes ?: 0 }
+    OrderBy.PAGE_RATING_VISITS_DESC -> sortedByDescending { it.page_rating_visits ?: 0 }
+    OrderBy.PAGE_RATING_VISITS_ASC -> sortedBy { it.page_rating_visits ?: 0 }
     OrderBy.DATE_CREATED -> sortedByDescending { it.date_created ?: "" }
     OrderBy.DATE_PUBLISHED -> sortedByDescending { it.date_published ?: "" }
     OrderBy.STARS_DESC -> sortedByDescending { it.socialData?.stars ?: 0 }

@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class OrderBy(val displayName: String) {
     PAGE_RATING_VOTES("Page Rating Votes"),
+    PAGE_RATING_VISITS_DESC("Page Rating Visits (Highest first)"),
+    PAGE_RATING_VISITS_ASC("Page Rating Visits (Lowest first)"),
     DATE_CREATED("Date Created"),
     DATE_PUBLISHED("Date Published"),
     STARS_DESC("Stars (Highest first)"),
