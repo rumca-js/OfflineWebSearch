@@ -67,15 +67,17 @@ object EntryRepository {
         context: Context,
         activeDatabaseState: DatabaseState? = null,
         searchQuery: String = "",
-        orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES
+        orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+        filterByVisited: Boolean = false,
+        filterByReadLater: Boolean = false
     ): Int = withContext(Dispatchers.IO) {
         when {
             activeDatabaseState == null ->
-                filterInMemory(loadEntriesFromAssets(context, defaultAssets), searchQuery).size
+                filterInMemory(loadEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater).size
             activeDatabaseState.extension != ".db" ->
-                filterInMemory(loadEntriesFromJson(context, activeDatabaseState), searchQuery).size
+                filterInMemory(loadEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater).size
             else ->
-                countEntriesFromSql(context, activeDatabaseState, searchQuery)
+                countEntriesFromSql(context, activeDatabaseState, searchQuery, filterByVisited, filterByReadLater)
         }
     }
 
@@ -89,19 +91,21 @@ object EntryRepository {
         searchQuery: String = "",
         orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
         offset: Int = 0,
-        pageSize: Int = 20
+        pageSize: Int = 20,
+        filterByVisited: Boolean = false,
+        filterByReadLater: Boolean = false
     ): List<Entry> = withContext(Dispatchers.IO) {
         when {
             activeDatabaseState == null -> {
-                val all = filterInMemory(loadEntriesFromAssets(context, defaultAssets), searchQuery)
+                val all = filterInMemory(loadEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater)
                 all.sortedByOrderBy(orderBy).drop(offset).take(pageSize)
             }
             activeDatabaseState.extension != ".db" -> {
-                val all = filterInMemory(loadEntriesFromJson(context, activeDatabaseState), searchQuery)
+                val all = filterInMemory(loadEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater)
                 all.sortedByOrderBy(orderBy).drop(offset).take(pageSize)
             }
             else ->
-                loadPageFromSql(context, activeDatabaseState, searchQuery, orderBy, offset, pageSize)
+                loadPageFromSql(context, activeDatabaseState, searchQuery, orderBy, offset, pageSize, filterByVisited, filterByReadLater)
         }
     }
 
@@ -312,7 +316,9 @@ object EntryRepository {
     private fun countEntriesFromSql(
         context: Context,
         state: DatabaseState,
-        searchQuery: String
+        searchQuery: String,
+        filterByVisited: Boolean = false,
+        filterByReadLater: Boolean = false
     ): Int {
         val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return 0
@@ -320,7 +326,15 @@ object EntryRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
                 val (whereClause, args) = buildWhereClause(searchQuery)
-                val whereSql = if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""
+                val extraConditions = mutableListOf<String>()
+                if (whereClause.isNotEmpty()) extraConditions.add(whereClause)
+                if (filterByVisited) {
+                    extraConditions.add("l.id IN (SELECT entry_id FROM entryvisithistory WHERE entry_id IS NOT NULL)")
+                }
+                if (filterByReadLater) {
+                    extraConditions.add("l.id IN (SELECT entry_id FROM readlater WHERE entry_id IS NOT NULL)")
+                }
+                val whereSql = if (extraConditions.isNotEmpty()) " WHERE " + extraConditions.joinToString(" AND ") else ""
                 val sql = "SELECT COUNT(DISTINCT l.id) FROM linkdatamodel l" +
                     " LEFT JOIN entrycompactedtags t ON l.id = t.entry_id" +
                     " LEFT JOIN socialdata s ON l.id = s.entry_id" +
@@ -340,7 +354,9 @@ object EntryRepository {
         searchQuery: String,
         orderBy: OrderBy,
         offset: Int,
-        pageSize: Int
+        pageSize: Int,
+        filterByVisited: Boolean = false,
+        filterByReadLater: Boolean = false
     ): List<Entry> {
         val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return emptyList()
@@ -350,8 +366,16 @@ object EntryRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
                 val (whereClause, args) = buildWhereClause(searchQuery)
+                val extraConditions = mutableListOf<String>()
+                if (whereClause.isNotEmpty()) extraConditions.add(whereClause)
+                if (filterByVisited) {
+                    extraConditions.add("l.id IN (SELECT entry_id FROM entryvisithistory WHERE entry_id IS NOT NULL)")
+                }
+                if (filterByReadLater) {
+                    extraConditions.add("l.id IN (SELECT entry_id FROM readlater WHERE entry_id IS NOT NULL)")
+                }
                 val orderSql = orderBy.toSqlColumn()
-                val whereSql = if (whereClause.isNotEmpty()) "WHERE $whereClause" else ""
+                val whereSql = if (extraConditions.isNotEmpty()) "WHERE " + extraConditions.joinToString(" AND ") else ""
 
                 // Inner subquery pages on distinct entry IDs, outer join fetches data + tags + socialdata.
                 val sql = """
@@ -557,8 +581,21 @@ object EntryRepository {
         }
     }
 
-    private fun filterInMemory(entries: List<Entry>, searchQuery: String): List<Entry> {
-        if (searchQuery.isBlank()) return entries
+    private fun filterInMemory(
+        entries: List<Entry>,
+        searchQuery: String,
+        filterByVisited: Boolean = false,
+        filterByReadLater: Boolean = false
+    ): List<Entry> {
+        val baseList = if (filterByVisited) {
+            entries.filter { (it.page_rating_visits ?: 0) > 0 }
+        } else if (filterByReadLater) {
+            entries.filter { it.bookmarked == true }
+        } else {
+            entries
+        }
+
+        if (searchQuery.isBlank()) return baseList
         val query = searchQuery.trim()
         val likeRegex = Regex(
             """^(title|link|description|tag|tags)\s+LIKE\s+['"]?%?([^%'"]+)%?['"]?$""",
@@ -568,7 +605,7 @@ object EntryRepository {
         return if (match != null) {
             val field = match.groupValues[1].lowercase()
             val term = match.groupValues[2].trim()
-            entries.filter { entry ->
+            baseList.filter { entry ->
                 when (field) {
                     "title" -> entry.title?.contains(term, ignoreCase = true) == true
                     "link" -> entry.link?.contains(term, ignoreCase = true) == true
@@ -578,7 +615,7 @@ object EntryRepository {
                 }
             }
         } else {
-            entries.filter { entry ->
+            baseList.filter { entry ->
                 entry.title?.contains(query, ignoreCase = true) == true ||
                     entry.description?.contains(query, ignoreCase = true) == true ||
                     entry.link?.contains(query, ignoreCase = true) == true ||

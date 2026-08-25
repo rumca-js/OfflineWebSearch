@@ -87,8 +87,8 @@ Possible database states include:
 ## EntryListScreen
 
  - Provides search widget
- - Provides a visited chip to navigate to visited entries.
- - Provides a read later chip to navigate to saved read later entries.
+ - Provides a visited filter chip to toggle filtering results to visited entries (visible when `trackUserNavigation` is enabled).
+ - Provides a read later filter chip to toggle filtering results to saved read later entries (visible when the active database is writable).
  - Search supports advanced search capabilities (like SQLite syntax).
  - Search suggestion are scrollable, with rows
  - The list supports loading additional results.
@@ -134,6 +134,7 @@ Possible database states include:
 Displays the details of an entry.
 
 Provides a top bar with the following actions:
+ - Check later (adds or removes entry from Read Later).
  - Edit.
  - Share.
  - Preview.
@@ -147,6 +148,12 @@ The screen displays, where available:
  - Publication date.
  - Other entry metadata.
  - Entry transition pane. The pane shows entries that the user previously visited from the current entry. Entry transitions are stored in UserEntryTransitionHistory.
+
+## EntryEditScreen
+ - Allows adding a new entry or editing an existing entry.
+ - Provides input fields for entry metadata (URL, title, description, tags, author, etc.).
+ - Saves changes to the active database.
+ - Only accessible when the active database is writable.
 
 ## EntryStatusScreen
  - Fetches the entry URL from the internet.
@@ -168,6 +175,11 @@ The screen displays, where available:
 
 ## OptionsScreen
  - Displays the configured databases.
+ - Provides navigation to DatabasesScreen and AboutScreen.
+ - Configures search settings and application preferences.
+
+## DatabasesScreen
+ - Displays the list of configured databases.
  - Database can be added from preconfigured list available at https://rumca-js.github.io/data/databases.txt
  - Database can be added from local filesystem
  - Database can be added from url
@@ -175,7 +187,7 @@ The screen displays, where available:
  - Database fetched from the internet can be re-fetched. User is notified that it destroys current local database
  - Database can be shared (to other apps), saved as a file
  - List of databases show state of database (DOWNLOADING, UNPACKING, READY, FAILED)
- - each database in list contain button to Refresh, Remove
+ - Each database in list contains buttons to Refresh, Remove
  - Selecting a database opens DatabaseScreen.
 
 ## DatabaseScreen
@@ -193,9 +205,10 @@ The screen displays, where available:
  - Displays the number of rows in relevant tables.
  - Provides an action to clear the search history.
  - Provides an action to clear the user's visited entries.
+ - Provides an action to clear the user's read later entries.
 
 ## SourcesScreen
- - Provides bar on top with buttons: edit, fetch, remove.
+ - Provides bar on top with buttons: add, edit, fetch, remove.
  - Selecting source opens SourceScreen.
  - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
 
@@ -211,13 +224,21 @@ The screen displays, where available:
  - Extracted entries are inserted into the linkdatamodel table.
  - Existing entries should not be duplicated.
 
+## SourceEditScreen
+ - Allows adding a new RSS source or editing an existing source.
+ - Provides input fields for source title, URL, and enabled status.
+ - Saves changes to the sourcedatamodel table in the active database.
+ - Only accessible when the active database is writable.
+
 # Browsing
- - Every entry visit is recorded (if configured so)
- - Visit information is stored in the  UserEntryVisitHistory SQLite table.
+ - Every entry visit is recorded (if configured so).
+ - Visit information is stored in the UserEntryVisitHistory SQLite table (`entryvisithistory`).
  - The application can display the user's visited entries.
  - The application can clear the user's visit history.
- - When EntryDetailScreen is visited, it contains pane below to which entries user transitions to
- - Entry transitions are maintained by UserEntryTransitionHistory SQLite table.
+ - Entries can be saved to read later, stored in the `readlater` SQLite table.
+ - The application can display and clear the user's read later entries.
+ - When EntryDetailScreen is visited, it contains pane below to which entries user transitions to.
+ - Entry transitions are maintained by UserEntryTransitionHistory SQLite table (`entrytransitionhistory`).
 
 # Data Layer
  - app/src/main/java/io/github/rumcajs/offlinewebsearch/data contains the data layer.

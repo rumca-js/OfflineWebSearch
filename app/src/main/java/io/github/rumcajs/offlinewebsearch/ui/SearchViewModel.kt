@@ -24,6 +24,8 @@ class SearchViewModel : ViewModel() {
     var showSuggestions by mutableStateOf(false)
     var activeSearchQuery by mutableStateOf("")
     var searchHistory by mutableStateOf<List<String>>(emptyList())
+    var isFilterVisited by mutableStateOf(false)
+    var isFilterReadLater by mutableStateOf(false)
 
     var isLoading by mutableStateOf(true)
         private set
@@ -229,7 +231,9 @@ class SearchViewModel : ViewModel() {
             context = context,
             activeDatabaseState = activeDatabaseState,
             searchQuery = activeSearchQuery,
-            orderBy = orderBy
+            orderBy = orderBy,
+            filterByVisited = isFilterVisited,
+            filterByReadLater = isFilterReadLater
         )
         val page = EntryRepository.loadEntriesPage(
             context = context,
@@ -237,7 +241,9 @@ class SearchViewModel : ViewModel() {
             searchQuery = activeSearchQuery,
             orderBy = orderBy,
             offset = offset,
-            pageSize = effectivePageSize
+            pageSize = effectivePageSize,
+            filterByVisited = isFilterVisited,
+            filterByReadLater = isFilterReadLater
         )
         totalSearchResults = count
         filteredData = page

@@ -13,11 +13,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
+import io.github.rumcajs.offlinewebsearch.ui.components.SearchFilterChipsPane
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchResultsContainer
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.History
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -52,41 +49,22 @@ fun EntryListScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        if (onNavigateToVisited != null || onNavigateToReadLater != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (onNavigateToVisited != null) {
-                    AssistChip(
-                        onClick = onNavigateToVisited,
-                        label = { Text("Visited") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = "Visited Entries",
-                                modifier = Modifier.size(AssistChipDefaults.IconSize)
-                            )
-                        }
-                    )
-                }
-                if (onNavigateToReadLater != null) {
-                    AssistChip(
-                        onClick = onNavigateToReadLater,
-                        label = { Text("Read Later") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Bookmark,
-                                contentDescription = "Read Later",
-                                modifier = Modifier.size(AssistChipDefaults.IconSize)
-                            )
-                        }
-                    )
-                }
+        SearchFilterChipsPane(
+            showVisitedChip = config.dbconfig.trackUserNavigation,
+            isFilterVisited = viewModel.isFilterVisited,
+            onToggleVisited = {
+                viewModel.isFilterVisited = !viewModel.isFilterVisited
+                viewModel.currentPage = 0
+                viewModel.performSearch(context)
+            },
+            showReadLaterChip = isEditable,
+            isFilterReadLater = viewModel.isFilterReadLater,
+            onToggleReadLater = {
+                viewModel.isFilterReadLater = !viewModel.isFilterReadLater
+                viewModel.currentPage = 0
+                viewModel.performSearch(context)
             }
-        }
+        )
         SearchContainer(
             searchQuery = viewModel.searchQuery,
             onSearchQueryChange = {

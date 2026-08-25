@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
@@ -24,14 +26,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import android.content.Intent
 import android.widget.Toast
+import io.github.rumcajs.offlinewebsearch.data.ReadLaterRepository
+import kotlinx.coroutines.launch
+import io.github.rumcajs.offlinewebsearch.ui.components.EntryDetailTopBar
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
-import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
-import io.github.rumcajs.offlinewebsearch.webtoolkit.OdyseeChannelHandler
-import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeChannelHandler
 import io.github.rumcajs.offlinewebsearch.ui.components.SocialDataPane
-import io.github.rumcajs.offlinewebsearch.ui.components.UrlServicesPane
 import io.github.rumcajs.offlinewebsearch.ui.components.isEmptyOrZero
-import io.github.rumcajs.offlinewebsearch.webtoolkit.RedditChannelHandler
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -49,46 +49,59 @@ fun EntryDetailScreen(
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var isReadLater by remember { mutableStateOf(false) }
+
+    val activeDbState = config.activeDatabaseState
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+
+    LaunchedEffect(entry.id, activeDbState) {
+        val entryId = entry.id
+        if (entryId != null && activeDbState != null && activeDbState.extension == ".db") {
+            isReadLater = ReadLaterRepository.isReadLater(context, activeDbState, entryId)
+        } else {
+            isReadLater = false
+        }
+    }
 
     LaunchedEffect(entry.id ?: entry.link) {
         onVisit?.invoke()
     }
 
-    val activeDbState = config.activeDatabaseState
-    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
-
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Entry Details") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            EntryDetailTopBar(
+                entry = entry,
+                isEditable = isEditable,
+                isReadLater = isReadLater,
+                onToggleReadLater = {
+                    val entryId = entry.id ?: return@EntryDetailTopBar
+                    scope.launch {
+                        if (isReadLater) {
+                            val (success, err) = ReadLaterRepository.removeReadLaterByEntryId(context, activeDbState, entryId)
+                            if (success) {
+                                isReadLater = false
+                                Toast.makeText(context, "Removed from Read Later", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, err ?: "Failed to update", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            val (success, err) = ReadLaterRepository.addReadLater(context, activeDbState, entryId)
+                            if (success) {
+                                isReadLater = true
+                                Toast.makeText(context, "Added to Read Later", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, err ?: "Failed to update", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 },
-                actions = {
-                    entry.link?.let { url ->
-                        IconButton(onClick = {
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, url)
-                            }
-                            context.startActivity(Intent.createChooser(intent, "Share link"))
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share")
-                        }
-                    }
-                    IconButton(onClick = onNavigateToEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
-                    }
-                    if (isEditable && onDelete != null) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Remove")
-                        }
-                    }
-                }
+                onNavigateToEdit = onNavigateToEdit,
+                onDeleteClick = { showDeleteDialog = true },
+                onBack = onBack,
+                context = context
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
