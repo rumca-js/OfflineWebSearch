@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -53,6 +52,30 @@ class MainActivity : androidx.activity.ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel()
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+            DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                            val cfg = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                            val activeState = cfg.activeDatabaseState
+                            if (activeState != null && !activeState.isReadOnly && activeState.extension == ".db" && !cfg.networkConfig.disabled) {
+                                val count = io.github.rumcajs.offlinewebsearch.data.SourceRepository.fetchOutdatedSources(context, activeState)
+                                if (count > 0) {
+                                    searchViewModel.refreshPage(context)
+                                }
+                            }
+                        }
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
+            }
+
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.theme.OfflineWebSearchTheme {
                 val navController = rememberNavController()
                 val items = listOf(

@@ -48,6 +48,38 @@ object SourceOperationalDataRepository {
         return sdf.format(Date())
     }
 
+    /**
+     * Parses an ISO 8601 UTC timestamp string to epoch milliseconds, or null on error.
+     */
+    fun parseIsoTimestamp(timestamp: String?): Long? {
+        if (timestamp.isNullOrBlank()) return null
+        return try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            sdf.parse(timestamp)?.time
+        } catch (e: Exception) {
+            try {
+                // Fallback for timestamps with different formatting
+                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                sdf.timeZone = TimeZone.getTimeZone("UTC")
+                sdf.parse(timestamp)?.time
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    const val OUTDATED_FETCH_THRESHOLD_MILLIS: Long = 3600_000L // 1 hour
+
+    /**
+     * Checks whether a fetch timestamp is considered outdated (i.e. null, unparseable, or older than 1 hour).
+     */
+    fun isFetchOutdated(fetchTime: String?): Boolean {
+        val parsedTime = parseIsoTimestamp(fetchTime) ?: return true
+        val now = System.currentTimeMillis()
+        return (now - parsedTime) > OUTDATED_FETCH_THRESHOLD_MILLIS
+    }
+
     private fun ensureTableExists(db: SQLiteDatabase) {
         val createSql = """
             CREATE TABLE IF NOT EXISTS $TABLE_NAME (

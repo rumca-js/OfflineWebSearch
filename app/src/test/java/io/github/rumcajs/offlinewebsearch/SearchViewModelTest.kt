@@ -111,4 +111,30 @@ class SearchViewModelTest {
         assertFalse(viewModel.isFilterVisited)
         assertFalse(viewModel.isFilterReadLater)
     }
+
+    @Test
+    fun testSourceFetchOutdated() {
+        val repo = io.github.rumcajs.offlinewebsearch.data.SourceOperationalDataRepository
+
+        // Null or blank timestamp is considered outdated
+        assertTrue(repo.isFetchOutdated(null))
+        assertTrue(repo.isFetchOutdated(""))
+        assertTrue(repo.isFetchOutdated("invalid-timestamp"))
+
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+
+        // 10 seconds ago -> not outdated
+        val nowIso = sdf.format(java.util.Date(System.currentTimeMillis() - 10_000L))
+        assertFalse(repo.isFetchOutdated(nowIso))
+
+        // 30 minutes ago -> not outdated for 1 hour threshold
+        val halfHourAgo = sdf.format(java.util.Date(System.currentTimeMillis() - 30 * 60 * 1000L))
+        assertFalse(repo.isFetchOutdated(halfHourAgo))
+
+        // 2 hours ago -> outdated for 1 hour threshold
+        val twoHoursAgo = sdf.format(java.util.Date(System.currentTimeMillis() - 2 * 3600 * 1000L))
+        assertTrue(repo.isFetchOutdated(twoHoursAgo))
+    }
 }

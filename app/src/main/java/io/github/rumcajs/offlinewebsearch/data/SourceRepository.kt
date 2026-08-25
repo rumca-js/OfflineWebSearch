@@ -474,4 +474,41 @@ object SourceRepository {
         val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
         updateSource(context, activeDatabaseState, urlObj)
     }
+
+    /**
+     * Checks fetch times of all enabled sources and fetches any sources whose fetch timestamp is older
+     * than 1 hour, or never fetched.
+     * @return number of successfully refreshed sources.
+     */
+    suspend fun fetchOutdatedSources(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Int = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext 0
+        }
+        val config = AppConfigManager.config.value
+        if (config.networkConfig.disabled) {
+            return@withContext 0
+        }
+
+        val sources = loadSources(context, activeDatabaseState).filter { it.enabled && it.url.isNotBlank() }
+        if (sources.isEmpty()) return@withContext 0
+
+        var refreshedCount = 0
+        for (source in sources) {
+            val sourceId = source.id
+            val opData = if (sourceId != null) {
+                SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDatabaseState, sourceId)
+            } else null
+
+            if (SourceOperationalDataRepository.isFetchOutdated(opData?.date_fetched)) {
+                val (success, _) = updateSource(context, activeDatabaseState, source)
+                if (success) {
+                    refreshedCount++
+                }
+            }
+        }
+        refreshedCount
+    }
 }
