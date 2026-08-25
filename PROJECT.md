@@ -32,6 +32,11 @@ Users can provide databases from:
  - The Android application must remain compatible with the defined SQLite schema.
  - Entries - linkdatamodel
  - Sources - sourcedatamodel
+ - Search Views - searchview
+ - Configuration - configurationentry
+ - Visited Entries History - entryvisithistory
+ - Entry Transitions History - entrytransitionhistory
+ - Read Later - readlater
 
 # Database handling
  - any internet database is downloaded to application storage, and used from there
@@ -68,11 +73,14 @@ Possible database states include:
  - VisitedEntriesScreen - Shows entries visited by the user.
  - ReadLaterScreen - Shows entries saved to read later.
  - EntryDetailScreen - Shows details of a selected entry.
+ - EntryEditScreen - Adds or edits an entry.
  - EntryStatusScreen - Checks the HTTP status of an entry URL.
  - EntryPreviewScreen - Fetches and displays the current web page data.
  - OptionsScreen - Configures databases and application settings.
+ - DatabasesScreen - Shows the list of configured databases.
  - DatabaseScreen - Shows information and actions for a database.
  - SourceScreen - Shows information and actions for a source.
+ - SourceEditScreen - Adds or edits a source.
  - SourcesScreen - Shows the list of configured sources.
  - AboutScreen - Shows information about the application.
 
