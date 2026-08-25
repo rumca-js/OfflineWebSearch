@@ -27,6 +27,20 @@ class SearchViewModel : ViewModel() {
     var isFilterVisited by mutableStateOf(false)
     var isFilterReadLater by mutableStateOf(false)
 
+    fun toggleVisitedFilter() {
+        isFilterVisited = !isFilterVisited
+        if (isFilterVisited) {
+            isFilterReadLater = false
+        }
+    }
+
+    fun toggleReadLaterFilter() {
+        isFilterReadLater = !isFilterReadLater
+        if (isFilterReadLater) {
+            isFilterVisited = false
+        }
+    }
+
     var isLoading by mutableStateOf(true)
         private set
 

@@ -72,4 +72,43 @@ class SearchViewModelTest {
         assertFalse(viewModel.isSearchButtonEnabled)
         assertEquals("", viewModel.activeSearchQuery)
     }
+
+    @Test
+    fun testFilterChipsMutualExclusivity() {
+        val viewModel = SearchViewModel()
+
+        // Initial state: both false
+        assertFalse(viewModel.isFilterVisited)
+        assertFalse(viewModel.isFilterReadLater)
+
+        // Toggle Visited on
+        viewModel.toggleVisitedFilter()
+        assertTrue(viewModel.isFilterVisited)
+        assertFalse(viewModel.isFilterReadLater)
+
+        // Toggle Read Later on -> Visited should be turned off
+        viewModel.toggleReadLaterFilter()
+        assertFalse(viewModel.isFilterVisited)
+        assertTrue(viewModel.isFilterReadLater)
+
+        // Toggle Visited on -> Read Later should be turned off
+        viewModel.toggleVisitedFilter()
+        assertTrue(viewModel.isFilterVisited)
+        assertFalse(viewModel.isFilterReadLater)
+
+        // Toggle Visited off -> both false
+        viewModel.toggleVisitedFilter()
+        assertFalse(viewModel.isFilterVisited)
+        assertFalse(viewModel.isFilterReadLater)
+
+        // Toggle Read Later on -> Read Later true, Visited false
+        viewModel.toggleReadLaterFilter()
+        assertFalse(viewModel.isFilterVisited)
+        assertTrue(viewModel.isFilterReadLater)
+
+        // Toggle Read Later off -> both false
+        viewModel.toggleReadLaterFilter()
+        assertFalse(viewModel.isFilterVisited)
+        assertFalse(viewModel.isFilterReadLater)
+    }
 }

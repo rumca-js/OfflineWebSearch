@@ -53,14 +53,14 @@ fun EntryListScreen(
             showVisitedChip = config.dbconfig.trackUserNavigation,
             isFilterVisited = viewModel.isFilterVisited,
             onToggleVisited = {
-                viewModel.isFilterVisited = !viewModel.isFilterVisited
+                viewModel.toggleVisitedFilter()
                 viewModel.currentPage = 0
                 viewModel.performSearch(context)
             },
             showReadLaterChip = isEditable,
             isFilterReadLater = viewModel.isFilterReadLater,
             onToggleReadLater = {
-                viewModel.isFilterReadLater = !viewModel.isFilterReadLater
+                viewModel.toggleReadLaterFilter()
                 viewModel.currentPage = 0
                 viewModel.performSearch(context)
             }
@@ -101,7 +101,7 @@ fun EntryListScreen(
                     listState.scrollToItem(0)
                 }
             },
-            onAddEntry = if (isEditable && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
+            onAddEntry = if (isEditable && !viewModel.isFilterReadLater && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
             onRefresh = { viewModel.performSearch(context) },
             modifier = Modifier.weight(1f)
         )
