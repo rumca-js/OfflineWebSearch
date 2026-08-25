@@ -15,12 +15,18 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchResultsContainer
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.History
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryListScreen(
     viewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel(),
     onNavigateToDetail: (io.github.rumcajs.offlinewebsearch.data.Entry) -> Unit = {},
-    onNavigateToAddEntry: (() -> Unit)? = null
+    onNavigateToAddEntry: (() -> Unit)? = null,
+    onNavigateToVisited: (() -> Unit)? = null,
+    onNavigateToReadLater: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -46,6 +52,41 @@ fun EntryListScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
+        if (onNavigateToVisited != null || onNavigateToReadLater != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (onNavigateToVisited != null) {
+                    AssistChip(
+                        onClick = onNavigateToVisited,
+                        label = { Text("Visited") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Visited Entries",
+                                modifier = Modifier.size(AssistChipDefaults.IconSize)
+                            )
+                        }
+                    )
+                }
+                if (onNavigateToReadLater != null) {
+                    AssistChip(
+                        onClick = onNavigateToReadLater,
+                        label = { Text("Read Later") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = "Read Later",
+                                modifier = Modifier.size(AssistChipDefaults.IconSize)
+                            )
+                        }
+                    )
+                }
+            }
+        }
         SearchContainer(
             searchQuery = viewModel.searchQuery,
             onSearchQueryChange = {

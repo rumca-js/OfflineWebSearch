@@ -65,6 +65,8 @@ Possible database states include:
 # Views
 
  - EntryListScreen - Provides the search interface. Shows search results.
+ - VisitedEntriesScreen - Shows entries visited by the user.
+ - ReadLaterScreen - Shows entries saved to read later.
  - EntryDetailScreen - Shows details of a selected entry.
  - EntryStatusScreen - Checks the HTTP status of an entry URL.
  - EntryPreviewScreen - Fetches and displays the current web page data.
@@ -77,6 +79,8 @@ Possible database states include:
 ## EntryListScreen
 
  - Provides search widget
+ - Provides a visited chip to navigate to visited entries.
+ - Provides a read later chip to navigate to saved read later entries.
  - Search supports advanced search capabilities (like SQLite syntax).
  - Search suggestion are scrollable, with rows
  - The list supports loading additional results.
@@ -85,6 +89,18 @@ Possible database states include:
  - after page navigation add new result button should be present
  - Selecting an entry opens EntryDetailScreen.
  - Implement pull to refresh
+
+## VisitedEntriesScreen
+ - Displays the list of entries visited by the user stored in `entryvisithistory`.
+ - Selecting an entry opens EntryDetailScreen.
+ - Provides an action to clear all visited entry history.
+ - Supports pull to refresh.
+
+## ReadLaterScreen
+ - Displays the list of entries saved to read later stored in `readlater`.
+ - Selecting an entry opens EntryDetailScreen.
+ - Provides an action to clear all read later entries.
+ - Supports pull to refresh.
 
 ## Search
  - Search is performed against the selected database.

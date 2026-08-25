@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +42,8 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object EntryAdd : Screen("entry_add", "Add Entry", Icons.Filled.Edit)
     object SourceDetail : Screen("source_detail", "Source Detail", Icons.Filled.List)
     object SourceEdit : Screen("source_edit", "Source Edit", Icons.Filled.Edit)
+    object Visited : Screen("visited", "Visited", Icons.AutoMirrored.Filled.List)
+    object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
@@ -95,7 +99,31 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 },
                                 onNavigateToAddEntry = {
                                     navController.navigate(Screen.EntryAdd.route)
+                                },
+                                onNavigateToVisited = {
+                                    navController.navigate(Screen.Visited.route)
+                                },
+                                onNavigateToReadLater = {
+                                    navController.navigate(Screen.ReadLater.route)
                                 }
+                            )
+                        }
+                        composable(Screen.Visited.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.VisitedEntriesScreen(
+                                onNavigateToDetail = { entry ->
+                                    searchViewModel.selectedEntry = entry
+                                    navController.navigate(Screen.Detail.route)
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(Screen.ReadLater.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.ReadLaterScreen(
+                                onNavigateToDetail = { entry ->
+                                    searchViewModel.selectedEntry = entry
+                                    navController.navigate(Screen.Detail.route)
+                                },
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable(Screen.Sources.route) {
