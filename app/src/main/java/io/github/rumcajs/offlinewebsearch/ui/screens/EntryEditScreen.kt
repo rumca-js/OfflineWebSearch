@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.data.EntryEnrichmentWorker
 import io.github.rumcajs.offlinewebsearch.data.EntryRepository
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import java.text.SimpleDateFormat
@@ -62,18 +63,35 @@ fun EntryEditScreen(
             false
         } else if (isAddMode) {
             val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-            val (success, err) = EntryRepository.addEntryToSql(
+            val (success, rowId, err) = EntryRepository.addEntryToSql(
                 context = context,
                 activeDatabaseState = activeDbState,
                 entry = entry.copy(
                     link = link,
-                    title = title,
-                    description = description,
+                    title = title.trim(),
+                    description = description.trim(),
                     date_created = now,
                     date_published = now
                 )
             )
             errorMessage = if (!success) err else null
+
+            // Capture as non-null local – smart-cast does not survive the lambda boundary.
+            val dbState = activeDbState
+            // Fire-and-forget background enrichment when network is available.
+            if (success && rowId != -1L && !config.networkConfig.disabled && dbState != null) {
+                coroutineScope.launch {
+                    EntryEnrichmentWorker.enrich(
+                        context = context,
+                        activeDbState = dbState,
+                        entryId = rowId,
+                        link = link,
+                        currentTitle = title.trim(),
+                        currentDescription = description.trim()
+                    )
+                }
+            }
+
             success
         } else {
             val success = EntryRepository.updateEntryInSql(
@@ -88,6 +106,7 @@ fun EntryEditScreen(
             success
         }
     }
+
 
     Scaffold(
         topBar = {

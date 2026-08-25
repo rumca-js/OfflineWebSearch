@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : Screen("home", "Browse", Icons.Filled.Home)
     object Databases : Screen("databases", "Databases", Icons.Filled.Storage)
-    object Sources : Screen("sources", "Sources", Icons.Filled.List)
+    object Sources : Screen("sources", "Sources", Icons.AutoMirrored.Filled.List)
     object About : Screen("about", "About", Icons.Filled.Info)
     object Options : Screen("options", "Options", Icons.Filled.Settings)
     object Detail : Screen("detail", "Detail", Icons.Filled.Search)
@@ -39,7 +40,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object DatabaseDetail : Screen("database_detail", "Database Detail", Icons.Filled.Storage)
     object Edit : Screen("edit", "Edit Entry", Icons.Filled.Edit)
     object EntryAdd : Screen("entry_add", "Add Entry", Icons.Filled.Edit)
-    object SourceDetail : Screen("source_detail", "Source Detail", Icons.Filled.List)
+    object SourceDetail : Screen("source_detail", "Source Detail", Icons.AutoMirrored.Filled.List)
     object SourceEdit : Screen("source_edit", "Source Edit", Icons.Filled.Edit)
     object Visited : Screen("visited", "Visited", Icons.AutoMirrored.Filled.List)
     object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)

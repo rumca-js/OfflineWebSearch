@@ -28,6 +28,7 @@ import coil.request.ImageRequest
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceSearchBar
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
+import io.github.rumcajs.offlinewebsearch.data.SourceRefreshState
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
 import kotlinx.coroutines.launch
 
@@ -83,6 +84,7 @@ fun SourcesScreen(
             isRefreshingAll = true
             scope.launch {
                 val enabledSources = sources.filter { it.enabled && it.url.isNotBlank() }
+                SourceRefreshState.start(enabledSources.size)
                 var fetchedCount = 0
                 for (src in enabledSources) {
                     val (success, _) = SourceRepository.updateSource(
@@ -93,9 +95,11 @@ fun SourcesScreen(
                     if (success) {
                         fetchedCount++
                     }
+                    SourceRefreshState.increment()
                 }
                 sources = SourceRepository.loadSources(context, activeDbState)
                 isRefreshingAll = false
+                SourceRefreshState.finish()
                 Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
             }
         }

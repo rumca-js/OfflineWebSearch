@@ -115,22 +115,23 @@ object EntryRepository {
 
     /**
      * Inserts a new entry (and its tags) into the SQLite database.
-     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     * @return Triple(success, insertedRowId, errorMessage).
+     *         [insertedRowId] is the primary key of the new row on success, or -1 on failure.
      */
     suspend fun addEntryToSql(
         context: Context,
         activeDatabaseState: DatabaseState,
         entry: Entry
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+    ): Triple<Boolean, Long, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState.extension != ".db") {
-            return@withContext Pair(false, "Database is not a SQLite .db file")
+            return@withContext Triple(false, -1L, "Database is not a SQLite .db file")
         }
         if (activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is read-only")
+            return@withContext Triple(false, -1L, "Database is read-only")
         }
 
         val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found: ${activeDatabaseState.localFileName}")
+        if (!file.exists()) return@withContext Triple(false, -1L, "Database file not found: ${activeDatabaseState.localFileName}")
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
@@ -178,14 +179,14 @@ object EntryRepository {
                 }
 
                 db.setTransactionSuccessful()
-                Pair(true, null)
+                Triple(true, rowId, null)
             } finally {
                 db.endTransaction()
                 db.close()
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
+            Triple(false, -1L, e.message ?: "Unknown SQL error")
         }
     }
 

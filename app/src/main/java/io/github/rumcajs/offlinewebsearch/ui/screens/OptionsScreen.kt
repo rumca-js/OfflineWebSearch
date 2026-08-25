@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.data.SourceRefreshState
 import io.github.rumcajs.offlinewebsearch.ui.components.DatabasesContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.ReadOnlyBadge
 
@@ -27,6 +28,7 @@ fun OptionsScreen(
     onNavigateToAbout: () -> Unit = {}
 ) {
     val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
+    val sourceRefreshProgress by SourceRefreshState.progress.collectAsState()
     val scrollState = rememberScrollState()
 
     Column(
@@ -272,6 +274,22 @@ fun OptionsScreen(
                     )
                 }
             }
+        }
+
+        // ── Source refresh progress bar ───────────────────────────────────────
+        sourceRefreshProgress?.let { progress ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Refreshing sources: ${progress.done} / ${progress.total}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = { progress.fraction },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
