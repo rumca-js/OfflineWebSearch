@@ -39,4 +39,36 @@ object DateUtils {
             }
         }
     }
+
+    /**
+     * Attempts to parse a date string into a [Date] using a sequence of common
+     * ISO 8601 and RFC 2822 formats found in HTML meta tags and RSS feeds.
+     * Returns null if the string cannot be parsed by any known format.
+     */
+    fun parseDateString(text: String): Date? {
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ssXXX",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd",
+            "EEE, dd MMM yyyy HH:mm:ss zzz",
+            "EEE, dd MMM yyyy HH:mm:ss Z",
+            "dd MMM yyyy HH:mm:ss zzz"
+        )
+        for (format in formats) {
+            try {
+                return SimpleDateFormat(format, Locale.US).apply { isLenient = false }.parse(text)
+            } catch (_: Exception) { }
+        }
+        return null
+    }
+
+    /**
+     * Formats a [Date] as a UTC ISO 8601 timestamp string (e.g. "2026-08-26T10:49:00Z").
+     */
+    fun toIsoString(date: Date): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        return sdf.format(date)
+    }
 }

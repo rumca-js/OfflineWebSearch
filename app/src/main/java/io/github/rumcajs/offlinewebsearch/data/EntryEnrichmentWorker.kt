@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -52,7 +53,8 @@ object EntryEnrichmentWorker {
             val fetchedTitle       = if (currentTitle.isBlank()) page.getTitle()?.trim() else null
             val fetchedDescription = if (currentDescription.isBlank()) page.getDescription()?.trim() else null
             val fetchedThumbnail   = page.getThumbnails().firstOrNull()
-            val fetchedDatePublished = page.getDatePublished()?.trim()
+            val fetchedDatePublished = page.getDatePublished()
+                ?.let { DateUtils.toIsoString(it) }
 
             // Only open the database if there is at least one new value to write.
             val hasUpdate = !fetchedTitle.isNullOrBlank()

@@ -191,6 +191,7 @@ private fun PageMetadataSection(page: Page, url: String) {
 
     // Date published badge
     val datePublished = page.getDatePublished()
+        ?.let { io.github.rumcajs.offlinewebsearch.util.DateUtils.toIsoString(it) }
     if (!datePublished.isNullOrBlank()) {
         SuggestionChip(
             onClick = {},

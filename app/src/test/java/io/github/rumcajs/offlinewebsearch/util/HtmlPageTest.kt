@@ -32,7 +32,7 @@ class HtmlPageTest {
         assertEquals(2, htmlPage.getThumbnails().size)
         assertEquals("https://example.com/image1.jpg", htmlPage.getThumbnails()[0])
         assertEquals("https://example.com/image2.jpg", htmlPage.getThumbnails()[1])
-        assertEquals("2024-01-01T12:00:00Z", htmlPage.getDatePublished())
+        assertEquals(DateUtils.parseDateString("2024-01-01T12:00:00Z"), htmlPage.getDatePublished())
     }
 
     @Test
@@ -54,7 +54,7 @@ class HtmlPageTest {
         assertEquals("Another description", htmlPage.getDescription())
         assertEquals(1, htmlPage.getThumbnails().size)
         assertEquals("https://example.com/image3.jpg", htmlPage.getThumbnails()[0])
-        assertEquals("2025-05-05", htmlPage.getDatePublished())
+        assertEquals(DateUtils.parseDateString("2025-05-05"), htmlPage.getDatePublished())
     }
 
     @Test

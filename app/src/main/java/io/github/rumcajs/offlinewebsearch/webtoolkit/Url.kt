@@ -49,8 +49,9 @@ open class Url(val url: String) {
 
     /**
      * Returns the publication date of the page parsed from the fetched contents.
+     * Should be in format Year-Month-Day Hour:Minutes
      */
-    open suspend fun getDatePublished(): String? {
+    open suspend fun getDatePublished(): java.util.Date? {
         return baseUrl.getDatePublished()
     }
 

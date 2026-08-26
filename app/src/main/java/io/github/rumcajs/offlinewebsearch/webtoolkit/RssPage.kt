@@ -180,7 +180,7 @@ class RssPage(val link: String, val contents: String) : Page {
 
     override fun getTitle(): String? = feedTitle
     override fun getDescription(): String? = feedDescription
-    override fun getDatePublished(): String? = null
+    override fun getDatePublished(): java.util.Date? = null
     override fun getThumbnails(): List<String> = thumbnails
     override fun getEntries(): List<Entry> {
         return entries.map {

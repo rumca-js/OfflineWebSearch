@@ -1,12 +1,14 @@
 package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import java.util.Date
 
 class HtmlPage(val url: String, val contents: String) : Page {
     private var title: String? = null
     private var description: String? = null
     private val thumbnails = mutableListOf<String>()
-    private var datePublished: String? = null
+    private var datePublished: Date? = null
 
     init {
         if (contents.isNotBlank()) {
@@ -28,7 +30,7 @@ class HtmlPage(val url: String, val contents: String) : Page {
                             thumbnails.add(unescapedContent)
                         }
                         "og:article:published_time", "article:published_time", "og:pubdate", "og:publish_date" -> {
-                            if (datePublished == null) datePublished = unescapedContent
+                            if (datePublished == null) datePublished = DateUtils.parseDateString(unescapedContent)
                         }
                     }
                 }
@@ -92,7 +94,6 @@ class HtmlPage(val url: String, val contents: String) : Page {
     override fun getTitle(): String? = title
     override fun getDescription(): String? = description
     override fun getThumbnails(): List<String> = thumbnails
-    override fun getDatePublished(): String? = datePublished
+    override fun getDatePublished(): Date? = datePublished
     override fun getEntries(): List<Entry> = emptyList()
 }
-
