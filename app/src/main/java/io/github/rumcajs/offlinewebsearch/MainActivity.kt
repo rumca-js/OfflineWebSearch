@@ -306,6 +306,13 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                         searchViewModel.selectedSource = source
                                         navController.navigate(Screen.SourceDetail.route)
                                     },
+                                    onReadLaterChanged = {
+                                        // Refresh list so that removing/adding a Read Later
+                                        // entry is reflected immediately when the filter is active.
+                                        if (searchViewModel.isFilterReadLater) {
+                                            searchViewModel.refreshPage(context)
+                                        }
+                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }

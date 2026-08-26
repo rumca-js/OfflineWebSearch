@@ -3,14 +3,11 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 /**
  * Data class representing operational metadata for a source stored in the `sourceoperationaldata` table.
@@ -23,7 +20,7 @@ import java.util.TimeZone
  *
  * @property id Primary key (autoincrement).
  * @property date_fetched ISO 8601 timestamp string when the source was last fetched.
- * @property source_obj_id Foreign key referencing the associated source ID in `sourcedatamodel`.
+ * @property source_obj_id Foreign key reference to `sourcedatamodel.id`.
  */
 @Serializable
 data class SourceOperationalData(
@@ -35,39 +32,19 @@ data class SourceOperationalData(
 /**
  * Repository for accessing and managing the `sourceoperationaldata` SQLite table.
  */
-object SourceOperationalDataRepository {
+object SourceOperationalDataRepository : RepositoryInterface {
 
-    private const val TABLE_NAME = "sourceoperationaldata"
+    override fun getTableName(): String = "sourceoperationaldata"
 
     /**
      * Generates a current UTC ISO 8601 timestamp string.
      */
-    fun getCurrentIsoTimestamp(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-        sdf.timeZone = TimeZone.getTimeZone("UTC")
-        return sdf.format(Date())
-    }
+    fun getCurrentIsoTimestamp(): String = DateUtils.getCurrentIsoTimestamp()
 
     /**
      * Parses an ISO 8601 UTC timestamp string to epoch milliseconds, or null on error.
      */
-    fun parseIsoTimestamp(timestamp: String?): Long? {
-        if (timestamp.isNullOrBlank()) return null
-        return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-            sdf.timeZone = TimeZone.getTimeZone("UTC")
-            sdf.parse(timestamp)?.time
-        } catch (e: Exception) {
-            try {
-                // Fallback for timestamps with different formatting
-                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-                sdf.timeZone = TimeZone.getTimeZone("UTC")
-                sdf.parse(timestamp)?.time
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
+    fun parseIsoTimestamp(timestamp: String?): Long? = DateUtils.parseIsoTimestamp(timestamp)
 
     const val OUTDATED_FETCH_THRESHOLD_MILLIS: Long = 3600_000L // 1 hour
 
@@ -80,9 +57,9 @@ object SourceOperationalDataRepository {
         return (now - parsedTime) > OUTDATED_FETCH_THRESHOLD_MILLIS
     }
 
-    private fun ensureTableExists(db: SQLiteDatabase) {
+    override fun ensureTableExists(db: SQLiteDatabase) {
         val createSql = """
-            CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+            CREATE TABLE IF NOT EXISTS ${getTableName()} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date_fetched TEXT,
                 source_obj_id INTEGER
@@ -109,7 +86,7 @@ object SourceOperationalDataRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, date_fetched, source_obj_id FROM $TABLE_NAME WHERE source_obj_id = ? LIMIT 1"
+            val sqlText = "SELECT id, date_fetched, source_obj_id FROM ${getTableName()} WHERE source_obj_id = ? LIMIT 1"
             var result: SourceOperationalData? = null
             val cursor = db.rawQuery(sqlText, arrayOf(sourceObjId.toString()))
             cursor.use { c ->
@@ -148,7 +125,7 @@ object SourceOperationalDataRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
 
-            val query = "SELECT id FROM $TABLE_NAME WHERE source_obj_id = ?"
+            val query = "SELECT id FROM ${getTableName()} WHERE source_obj_id = ?"
             val cursor = db.rawQuery(query, arrayOf(sourceObjId.toString()))
             val existingId = cursor.use { c ->
                 if (c.moveToFirst()) c.getLong(c.getColumnIndexOrThrow("id")) else null
@@ -158,13 +135,13 @@ object SourceOperationalDataRepository {
                 val values = ContentValues().apply {
                     put("date_fetched", fetchTime)
                 }
-                db.update(TABLE_NAME, values, "id = ?", arrayOf(existingId.toString()))
+                db.update(getTableName(), values, "id = ?", arrayOf(existingId.toString()))
             } else {
                 val values = ContentValues().apply {
                     put("date_fetched", fetchTime)
                     put("source_obj_id", sourceObjId)
                 }
-                db.insert(TABLE_NAME, null, values)
+                db.insert(getTableName(), null, values)
             }
 
             db.close()
@@ -232,7 +209,7 @@ object SourceOperationalDataRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            db.delete(TABLE_NAME, "source_obj_id = ?", arrayOf(sourceObjId.toString()))
+            db.delete(getTableName(), "source_obj_id = ?", arrayOf(sourceObjId.toString()))
             db.close()
             true
         } catch (e: Exception) {
@@ -240,4 +217,32 @@ object SourceOperationalDataRepository {
             false
         }
     }
+
+    /**
+     * Clears all records from the `sourceoperationaldata` table.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    override suspend fun clear(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            ensureTableExists(db)
+            db.delete(getTableName(), null, null)
+            db.close()
+            Pair(true, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
 }
+

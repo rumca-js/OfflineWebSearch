@@ -44,6 +44,8 @@ fun EntryDetailScreen(
     onVisit: (() -> Unit)? = null,
     onSelectEntry: ((io.github.rumcajs.offlinewebsearch.data.Entry) -> Unit)? = null,
     onSelectSource: ((io.github.rumcajs.offlinewebsearch.data.Source) -> Unit)? = null,
+    /** Called after a successful Read Later add (true) or remove (false). */
+    onReadLaterChanged: ((Boolean) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -83,6 +85,7 @@ fun EntryDetailScreen(
                             val (success, err) = ReadLaterRepository.removeReadLaterByEntryId(context, activeDbState, entryId)
                             if (success) {
                                 isReadLater = false
+                                onReadLaterChanged?.invoke(false)
                                 Toast.makeText(context, "Removed from Read Later", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, err ?: "Failed to update", Toast.LENGTH_SHORT).show()
@@ -91,6 +94,7 @@ fun EntryDetailScreen(
                             val (success, err) = ReadLaterRepository.addReadLater(context, activeDbState, entryId)
                             if (success) {
                                 isReadLater = true
+                                onReadLaterChanged?.invoke(true)
                                 Toast.makeText(context, "Added to Read Later", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, err ?: "Failed to update", Toast.LENGTH_SHORT).show()

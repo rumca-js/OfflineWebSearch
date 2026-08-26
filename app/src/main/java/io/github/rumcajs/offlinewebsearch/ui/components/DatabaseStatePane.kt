@@ -10,8 +10,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.DatabaseStats
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatsRepository
+import io.github.rumcajs.offlinewebsearch.data.RepositoryInterface
+import io.github.rumcajs.offlinewebsearch.data.RepositoryList
 import java.io.File
 import java.text.DecimalFormat
 
@@ -25,13 +26,13 @@ fun DatabaseStatePane(
 ) {
     val context = LocalContext.current
     val isSql = state.extension == ".db"
-    var stats by remember(state) { mutableStateOf(DatabaseStats()) }
+    var repoCounts by remember(state) { mutableStateOf<Map<RepositoryInterface, Long?>>(emptyMap()) }
     var isLoadingStats by remember(state) { mutableStateOf(false) }
 
     LaunchedEffect(state) {
         if (isSql) {
             isLoadingStats = true
-            stats = DatabaseStatsRepository.getStats(context, state)
+            repoCounts = DatabaseStatsRepository.getRepositoryCounts(context, state)
             isLoadingStats = false
         }
     }
@@ -55,30 +56,13 @@ fun DatabaseStatePane(
             value = if (state.localFileName.isBlank()) "places_0.json (Assets)" else state.localFileName
         )
         if (isSql) {
-            DatabasePropertyRow(
-                label = "linkdatamodel Count",
-                value = if (isLoadingStats) "Loading..." else stats.linkDataModelCount?.toString() ?: "N/A"
-            )
-            DatabasePropertyRow(
-                label = "searchview Count",
-                value = if (isLoadingStats) "Loading..." else stats.searchViewCount?.toString() ?: "N/A"
-            )
-            DatabasePropertyRow(
-                label = "sourcedatamodel Count",
-                value = if (isLoadingStats) "Loading..." else stats.sourceDataModelCount?.toString() ?: "N/A"
-            )
-            DatabasePropertyRow(
-                label = "configurationentry Count",
-                value = if (isLoadingStats) "Loading..." else stats.configurationEntryCount?.toString() ?: "N/A"
-            )
-            DatabasePropertyRow(
-                label = "entrytransitionhistory Count",
-                value = if (isLoadingStats) "Loading..." else stats.entryTransitionHistoryCount?.toString() ?: "N/A"
-            )
-            DatabasePropertyRow(
-                label = "entryvisithistory Count",
-                value = if (isLoadingStats) "Loading..." else stats.entryVisitHistoryCount?.toString() ?: "N/A"
-            )
+            for (repo in RepositoryList.repositories) {
+                val count = repoCounts[repo]
+                DatabasePropertyRow(
+                    label = "${repo.getTableName()} Count",
+                    value = if (isLoadingStats) "Loading..." else count?.toString() ?: "N/A"
+                )
+            }
         }
         DatabasePropertyRow(label = "Status", value = state.status.name, isHighlight = true)
         DatabasePropertyRow(

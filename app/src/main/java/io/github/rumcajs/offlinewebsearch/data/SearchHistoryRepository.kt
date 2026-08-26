@@ -3,14 +3,11 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 /**
  * Data class representing an entry in the `searchhistory` table.
@@ -32,20 +29,17 @@ data class SearchHistory(
  * Repository for accessing and managing the `searchhistory` SQLite table.
  * Used for storing user searches and providing search suggestions.
  */
-object SearchHistoryRepository {
+object SearchHistoryRepository : RepositoryInterface {
 
-    private const val TABLE_NAME = "searchhistory"
+    override fun getTableName(): String = "searchhistory"
+
     private const val MAX_SEARCH_HISTORY_ENTRIES = 200
 
-    private fun getCurrentIsoTimestamp(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-        sdf.timeZone = TimeZone.getTimeZone("UTC")
-        return sdf.format(Date())
-    }
+    private fun getCurrentIsoTimestamp(): String = DateUtils.getCurrentIsoTimestamp()
 
-    private fun ensureTableExists(db: SQLiteDatabase) {
+    override fun ensureTableExists(db: SQLiteDatabase) {
         val createSql = """
-            CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+            CREATE TABLE IF NOT EXISTS ${getTableName()} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 search_query TEXT NOT NULL,
                 date TEXT
@@ -74,7 +68,7 @@ object SearchHistoryRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, search_query, date FROM $TABLE_NAME ORDER BY date DESC, id DESC LIMIT ?"
+            val sqlText = "SELECT id, search_query, date FROM ${getTableName()} ORDER BY date DESC, id DESC LIMIT ?"
             val cursor = db.rawQuery(sqlText, arrayOf(limit.toString()))
             cursor.use { c ->
                 while (c.moveToNext()) {
@@ -121,9 +115,9 @@ object SearchHistoryRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
             val sqlText = if (prefix.isBlank()) {
-                "SELECT DISTINCT search_query FROM $TABLE_NAME WHERE search_query IS NOT NULL AND search_query != '' ORDER BY date DESC, id DESC LIMIT ?"
+                "SELECT DISTINCT search_query FROM ${getTableName()} WHERE search_query IS NOT NULL AND search_query != '' ORDER BY date DESC, id DESC LIMIT ?"
             } else {
-                "SELECT DISTINCT search_query FROM $TABLE_NAME WHERE search_query LIKE ? AND search_query != '' ORDER BY date DESC, id DESC LIMIT ?"
+                "SELECT DISTINCT search_query FROM ${getTableName()} WHERE search_query LIKE ? AND search_query != '' ORDER BY date DESC, id DESC LIMIT ?"
             }
             val selectionArgs = if (prefix.isBlank()) {
                 arrayOf(limit.toString())
@@ -173,7 +167,7 @@ object SearchHistoryRepository {
             ensureTableExists(db)
 
             val now = getCurrentIsoTimestamp()
-            val checkSql = "SELECT id FROM $TABLE_NAME WHERE search_query = ?"
+            val checkSql = "SELECT id FROM ${getTableName()} WHERE search_query = ?"
             val cursor = db.rawQuery(checkSql, arrayOf(trimmedQuery))
             val existingId = cursor.use { c ->
                 if (c.moveToFirst()) c.getLong(c.getColumnIndexOrThrow("id")) else null
@@ -183,20 +177,20 @@ object SearchHistoryRepository {
                 val values = ContentValues().apply {
                     put("date", now)
                 }
-                db.update(TABLE_NAME, values, "id = ?", arrayOf(existingId.toString()))
+                db.update(getTableName(), values, "id = ?", arrayOf(existingId.toString()))
             } else {
                 val values = ContentValues().apply {
                     put("search_query", trimmedQuery)
                     put("date", now)
                 }
-                db.insert(TABLE_NAME, null, values)
+                db.insert(getTableName(), null, values)
             }
 
             // Enforce max limit of 200 entries, deleting older entries
             val pruneSql = """
-                DELETE FROM $TABLE_NAME
+                DELETE FROM ${getTableName()}
                 WHERE id NOT IN (
-                    SELECT id FROM $TABLE_NAME
+                    SELECT id FROM ${getTableName()}
                     ORDER BY date DESC, id DESC
                     LIMIT $MAX_SEARCH_HISTORY_ENTRIES
                 )
@@ -212,36 +206,18 @@ object SearchHistoryRepository {
     }
 
     /**
-     * Deletes a search history record by ID.
+     * Deletes a search history record by ID (alias for [deleteById]).
      */
     suspend fun deleteSearch(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val rows = db.delete(TABLE_NAME, "id = ?", arrayOf(id.toString()))
-            db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
-        }
-    }
+    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
 
     /**
      * Clears all search history records from `searchhistory`.
      */
-    suspend fun clearSearchHistory(
+    override suspend fun clear(
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
@@ -255,7 +231,7 @@ object SearchHistoryRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            db.delete(TABLE_NAME, null, null)
+            db.delete(getTableName(), null, null)
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
@@ -263,4 +239,14 @@ object SearchHistoryRepository {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Clears all search history records from `searchhistory` (alias for [clear]).
+     */
+    suspend fun clearSearchHistory(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
+
+

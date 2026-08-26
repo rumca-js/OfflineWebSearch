@@ -3,14 +3,11 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 /**
  * Data class representing an entry in the `entryvisithistory` table.
@@ -33,19 +30,15 @@ data class EntryVisitHistory(
 /**
  * Repository for accessing and managing the `entryvisithistory` SQLite table.
  */
-object EntryVisitHistoryRepository {
+object EntryVisitHistoryRepository : RepositoryInterface {
 
-    private const val TABLE_NAME = "entryvisithistory"
+    override fun getTableName(): String = "entryvisithistory"
 
-    private fun getCurrentIsoTimestamp(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-        sdf.timeZone = TimeZone.getTimeZone("UTC")
-        return sdf.format(Date())
-    }
+    private fun getCurrentIsoTimestamp(): String = DateUtils.getCurrentIsoTimestamp()
 
-    private fun ensureTableExists(db: SQLiteDatabase) {
+    override fun ensureTableExists(db: SQLiteDatabase) {
         val createSql = """
-            CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+            CREATE TABLE IF NOT EXISTS ${getTableName()} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 visits INTEGER,
                 date_last_visit TEXT,
@@ -73,7 +66,7 @@ object EntryVisitHistoryRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, visits, date_last_visit, entry_id FROM $TABLE_NAME ORDER BY date_last_visit DESC, id DESC"
+            val sqlText = "SELECT id, visits, date_last_visit, entry_id FROM ${getTableName()} ORDER BY date_last_visit DESC, id DESC"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -122,7 +115,7 @@ object EntryVisitHistoryRepository {
             val sqlText = """
                 SELECT v.id AS v_id, v.visits AS v_visits, v.date_last_visit AS v_date_last_visit, v.entry_id AS v_entry_id,
                        ${EntryRepository.ENTRY_SELECT_COLUMNS}
-                FROM $TABLE_NAME v
+                FROM ${getTableName()} v
                 INNER JOIN linkdatamodel l ON v.entry_id = l.id
                 ORDER BY v.date_last_visit DESC, v.id DESC
             """.trimIndent()
@@ -174,7 +167,7 @@ object EntryVisitHistoryRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
 
-            val lastVisitQuery = "SELECT entry_id FROM $TABLE_NAME WHERE entry_id IS NOT NULL ORDER BY date_last_visit DESC, id DESC LIMIT 1"
+            val lastVisitQuery = "SELECT entry_id FROM ${getTableName()} WHERE entry_id IS NOT NULL ORDER BY date_last_visit DESC, id DESC LIMIT 1"
             val lastVisitCursor = db.rawQuery(lastVisitQuery, null)
             val lastVisitedEntryId = lastVisitCursor.use { c ->
                 if (c.moveToFirst() && !c.isNull(c.getColumnIndexOrThrow("entry_id"))) {
@@ -185,7 +178,7 @@ object EntryVisitHistoryRepository {
             }
 
             val now = getCurrentIsoTimestamp()
-            val query = "SELECT id, visits FROM $TABLE_NAME WHERE entry_id = ?"
+            val query = "SELECT id, visits FROM ${getTableName()} WHERE entry_id = ?"
             val cursor = db.rawQuery(query, arrayOf(entryId.toString()))
             val existing = cursor.use { c ->
                 if (c.moveToFirst()) {
@@ -203,14 +196,14 @@ object EntryVisitHistoryRepository {
                     put("visits", visits + 1)
                     put("date_last_visit", now)
                 }
-                db.update(TABLE_NAME, values, "id = ?", arrayOf(id.toString()))
+                db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
             } else {
                 val values = ContentValues().apply {
                     put("visits", 1)
                     put("date_last_visit", now)
                     put("entry_id", entryId)
                 }
-                db.insert(TABLE_NAME, null, values)
+                db.insert(getTableName(), null, values)
             }
 
             db.close()
@@ -232,36 +225,18 @@ object EntryVisitHistoryRepository {
     }
 
     /**
-     * Deletes a visit history record by ID.
+     * Deletes a visit history record by ID (alias for [deleteById]).
      */
     suspend fun deleteVisit(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val rows = db.delete(TABLE_NAME, "id = ?", arrayOf(id.toString()))
-            db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
-        }
-    }
+    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
 
     /**
      * Clears all records from the `entryvisithistory` table.
      */
-    suspend fun clearVisitHistory(
+    override suspend fun clear(
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
@@ -275,7 +250,7 @@ object EntryVisitHistoryRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            db.delete(TABLE_NAME, null, null)
+            db.delete(getTableName(), null, null)
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
@@ -283,4 +258,13 @@ object EntryVisitHistoryRepository {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Clears all records from the `entryvisithistory` table (alias for [clear]).
+     */
+    suspend fun clearVisitHistory(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
+

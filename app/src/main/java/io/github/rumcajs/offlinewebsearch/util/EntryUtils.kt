@@ -30,6 +30,36 @@ object EntryUtils {
             description
         }
     }
+
+    /**
+     * Returns the author or source name to display for an entry.
+     * If [context] and [activeDatabaseState] are provided and [entry] has a `source_id`,
+     * attempts to resolve the source's name/title from `sourcedatamodel`.
+     * Otherwise, falls back to `source_id` string, or `entry.author` if non-blank.
+     */
+    suspend fun getDisplayAuthor(
+        entry: io.github.rumcajs.offlinewebsearch.data.Entry,
+        context: android.content.Context? = null,
+        activeDatabaseState: io.github.rumcajs.offlinewebsearch.data.DatabaseState? = null
+    ): String? {
+        val sourceId = entry.source_id
+        if (sourceId != null) {
+            if (context != null && activeDatabaseState != null) {
+                val sourceTitle = io.github.rumcajs.offlinewebsearch.data.SourceRepository.getSourceTitleById(
+                    context,
+                    activeDatabaseState,
+                    sourceId
+                )
+                if (!sourceTitle.isNullOrBlank()) {
+                    return sourceTitle
+                }
+            }
+            return sourceId.toString()
+        }
+        return entry.author?.takeIf { it.isNotBlank() }
+    }
+
+
     fun getFormattedRating(entry: io.github.rumcajs.offlinewebsearch.data.Entry): String {
         return (entry.page_rating ?: 0).toString()
     }

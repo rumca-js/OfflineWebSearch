@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -16,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow
 import io.github.rumcajs.offlinewebsearch.ui.screens.LinkRow
@@ -38,6 +42,11 @@ fun EntryMetadataPane(
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val config by AppConfigManager.config.collectAsState()
+
+    val displayAuthor by produceState<String?>(initialValue = entry.author?.takeIf { it.isNotBlank() }, key1 = entry, key2 = config.activeDatabaseState) {
+        value = EntryUtils.getDisplayAuthor(entry, context, config.activeDatabaseState)
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // Display channel
@@ -86,7 +95,7 @@ fun EntryMetadataPane(
 
         DetailRow(
             label = "Author",
-            value = entry.author ?: "NA"
+            value = displayAuthor ?: "NA"
         )
         DetailRow(
             label = "Album",

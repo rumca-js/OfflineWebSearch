@@ -266,6 +266,19 @@ fun DatabaseScreen(
                 Text(if (isClearingVisits) "Clearing Entry Visit History..." else "Clear Entry Visit History")
             }
 
+            var showClearSocialDataDialog by remember { mutableStateOf(false) }
+            var isClearingSocialData by remember { mutableStateOf(false) }
+
+            Button(
+                onClick = { showClearSocialDataDialog = true },
+                enabled = canClearHistory && !isClearingSocialData,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(if (isClearingSocialData) "Clearing Social Data..." else "Clear Social Data")
+            }
+
             if (showClearSearchHistoryDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearSearchHistoryDialog = false },
@@ -356,6 +369,38 @@ fun DatabaseScreen(
                     },
                     dismissButton = {
                         TextButton(onClick = { showClearVisitHistoryDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            if (showClearSocialDataDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearSocialDataDialog = false },
+                    title = { Text("Clear Social Data") },
+                    text = { Text("Are you sure you want to clear the social data table?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showClearSocialDataDialog = false
+                                scope.launch {
+                                    isClearingSocialData = true
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SocialDataRepository.clearSocialData(context, state)
+                                    isClearingSocialData = false
+                                    if (success) {
+                                        Toast.makeText(context, "Social data cleared", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to clear social data: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Clear")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearSocialDataDialog = false }) {
                             Text("Cancel")
                         }
                     }

@@ -12,7 +12,8 @@ data class DatabaseStats(
     val sourceDataModelCount: Long? = null,
     val configurationEntryCount: Long? = null,
     val entryTransitionHistoryCount: Long? = null,
-    val entryVisitHistoryCount: Long? = null
+    val entryVisitHistoryCount: Long? = null,
+    val socialDataCount: Long? = null
 )
 
 object DatabaseStatsRepository {
@@ -33,6 +34,7 @@ object DatabaseStatsRepository {
         var configCount: Long? = null
         var transitionHistoryCount: Long? = null
         var visitHistoryCount: Long? = null
+        var socialDataCount: Long? = null
 
         try {
             val db = SQLiteDatabase.openDatabase(
@@ -41,12 +43,13 @@ object DatabaseStatsRepository {
                 SQLiteDatabase.OPEN_READONLY
             )
             db.use {
-                linkDataCount = getTableCount(it, "linkdatamodel")
-                searchViewCount = getTableCount(it, "searchview")
-                sourceDataCount = getTableCount(it, "sourcedatamodel")
-                configCount = getTableCount(it, "configurationentry")
-                transitionHistoryCount = getTableCount(it, "entrytransitionhistory")
-                visitHistoryCount = getTableCount(it, "entryvisithistory")
+                linkDataCount = EntryRepository.getRowCount(it)
+                searchViewCount = it.getTableCount("searchview")
+                sourceDataCount = SourceRepository.getRowCount(it)
+                configCount = it.getTableCount("configurationentry")
+                transitionHistoryCount = EntryTransitionHistoryRepository.getRowCount(it)
+                visitHistoryCount = EntryVisitHistoryRepository.getRowCount(it)
+                socialDataCount = SocialDataRepository.getRowCount(it)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -58,13 +61,53 @@ object DatabaseStatsRepository {
             sourceDataModelCount = sourceDataCount,
             configurationEntryCount = configCount,
             entryTransitionHistoryCount = transitionHistoryCount,
-            entryVisitHistoryCount = visitHistoryCount
+            entryVisitHistoryCount = visitHistoryCount,
+            socialDataCount = socialDataCount
         )
     }
 
-    private fun getTableCount(db: SQLiteDatabase, tableName: String): Long? {
+    /**
+     * Retrieves row counts for all known repositories from [RepositoryList].
+     *
+     * @param context Application context.
+     * @param state Target database state.
+     * @return Map of repository to row count (or null if unavailable).
+     */
+    suspend fun getRepositoryCounts(
+        context: Context,
+        state: DatabaseState
+    ): Map<RepositoryInterface, Long?> = withContext(Dispatchers.IO) {
+        if (state.extension != ".db") {
+            return@withContext emptyMap()
+        }
+
+        val file = File(context.filesDir, state.localFileName)
+        if (!file.exists()) {
+            return@withContext emptyMap()
+        }
+
+        val counts = mutableMapOf<RepositoryInterface, Long?>()
+        try {
+            val db = SQLiteDatabase.openDatabase(
+                file.absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            db.use { database ->
+                for (repo in RepositoryList.repositories) {
+                    counts[repo] = repo.getRowCount(database)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        counts
+    }
+
+    private fun SQLiteDatabase.getTableCount(tableName: String): Long? {
         return try {
-            val cursor = db.rawQuery("SELECT COUNT(*) FROM $tableName", null)
+            val cursor = rawQuery("SELECT COUNT(*) FROM $tableName", null)
             cursor.use { c ->
                 if (c.moveToFirst()) {
                     c.getLong(0)
@@ -75,3 +118,4 @@ object DatabaseStatsRepository {
         }
     }
 }
+

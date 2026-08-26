@@ -27,13 +27,13 @@ data class ReadLater(
 /**
  * Repository for accessing and managing the `readlater` SQLite table.
  */
-object ReadLaterRepository {
+object ReadLaterRepository : RepositoryInterface {
 
-    private const val TABLE_NAME = "readlater"
+    override fun getTableName(): String = "readlater"
 
-    private fun ensureTableExists(db: SQLiteDatabase) {
+    override fun ensureTableExists(db: SQLiteDatabase) {
         val createSql = """
-            CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+            CREATE TABLE IF NOT EXISTS ${getTableName()} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 entry_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL
@@ -63,9 +63,9 @@ object ReadLaterRepository {
             ensureTableExists(db)
 
             val query = if (userId != null) {
-                "SELECT id, entry_id, user_id FROM $TABLE_NAME WHERE user_id = ? ORDER BY id DESC"
+                "SELECT id, entry_id, user_id FROM ${getTableName()} WHERE user_id = ? ORDER BY id DESC"
             } else {
-                "SELECT id, entry_id, user_id FROM $TABLE_NAME ORDER BY id DESC"
+                "SELECT id, entry_id, user_id FROM ${getTableName()} ORDER BY id DESC"
             }
             val args = if (userId != null) arrayOf(userId.toString()) else null
 
@@ -119,7 +119,7 @@ object ReadLaterRepository {
             val sqlText = """
                 SELECT r.id AS r_id, r.entry_id AS r_entry_id, r.user_id AS r_user_id,
                        ${EntryRepository.ENTRY_SELECT_COLUMNS}
-                FROM $TABLE_NAME r
+                FROM ${getTableName()} r
                 INNER JOIN linkdatamodel l ON r.entry_id = l.id
                 $whereClause
                 ORDER BY r.id DESC
@@ -170,7 +170,7 @@ object ReadLaterRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             ensureTableExists(db)
             val cursor = db.rawQuery(
-                "SELECT 1 FROM $TABLE_NAME WHERE entry_id = ? AND user_id = ? LIMIT 1",
+                "SELECT 1 FROM ${getTableName()} WHERE entry_id = ? AND user_id = ? LIMIT 1",
                 arrayOf(entryId.toString(), userId.toString())
             )
             val exists = cursor.use { it.moveToFirst() }
@@ -203,7 +203,7 @@ object ReadLaterRepository {
             ensureTableExists(db)
 
             val checkCursor = db.rawQuery(
-                "SELECT id FROM $TABLE_NAME WHERE entry_id = ? AND user_id = ? LIMIT 1",
+                "SELECT id FROM ${getTableName()} WHERE entry_id = ? AND user_id = ? LIMIT 1",
                 arrayOf(entryId.toString(), userId.toString())
             )
             val exists = checkCursor.use { it.moveToFirst() }
@@ -213,7 +213,7 @@ object ReadLaterRepository {
                     put("entry_id", entryId)
                     put("user_id", userId)
                 }
-                db.insert(TABLE_NAME, null, values)
+                db.insert(getTableName(), null, values)
             }
 
             db.close()
@@ -244,7 +244,7 @@ object ReadLaterRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
             val rows = db.delete(
-                TABLE_NAME,
+                getTableName(),
                 "entry_id = ? AND user_id = ?",
                 arrayOf(entryId.toString(), userId.toString())
             )
@@ -257,36 +257,18 @@ object ReadLaterRepository {
     }
 
     /**
-     * Deletes a ReadLater record by its primary key [id].
+     * Deletes a ReadLater record by its primary key [id] (alias for [deleteById]).
      */
     suspend fun deleteReadLater(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val rows = db.delete(TABLE_NAME, "id = ?", arrayOf(id.toString()))
-            db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
-        }
-    }
+    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
 
     /**
      * Clears all records from the `readlater` table.
      */
-    suspend fun clearReadLater(
+    override suspend fun clear(
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
@@ -300,7 +282,7 @@ object ReadLaterRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            db.delete(TABLE_NAME, null, null)
+            db.delete(getTableName(), null, null)
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
@@ -308,4 +290,14 @@ object ReadLaterRepository {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Clears all records from the `readlater` table (alias for [clear]).
+     */
+    suspend fun clearReadLater(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
+
+

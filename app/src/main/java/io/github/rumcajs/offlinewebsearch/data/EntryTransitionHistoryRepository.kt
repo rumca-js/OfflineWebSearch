@@ -29,15 +29,15 @@ data class EntryTransitionHistory(
 /**
  * Repository for accessing and managing the `entrytransitionhistory` SQLite table.
  */
-object EntryTransitionHistoryRepository {
+object EntryTransitionHistoryRepository : RepositoryInterface {
 
-    private const val TABLE_NAME = "entrytransitionhistory"
+    override fun getTableName(): String = "entrytransitionhistory"
 
     const val MAX_NUMBER_OF_DISPLAYED_ENTRIES = 50
 
-    private fun ensureTableExists(db: SQLiteDatabase) {
+    override fun ensureTableExists(db: SQLiteDatabase) {
         val createSql = """
-            CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+            CREATE TABLE IF NOT EXISTS ${getTableName()} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 counter INTEGER,
                 entry_from_id INTEGER,
@@ -67,7 +67,7 @@ object EntryTransitionHistoryRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, counter, entry_from_id, entry_to_id FROM $TABLE_NAME WHERE entry_from_id = ? ORDER BY counter DESC, id DESC LIMIT ?"
+            val sqlText = "SELECT id, counter, entry_from_id, entry_to_id FROM ${getTableName()} WHERE entry_from_id = ? ORDER BY counter DESC, id DESC LIMIT ?"
             val cursor = db.rawQuery(sqlText, arrayOf(fromEntryId.toString(), limit.toString()))
             cursor.use { c ->
                 while (c.moveToNext()) {
@@ -130,7 +130,7 @@ object EntryTransitionHistoryRepository {
             val sqlText = """
                 SELECT t.id AS t_id, t.counter AS t_counter, t.entry_from_id AS t_entry_from_id, t.entry_to_id AS t_entry_to_id,
                        ${EntryRepository.ENTRY_SELECT_COLUMNS}
-                FROM $TABLE_NAME t
+                FROM ${getTableName()} t
                 INNER JOIN linkdatamodel l ON t.entry_to_id = l.id
                 WHERE t.entry_from_id = ?
                 ORDER BY t.counter DESC, t.id DESC
@@ -188,7 +188,7 @@ object EntryTransitionHistoryRepository {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
 
-            val query = "SELECT id, counter FROM $TABLE_NAME WHERE entry_from_id = ? AND entry_to_id = ?"
+            val query = "SELECT id, counter FROM ${getTableName()} WHERE entry_from_id = ? AND entry_to_id = ?"
             val cursor = db.rawQuery(query, arrayOf(fromEntryId.toString(), toEntryId.toString()))
             val existing = cursor.use { c ->
                 if (c.moveToFirst()) {
@@ -205,14 +205,14 @@ object EntryTransitionHistoryRepository {
                 val values = ContentValues().apply {
                     put("counter", counter + 1)
                 }
-                db.update(TABLE_NAME, values, "id = ?", arrayOf(id.toString()))
+                db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
             } else {
                 val values = ContentValues().apply {
                     put("counter", 1)
                     put("entry_from_id", fromEntryId)
                     put("entry_to_id", toEntryId)
                 }
-                db.insert(TABLE_NAME, null, values)
+                db.insert(getTableName(), null, values)
             }
 
             db.close()
@@ -224,36 +224,19 @@ object EntryTransitionHistoryRepository {
     }
 
     /**
-     * Deletes a transition record by ID.
+     * Deletes a transition record by ID (alias for [deleteById]).
      */
     suspend fun deleteTransition(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val rows = db.delete(TABLE_NAME, "id = ?", arrayOf(id.toString()))
-            db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
-        }
-    }
+    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
 
     /**
+     * TODO. I think it can be moved to RepositoryInterface
      * Clears all transition history records from `entrytransitionhistory`.
      */
-    suspend fun clearTransitionHistory(
+    override suspend fun clear(
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
@@ -267,7 +250,7 @@ object EntryTransitionHistoryRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            db.delete(TABLE_NAME, null, null)
+            db.delete(getTableName(), null, null)
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
@@ -275,4 +258,13 @@ object EntryTransitionHistoryRepository {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Clears all transition history records from `entrytransitionhistory` (alias for [clear]).
+     */
+    suspend fun clearTransitionHistory(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
+

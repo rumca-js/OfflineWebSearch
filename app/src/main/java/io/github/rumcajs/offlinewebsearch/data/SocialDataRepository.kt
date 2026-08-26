@@ -43,7 +43,9 @@ data class SocialData(
 /**
  * Repository providing access to the `socialdata` table in SQLite databases.
  */
-object SocialDataRepository {
+object SocialDataRepository : RepositoryInterface {
+
+    override fun getTableName(): String = "socialdata"
 
     /**
      * Loads the [SocialData] associated with a given [entryId].
@@ -65,7 +67,7 @@ object SocialDataRepository {
             val sqlText = """
                 SELECT id, entry_id, thumbs_up, thumbs_down, view_count, rating,
                        upvote_ratio, upvote_diff, upvote_view_ratio, stars, followers_count, date_updated
-                FROM socialdata
+                FROM ${getTableName()}
                 WHERE entry_id = ?
                 LIMIT 1
             """.trimIndent()
@@ -129,9 +131,9 @@ object SocialDataRepository {
                 socialData.followersCount?.let { put("followers_count", it) }
                 socialData.dateUpdated?.let { put("date_updated", it) }
             }
-            val newId = db.insert("socialdata", null, values)
+            val newId = db.insert(getTableName(), null, values)
             db.close()
-            if (newId != -1L) Pair(true, null) else Pair(false, "Failed to insert into socialdata")
+            if (newId != -1L) Pair(true, null) else Pair(false, "Failed to insert into ${getTableName()}")
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
@@ -172,7 +174,7 @@ object SocialDataRepository {
                 socialData.followersCount?.let { put("followers_count", it) }
                 socialData.dateUpdated?.let { put("date_updated", it) }
             }
-            val rows = db.update("socialdata", values, "id = ?", arrayOf(socialData.id.toString()))
+            val rows = db.update(getTableName(), values, "id = ?", arrayOf(socialData.id.toString()))
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; socialdata record may not exist")
         } catch (e: Exception) {
@@ -182,13 +184,22 @@ object SocialDataRepository {
     }
 
     /**
-     * Deletes a record from `socialdata` by [id].
+     * Deletes a record from `socialdata` by [id] (alias for [deleteById]).
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
     suspend fun deleteSocialData(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
+    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
+
+    /**
+     * Clears all records from the `socialdata` table.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    override suspend fun clear(
+        context: Context,
+        activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -199,12 +210,22 @@ object SocialDataRepository {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val rows = db.delete("socialdata", "id = ?", arrayOf(id.toString()))
+            db.delete(getTableName(), null, null)
             db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted; record may not exist")
+            Pair(true, null)
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Clears all records from the `socialdata` table (alias for [clear]).
+     */
+    suspend fun clearSocialData(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
+
+

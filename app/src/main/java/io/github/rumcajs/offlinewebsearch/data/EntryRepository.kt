@@ -53,7 +53,12 @@ private val defaultAssets = listOf(
     "places_10.json",
 )
 
-object EntryRepository {
+/**
+ * TODO - use getTableName in more places in this file
+ */
+object EntryRepository : RepositoryInterface {
+
+    override fun getTableName(): String = "linkdatamodel"
 
     // ──────────────────────────────────────────────────────────────────────────
     // Public API – paginated queries
@@ -263,7 +268,49 @@ object EntryRepository {
     }
 
     /**
-     * Deletes an entry (and its associated tags) from the SQLite database.
+     * Deletes an entry and all related records (tags, socialdata, visits, transitions, readlater) by [id].
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    override suspend fun deleteById(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            db.beginTransaction()
+            try {
+                db.delete("entrycompactedtags", "entry_id = ?", arrayOf(id.toString()))
+                db.delete(SocialDataRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
+                db.delete(EntryVisitHistoryRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
+                db.delete(
+                    EntryTransitionHistoryRepository.getTableName(),
+                    "entry_from_id = ? OR entry_to_id = ?",
+                    arrayOf(id.toString(), id.toString())
+                )
+                db.delete(ReadLaterRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
+                val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
+                db.setTransactionSuccessful()
+                if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted; entry may not exist")
+            } finally {
+                db.endTransaction()
+                db.close()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Deletes an entry (and its associated tags, history, social data) from the SQLite database.
      * Entry is identified by its primary key [id] (or [link] if [id] is null).
      * @return true if at least one row was deleted, false otherwise.
      */
@@ -273,6 +320,9 @@ object EntryRepository {
         id: Long?,
         link: String?
     ): Boolean = withContext(Dispatchers.IO) {
+        if (id != null) {
+            return@withContext deleteById(context, activeDatabaseState, id).first
+        }
         if (activeDatabaseState.extension != ".db") return@withContext false
         if (activeDatabaseState.isReadOnly) return@withContext false
 
@@ -281,27 +331,17 @@ object EntryRepository {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            db.beginTransaction()
-            try {
-                val rows = if (id != null) {
-                    // Remove associated tags and socialdata first (foreign key enforcement may be off)
-                    db.delete("entrycompactedtags", "entry_id = ?", arrayOf(id.toString()))
-                    db.delete("socialdata", "entry_id = ?", arrayOf(id.toString()))
-                    db.delete("linkdatamodel", "id = ?", arrayOf(id.toString()))
-                } else if (!link.isNullOrEmpty()) {
-                    db.execSQL(
-                        "DELETE FROM socialdata WHERE entry_id IN (SELECT id FROM linkdatamodel WHERE link = ?)",
-                        arrayOf(link)
-                    )
-                    db.delete("linkdatamodel", "link = ?", arrayOf(link))
-                } else {
-                    0
-                }
-                db.setTransactionSuccessful()
-                rows > 0
-            } finally {
-                db.endTransaction()
-                db.close()
+            val entryId = if (!link.isNullOrEmpty()) {
+                val cursor = db.rawQuery("SELECT id FROM ${getTableName()} WHERE link = ? LIMIT 1", arrayOf(link))
+                cursor.use { c -> if (c.moveToFirst()) c.getLong(0) else null }
+            } else null
+
+            db.close()
+
+            if (entryId != null) {
+                deleteById(context, activeDatabaseState, entryId).first
+            } else {
+                false
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -622,6 +662,32 @@ object EntryRepository {
                     entry.link?.contains(query, ignoreCase = true) == true ||
                     entry.tags?.any { it.contains(query, ignoreCase = true) } == true
             }
+        }
+    }
+
+    /**
+     * Clears all records from the `linkdatamodel` table.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    override suspend fun clear(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            db.delete(getTableName(), null, null)
+            db.close()
+            Pair(true, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
         }
     }
 }

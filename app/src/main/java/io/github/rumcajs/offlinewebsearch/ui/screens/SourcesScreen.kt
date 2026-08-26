@@ -1,6 +1,8 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -238,6 +242,7 @@ fun SourcesScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SourceItemRow(
     source: Source,
@@ -246,10 +251,21 @@ private fun SourceItemRow(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    if (source.url.isNotBlank()) {
+                        clipboardManager.setText(AnnotatedString(source.url))
+                        Toast.makeText(context, "Source URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )

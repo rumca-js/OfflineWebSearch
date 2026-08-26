@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,9 +24,14 @@ import io.github.rumcajs.offlinewebsearch.util.EntryUtils
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
+    val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val config by AppConfigManager.config.collectAsState()
     val isDead = !entry.date_dead_since.isNullOrBlank()
+
+    val displayAuthor by produceState<String?>(initialValue = entry.author?.takeIf { it.isNotBlank() }, key1 = entry, key2 = config.activeDatabaseState) {
+        value = EntryUtils.getDisplayAuthor(entry, context, config.activeDatabaseState)
+    }
 
     Card(
         modifier = Modifier
@@ -42,7 +48,7 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            if (config.dbconfig.viewStyle == ViewStyle.GALLERY && config.dbconfig.showIcons && entry.thumbnail != null) {
+            if (config.dbconfig.viewStyle == ViewStyle.GALLERY && config.dbconfig.showIcons && !entry.thumbnail.isNullOrBlank()) {
                 RemoteImage(
                     url = entry.thumbnail,
                     modifier = Modifier
@@ -67,12 +73,12 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (config.dbconfig.showIcons && (config.dbconfig.viewStyle != ViewStyle.GALLERY || entry.thumbnail == null)) {
-                            if (entry.thumbnail != null) {
+                        if (config.dbconfig.showIcons && config.dbconfig.viewStyle != ViewStyle.GALLERY) {
+                            if (!entry.thumbnail.isNullOrBlank()) {
                                 RemoteImage(
                                     url = entry.thumbnail,
                                     modifier = Modifier
-                                        .size(24.dp)
+                                        .size(48.dp)
                                         .padding(end = 8.dp),
                                     showErrorText = false,
                                     isRestricted = EntryUtils.isRestricted(
@@ -85,7 +91,7 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
                                     imageVector = Icons.Default.Link,
                                     contentDescription = null,
                                     modifier = Modifier
-                                        .size(24.dp)
+                                        .size(48.dp)
                                         .padding(end = 8.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -112,7 +118,7 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
                                 modifier = Modifier.padding(end = 4.dp)
                             )
                         }
-                        entry.page_rating_votes?.let { votes ->
+                        entry.page_rating_votes?.takeIf { it > 0 }?.let { votes ->
                             Surface(
                                 color = MaterialTheme.colorScheme.secondaryContainer,
                                 shape = androidx.compose.foundation.shape.CircleShape
@@ -153,9 +159,9 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
                                 color = MaterialTheme.colorScheme.outline
                             )
                         }
-                        entry.author?.let {
+                        displayAuthor?.let { authorText ->
                             Text(
-                                text = if (isRestricted) "xXx" else it,
+                                text = if (isRestricted) "xXx" else authorText,
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.outline,
                                 textAlign = TextAlign.End,

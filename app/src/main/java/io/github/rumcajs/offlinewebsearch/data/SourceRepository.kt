@@ -19,7 +19,9 @@ data class Source(
     val favicon: String = ""
 )
 
-object SourceRepository {
+object SourceRepository : RepositoryInterface {
+
+    override fun getTableName(): String = "sourcedatamodel"
 
     suspend fun loadSources(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
         val sources = mutableListOf<Source>()
@@ -32,7 +34,7 @@ object SourceRepository {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, favicon FROM sourcedatamodel"
+            val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()}"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -61,6 +63,40 @@ object SourceRepository {
         sources
     }
 
+    private val sourceTitleCache = java.util.concurrent.ConcurrentHashMap<Pair<String, Long>, String?>()
+
+    /**
+     * Clears cached source titles.
+     */
+    fun clearCache() {
+        sourceTitleCache.clear()
+    }
+
+    /**
+     * Looks up the title of a source by [sourceId], caching the result.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param sourceId ID of the source in `sourcedatamodel`.
+     * @return Title of the source, or null if not found.
+     */
+    suspend fun getSourceTitleById(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceId: Long
+    ): String? = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
+        val cacheKey = Pair(activeDatabaseState.localFileName, sourceId)
+        sourceTitleCache[cacheKey]?.let { return@withContext it }
+
+        val source = findSourceById(context, activeDatabaseState, sourceId)
+        val title = source?.title?.takeIf { it.isNotBlank() }
+        if (title != null) {
+            sourceTitleCache[cacheKey] = title
+        }
+        title
+    }
+
     /**
      * Finds a source in `sourcedatamodel` matching [sourceId].
      */
@@ -72,7 +108,7 @@ object SourceRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon FROM sourcedatamodel WHERE id = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} WHERE id = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -103,7 +139,7 @@ object SourceRepository {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon FROM sourcedatamodel WHERE url = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} WHERE url = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -146,17 +182,9 @@ object SourceRepository {
                 put("title", title)
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
-                put("source_type", "")
-                put("category_name", "")
-                put("subcategory_name", "")
-                put("export_to_cms", false)
-                put("remove_after_days", 0)
-                put("language", "")
-                put("age", 0)
                 put("favicon", "")
-                put("fetch_period", 3600)
-                put("auto_tag", "")
-                put("entries_backgroundcolor_alpha", 1.0)
+                // Default required schema values for linkarchivetools compatibility
+                put("entries_color", "")
                 put("entries_backgroundcolor", "")
                 put("entries_alpha", 1.0)
                 put("proxy_location", "")
@@ -165,7 +193,7 @@ object SourceRepository {
                 put("subcategory_id", 0)
                 put("xpath", "")
             }
-            val newId = db.insert("sourcedatamodel", null, values)
+            val newId = db.insert(getTableName(), null, values)
             db.close()
             if (newId != -1L) Pair(true, null) else Pair(false, "Insert returned -1; check table schema")
         } catch (e: Exception) {
@@ -200,7 +228,7 @@ object SourceRepository {
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
             }
-            val rows = db.update("sourcedatamodel", values, "id = ?", arrayOf(id.toString()))
+            val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
         } catch (e: Exception) {
@@ -210,10 +238,10 @@ object SourceRepository {
     }
 
     /**
-     * Deletes a source by ID.
+     * Deletes a source by ID from `sourcedatamodel` and cleans up associated operational data.
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
-    suspend fun deleteSource(
+    override suspend fun deleteById(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
@@ -227,7 +255,7 @@ object SourceRepository {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val rows = db.delete("sourcedatamodel", "id = ?", arrayOf(id.toString()))
+            val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
             db.close()
 
             if (rows > 0) {
@@ -241,6 +269,15 @@ object SourceRepository {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
+
+    /**
+     * Deletes a source by ID (alias for [deleteById]).
+     */
+    suspend fun deleteSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long
+    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
 
     /**
      * Updates source metadata (such as title and favicon) matching [sourceUrl] in `sourcedatamodel`.
@@ -285,7 +322,7 @@ object SourceRepository {
             val sourceValues = android.content.ContentValues()
             if (!title.isNullOrBlank()) sourceValues.put("title", title)
             if (!favicon.isNullOrBlank()) sourceValues.put("favicon", favicon)
-            val rows = db.update("sourcedatamodel", sourceValues, "url = ?", arrayOf(urlObj.url))
+            val rows = db.update(getTableName(), sourceValues, "url = ?", arrayOf(urlObj.url))
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source URL may not exist")
         } catch (e: Exception) {
@@ -511,4 +548,31 @@ object SourceRepository {
         }
         refreshedCount
     }
+
+    /**
+     * Clears all records from the `sourcedatamodel` table.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    override suspend fun clear(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            db.delete(getTableName(), null, null)
+            db.close()
+            Pair(true, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
 }
+

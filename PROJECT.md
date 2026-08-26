@@ -206,6 +206,7 @@ The screen displays, where available:
  - Provides an action to clear the search history.
  - Provides an action to clear the user's visited entries.
  - Provides an action to clear the user's read later entries.
+ - Provides an action to clear the social data.
 
 ## SourcesScreen
  - Provides bar on top with buttons: add, edit, fetch, remove.
@@ -245,6 +246,7 @@ The screen displays, where available:
  - The data layer provides access to application data.
  - The data layer wraps SQLite tables and provides accessors for the model.
  - Each repository is responsible for a specific data model or table.
+ - Repositories implement `RepositoryInterface` for common operations such as clearing table contents and deleting records by ID (`deleteById`).
  - For example, SourceRepository provides access to the sourcedatamodel table.
  - Database access should not be performed directly from UI screens.
  - UI screens should access data through the appropriate repository or data-layer interface.
