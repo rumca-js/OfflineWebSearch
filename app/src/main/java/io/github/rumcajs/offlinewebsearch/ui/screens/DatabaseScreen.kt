@@ -290,7 +290,7 @@ fun DatabaseScreen(
                                 showClearSearchHistoryDialog = false
                                 scope.launch {
                                     isClearingSearch = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository.clearSearchHistory(context, state)
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository.clear(context, state)
                                     isClearingSearch = false
                                     if (success) {
                                         Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
@@ -322,7 +322,7 @@ fun DatabaseScreen(
                                 showClearTransitionHistoryDialog = false
                                 scope.launch {
                                     isClearingTransitions = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository.clearTransitionHistory(context, state)
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository.clear(context, state)
                                     isClearingTransitions = false
                                     if (success) {
                                         Toast.makeText(context, "Entry transition history cleared", Toast.LENGTH_SHORT).show()
@@ -354,7 +354,7 @@ fun DatabaseScreen(
                                 showClearVisitHistoryDialog = false
                                 scope.launch {
                                     isClearingVisits = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository.clearVisitHistory(context, state)
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository.clear(context, state)
                                     isClearingVisits = false
                                     if (success) {
                                         Toast.makeText(context, "Entry visit history cleared", Toast.LENGTH_SHORT).show()
@@ -386,7 +386,7 @@ fun DatabaseScreen(
                                 showClearSocialDataDialog = false
                                 scope.launch {
                                     isClearingSocialData = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SocialDataRepository.clearSocialData(context, state)
+                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SocialDataRepository.clear(context, state)
                                     isClearingSocialData = false
                                     if (success) {
                                         Toast.makeText(context, "Social data cleared", Toast.LENGTH_SHORT).show()
