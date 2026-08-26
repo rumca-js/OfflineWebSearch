@@ -1,0 +1,1 @@
+Entry list in gallery does not display thumbnail area, if it is missing.
