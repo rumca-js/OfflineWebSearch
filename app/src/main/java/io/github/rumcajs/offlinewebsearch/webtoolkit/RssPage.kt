@@ -5,6 +5,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
 import java.lang.StringBuilder
 import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 
 class RssPage(val link: String, val contents: String) : Page {
     private var feedTitle: String? = null
@@ -125,7 +126,11 @@ class RssPage(val link: String, val contents: String) : Page {
                                     }
                                     "pubDate", "published", "updated", "dc:date" -> {
                                         if (entryDatePublished == null) {
-                                            entryDatePublished = text.ifEmpty { null }
+                                            // TODO - most probably we want to store date published as a date
+                                            val date = DateUtils.parseDateString(text)
+                                            date?.let {
+                                                entryDatePublished = DateUtils.toIsoString(it)
+                                            }
                                         }
                                     }
                                 }
