@@ -293,7 +293,8 @@ fun getRepositoriesToClear(): List<RepoClearItem> = listOf(
     RepoClearItem("Entry Transition History", io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository),
     RepoClearItem("Entry Visit History", io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository),
     RepoClearItem("Social Data", io.github.rumcajs.offlinewebsearch.data.SocialDataRepository),
-    RepoClearItem("Entry Compacted Tags", io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository)
+    RepoClearItem("Entry Compacted Tags", io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository),
+    RepoClearItem("Read later", io.github.rumcajs.offlinewebsearch.data.ReadLaterRepository)
 )
 
 /**
