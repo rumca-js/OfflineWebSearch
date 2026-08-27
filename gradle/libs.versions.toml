@@ -13,6 +13,7 @@ coil = "2.6.0"
 kotlin = "2.2.10"
 composeBom = "2026.02.01"
 kxml = "2.3.0"
+robolectric = "4.14.1"
 
 [libraries]
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
@@ -35,6 +36,8 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 kxml2 = { group = "net.sf.kxml", name = "kxml2", version.ref = "kxml" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidx-test-core = { group = "androidx.test", name = "core", version = "1.5.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

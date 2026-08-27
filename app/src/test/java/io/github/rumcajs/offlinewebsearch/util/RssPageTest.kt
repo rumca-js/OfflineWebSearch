@@ -42,11 +42,11 @@ class RssPageTest {
         assertEquals("Item 1 Title", entries[0].title)
         assertEquals("https://example.com/item1", entries[0].link)
         assertEquals("Description for Item 1", entries[0].description)
-        assertEquals("Mon, 01 Jan 2024 00:00:00 GMT", entries[0].date_published)
+        assertEquals("2024-01-01T00:00:00Z", entries[0].date_published)
         assertEquals("Item 2 Title", entries[1].title)
         assertEquals("https://example.com/item2", entries[1].link)
         assertEquals("Description for Item 2", entries[1].description)
-        assertEquals("Tue, 02 Jan 2024 00:00:00 GMT", entries[1].date_published)
+        assertEquals("2024-01-02T00:00:00Z", entries[1].date_published)
     }
 
     @Test
