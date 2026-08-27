@@ -17,7 +17,8 @@ object RepositoryList {
             ReadLaterRepository,
             SearchHistoryRepository,
             SocialDataRepository,
-            SourceOperationalDataRepository
+            SourceOperationalDataRepository,
+            EntryCompactedTagsRepository
         )
     }
 }

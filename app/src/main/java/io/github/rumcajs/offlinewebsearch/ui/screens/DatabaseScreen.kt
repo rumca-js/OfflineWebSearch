@@ -225,185 +225,15 @@ fun DatabaseScreen(
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            val isSql = state.extension == ".db"
-            var showClearSearchHistoryDialog by remember { mutableStateOf(false) }
-            var showClearTransitionHistoryDialog by remember { mutableStateOf(false) }
-            var isClearingSearch by remember { mutableStateOf(false) }
-            var isClearingTransitions by remember { mutableStateOf(false) }
+            val canClearHistory = state.extension == ".db" && !state.isReadOnly
 
-            val canClearHistory = isSql && !state.isReadOnly
-
-            Button(
-                onClick = { showClearSearchHistoryDialog = true },
-                enabled = canClearHistory && !isClearingSearch,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            ) {
-                Text(if (isClearingSearch) "Clearing Search History..." else "Clear Search History")
-            }
-
-            Button(
-                onClick = { showClearTransitionHistoryDialog = true },
-                enabled = canClearHistory && !isClearingTransitions,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            ) {
-                Text(if (isClearingTransitions) "Clearing Entry Transition History..." else "Clear Entry Transition History")
-            }
-
-            var showClearVisitHistoryDialog by remember { mutableStateOf(false) }
-            var isClearingVisits by remember { mutableStateOf(false) }
-
-            Button(
-                onClick = { showClearVisitHistoryDialog = true },
-                enabled = canClearHistory && !isClearingVisits,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            ) {
-                Text(if (isClearingVisits) "Clearing Entry Visit History..." else "Clear Entry Visit History")
-            }
-
-            var showClearSocialDataDialog by remember { mutableStateOf(false) }
-            var isClearingSocialData by remember { mutableStateOf(false) }
-
-            Button(
-                onClick = { showClearSocialDataDialog = true },
-                enabled = canClearHistory && !isClearingSocialData,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            ) {
-                Text(if (isClearingSocialData) "Clearing Social Data..." else "Clear Social Data")
-            }
-
-            if (showClearSearchHistoryDialog) {
-                AlertDialog(
-                    onDismissRequest = { showClearSearchHistoryDialog = false },
-                    title = { Text("Clear Search History") },
-                    text = { Text("Are you sure you want to clear the search history table?") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showClearSearchHistoryDialog = false
-                                scope.launch {
-                                    isClearingSearch = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository.clear(context, state)
-                                    isClearingSearch = false
-                                    if (success) {
-                                        Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to clear search history: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("Clear")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showClearSearchHistoryDialog = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
-
-            if (showClearTransitionHistoryDialog) {
-                AlertDialog(
-                    onDismissRequest = { showClearTransitionHistoryDialog = false },
-                    title = { Text("Clear Entry Transition History") },
-                    text = { Text("Are you sure you want to clear the entry transition history table?") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showClearTransitionHistoryDialog = false
-                                scope.launch {
-                                    isClearingTransitions = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository.clear(context, state)
-                                    isClearingTransitions = false
-                                    if (success) {
-                                        Toast.makeText(context, "Entry transition history cleared", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to clear entry transition history: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("Clear")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showClearTransitionHistoryDialog = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
-
-            if (showClearVisitHistoryDialog) {
-                AlertDialog(
-                    onDismissRequest = { showClearVisitHistoryDialog = false },
-                    title = { Text("Clear Entry Visit History") },
-                    text = { Text("Are you sure you want to clear the entry visit history table?") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showClearVisitHistoryDialog = false
-                                scope.launch {
-                                    isClearingVisits = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository.clear(context, state)
-                                    isClearingVisits = false
-                                    if (success) {
-                                        Toast.makeText(context, "Entry visit history cleared", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to clear entry visit history: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("Clear")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showClearVisitHistoryDialog = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
-
-            if (showClearSocialDataDialog) {
-                AlertDialog(
-                    onDismissRequest = { showClearSocialDataDialog = false },
-                    title = { Text("Clear Social Data") },
-                    text = { Text("Are you sure you want to clear the social data table?") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showClearSocialDataDialog = false
-                                scope.launch {
-                                    isClearingSocialData = true
-                                    val (success, error) = io.github.rumcajs.offlinewebsearch.data.SocialDataRepository.clear(context, state)
-                                    isClearingSocialData = false
-                                    if (success) {
-                                        Toast.makeText(context, "Social data cleared", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to clear social data: ${error ?: "Unknown error"}", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("Clear")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showClearSocialDataDialog = false }) {
-                            Text("Cancel")
-                        }
-                    }
+            getRepositoriesToClear().forEach { repoClearItem ->
+                ClearRepositoryButton(
+                    item = repoClearItem,
+                    enabled = canClearHistory,
+                    context = context,
+                    state = state,
+                    scope = scope
                 )
             }
 
@@ -440,5 +270,95 @@ fun DatabaseScreen(
                 Text(if (isDuplicating) "Creating Copy..." else "Create a Copy")
             }
         }
+    }
+}
+
+/**
+ * Describes a single repository that can be cleared from DatabaseScreen.
+ *
+ * @property label Human-readable label shown on the clear button.
+ * @property repository The repository whose [clear] operation is invoked.
+ */
+data class RepoClearItem(
+    val label: String,
+    val repository: io.github.rumcajs.offlinewebsearch.data.RepositoryInterface
+)
+
+/**
+ * Returns the list of repositories that the user can clear from DatabaseScreen,
+ * together with their display labels.
+ */
+fun getRepositoriesToClear(): List<RepoClearItem> = listOf(
+    RepoClearItem("Search History", io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository),
+    RepoClearItem("Entry Transition History", io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository),
+    RepoClearItem("Entry Visit History", io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository),
+    RepoClearItem("Social Data", io.github.rumcajs.offlinewebsearch.data.SocialDataRepository),
+    RepoClearItem("Entry Compacted Tags", io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository)
+)
+
+/**
+ * Renders a single clear button and its confirmation dialog for a given [RepoClearItem].
+ *
+ * @param item The repository item to clear.
+ * @param enabled Whether the button should be enabled (e.g. database is writable SQLite).
+ * @param context Application context used for Toast messages.
+ * @param state Current [DatabaseState] passed to the repository's [clear] function.
+ * @param scope Coroutine scope used to launch the clear operation.
+ */
+@Composable
+fun ClearRepositoryButton(
+    item: RepoClearItem,
+    enabled: Boolean,
+    context: android.content.Context,
+    state: io.github.rumcajs.offlinewebsearch.data.DatabaseState,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    var isClearing by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = { showDialog = true },
+        enabled = enabled && !isClearing,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Text(if (isClearing) "Clearing ${item.label}..." else "Clear ${item.label}")
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Clear ${item.label}") },
+            text = { Text("Are you sure you want to clear the ${item.label} table?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDialog = false
+                        scope.launch {
+                            isClearing = true
+                            val (success, error) = item.repository.clear(context, state)
+                            isClearing = false
+                            if (success) {
+                                Toast.makeText(context, "${item.label} cleared", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Failed to clear ${item.label}: ${error ?: "Unknown error"}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

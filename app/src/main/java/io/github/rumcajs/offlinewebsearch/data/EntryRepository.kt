@@ -287,7 +287,7 @@ object EntryRepository : RepositoryInterface {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             db.beginTransaction()
             try {
-                db.delete("entrycompactedtags", "entry_id = ?", arrayOf(id.toString()))
+                db.delete(EntryCompactedTagsRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
                 db.delete(SocialDataRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
                 db.delete(EntryVisitHistoryRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
                 db.delete(
