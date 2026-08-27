@@ -20,6 +20,7 @@ import java.util.zip.ZipFile
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 
 
 /**
@@ -239,7 +240,13 @@ object AppConfigManager {
         content: ByteArray,
         oldUrl: String? = null
     ) = withContext(Dispatchers.IO) {
-        val newState = DatabaseState.fromUrl(url).copy(status = DatabaseStatus.READY, progress = 1.0f)
+        val now = DateUtils.getCurrentIsoTimestamp()
+        val newState = DatabaseState.fromUrl(url).copy(
+            status = DatabaseStatus.READY,
+            progress = 1.0f,
+            dateCreated = now,
+            dateLastRefresh = now
+        )
 
         try {
             // Remove old/existing files and sidecars for this local database
@@ -272,7 +279,9 @@ object AppConfigManager {
                                 localFileName = newState.localFileName,
                                 status = DatabaseStatus.READY,
                                 progress = 1.0f,
-                                errorMessage = null
+                                errorMessage = null,
+                                dateCreated = state.dateCreated ?: now,
+                                dateLastRefresh = now
                             ))
                         }
                     } else {
@@ -523,7 +532,13 @@ object AppConfigManager {
         sourceFile: File,
         oldUrl: String? = null
     ) = withContext(Dispatchers.IO) {
-        val newState = DatabaseState.fromUrl(url).copy(status = DatabaseStatus.READY, progress = 1.0f)
+        val now = DateUtils.getCurrentIsoTimestamp()
+        val newState = DatabaseState.fromUrl(url).copy(
+            status = DatabaseStatus.READY,
+            progress = 1.0f,
+            dateCreated = now,
+            dateLastRefresh = now
+        )
 
         try {
             // Remove old/existing files and sidecars for this local database
@@ -554,7 +569,9 @@ object AppConfigManager {
                                 localFileName = newState.localFileName,
                                 status = DatabaseStatus.READY,
                                 progress = 1.0f,
-                                errorMessage = null
+                                errorMessage = null,
+                                dateCreated = state.dateCreated ?: now,
+                                dateLastRefresh = now
                             ))
                         }
                     } else {
@@ -688,7 +705,9 @@ object AppConfigManager {
                 progress = 1.0f,
                 errorMessage = null,
                 sizeInBytes = newSize,
-                isReadOnly = !newLocalFileName.endsWith(".db")
+                isReadOnly = !newLocalFileName.endsWith(".db"),
+                dateCreated = DateUtils.getCurrentIsoTimestamp(),
+                dateLastRefresh = DateUtils.getCurrentIsoTimestamp()
             )
 
             updateConfig { currentConfig ->

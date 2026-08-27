@@ -1,5 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.data
 
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.serialization.Serializable
 
@@ -35,7 +36,11 @@ data class DatabaseState(
     val progress: Float = 0f,
     val errorMessage: String? = null,
     val sizeInBytes: Long = 0L,
-    val isReadOnly: Boolean = true
+    val isReadOnly: Boolean = true,
+    /** ISO-8601 timestamp of when the database was first added. Null if unknown. */
+    val dateCreated: String? = null,
+    /** ISO-8601 timestamp of the most recent successful fetch or refresh. Null if never refreshed. */
+    val dateLastRefresh: String? = null
 ) {
     /** The storage extension of the local file: ".db" or ".json" */
     val extension: String

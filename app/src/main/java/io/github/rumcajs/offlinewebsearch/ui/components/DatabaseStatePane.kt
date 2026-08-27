@@ -86,6 +86,14 @@ fun DatabaseStatePane(
             label = "Error Message",
             value = state.errorMessage ?: "None"
         )
+        DatabasePropertyRow(
+            label = "Date Created",
+            value = state.dateCreated ?: "Unknown"
+        )
+        DatabasePropertyRow(
+            label = "Date Last Refresh",
+            value = state.dateLastRefresh ?: "Never"
+        )
     }
 }
 

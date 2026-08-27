@@ -20,6 +20,31 @@ object DateUtils {
     }
 
     /**
+     * Formats a [Date] as a UTC ISO 8601 timestamp string (e.g. "2026-08-26T10:49:00Z").
+     */
+    fun toIsoString(date: Date): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        return sdf.format(date)
+    }
+
+    /**
+     * This function should be refactored to return
+     * yyyy-MM-dd HH:mm:ss
+     */
+    fun toString(date: Date): String {
+        return toIsoString(date);
+    }
+
+    /**
+     * This function should be refactored to return
+     * yyyy-MM-dd HH:mm:ss
+     */
+    fun getCurrentTimestamp(): String {
+        return getCurrentIsoTimestamp();
+    }
+
+    /**
      * Parses an ISO 8601 UTC timestamp string to epoch milliseconds, or null on error.
      */
     fun parseIsoTimestamp(timestamp: String?): Long? {
@@ -61,14 +86,5 @@ object DateUtils {
             } catch (_: Exception) { }
         }
         return null
-    }
-
-    /**
-     * Formats a [Date] as a UTC ISO 8601 timestamp string (e.g. "2026-08-26T10:49:00Z").
-     */
-    fun toIsoString(date: Date): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-        sdf.timeZone = TimeZone.getTimeZone("UTC")
-        return sdf.format(date)
     }
 }
