@@ -60,6 +60,8 @@ It contains:
  - Current state.
  - Download or update information, if applicable.
  - Error information, if the state is FAILED.
+ - Date of creation database
+ - Date of last database refresh/update
 
 Possible database states include:
  - DOWNLOADING
@@ -70,45 +72,56 @@ Possible database states include:
 # Views
 
  - EntryListScreen - Provides the search interface. Shows search results.
- - VisitedEntriesScreen - Shows entries visited by the user.
- - ReadLaterScreen - Shows entries saved to read later.
  - EntryDetailScreen - Shows details of a selected entry.
  - EntryEditScreen - Adds or edits an entry.
  - EntryStatusScreen - Checks the HTTP status of an entry URL.
  - EntryPreviewScreen - Fetches and displays the current web page data.
  - OptionsScreen - Configures databases and application settings.
- - DatabasesScreen - Shows the list of configured databases.
+ - DatabasesScreen - To be removed
  - DatabaseScreen - Shows information and actions for a database.
  - SourceScreen - Shows information and actions for a source.
  - SourceEditScreen - Adds or edits a source.
  - SourcesScreen - Shows the list of configured sources.
  - AboutScreen - Shows information about the application.
+ - VisitedEntriesScreen - To be removed
+ - ReadLaterScreen - To be removed
 
 ## EntryListScreen
-
- - Provides search widget
- - Provides a visited filter chip to toggle filtering results to visited entries (visible when `trackUserNavigation` is enabled).
- - Provides a read later filter chip to toggle filtering results to saved read later entries (visible when the active database is writable).
+ - Entries screen is scrollable (search widget, entry results, pagination controls)
+ - Provides search widget with full width text input
+ - Search widget is followed with "Search" button and a button to select "filters" for search results
+   -- "Visited" filter - entry results should visited entries
+   -- "Read Later" filter - entry results should entries marked for read later
+   -- "by Date published" - shows entries, but with this order applied
+   -- "by Votes" - shows entries, but with this order applied
+   -- "by Visits" - shows entries, but with this order applied
+ - button to select filter is small, and on the right side of "Search" button
  - Search supports advanced search capabilities (like SQLite syntax).
- - Search suggestion are scrollable, with rows
  - The list supports loading additional results.
  - Search results support page navigation (or dynamic loading of next / prev elements)
  - page navigation elements (prev, next button) are in scrollable area, after search results
  - after page navigation add new result button should be present
  - Selecting an entry opens EntryDetailScreen.
- - Implement pull to refresh
+ - Entry results use pull to refresh, fetches data again
+ - Entry results shall be refreshed when necessary
+    -- when "Read Later" filter is applied, and "Read Later" table changes
+    -- when sources are successfully refreshed
+    -- when entry is deleted from EntryDetailScreen
+    -- back button in itself should not refresh list, as it does not modify Entries, or results
 
-## VisitedEntriesScreen
- - Displays the list of entries visited by the user stored in `entryvisithistory`.
- - Selecting an entry opens EntryDetailScreen.
- - Provides an action to clear all visited entry history.
- - Supports pull to refresh.
+### EntryItem - result
+There are several list styles:
+ - Gallery (emphasis on thumbnail, should look like YouTube or TikTok)
+ - Standard (similar to gallery, but thumbnail is smaller, and on the left, should remind Feed readers
+ - Search engine (emphasis on title, and showing actual link. Should look like search engine results)
 
-## ReadLaterScreen
- - Displays the list of entries saved to read later stored in `readlater`.
- - Selecting an entry opens EntryDetailScreen.
- - Provides an action to clear all read later entries.
- - Supports pull to refresh.
+ Entry Item shall display:
+ - entry.thumbnail or source.favicon
+ - title
+ - date of publish
+ - source.title
+
+ If thumbnail is not available, then it should be skipped.
 
 ## Search
  - Search is performed against the selected database.
@@ -175,33 +188,28 @@ The screen displays, where available:
 
 ## OptionsScreen
  - Displays the configured databases.
- - Provides navigation to DatabasesScreen and AboutScreen.
- - Configures search settings and application preferences.
-
-## DatabasesScreen
- - Displays the list of configured databases.
- - Database can be added from preconfigured list available at https://rumca-js.github.io/data/databases.txt
- - Database can be added from local filesystem
- - Database can be added from url
- - Database can be created empty (from assets SQLite table)
- - Database fetched from the internet can be re-fetched. User is notified that it destroys current local database
- - Database can be shared (to other apps), saved as a file
- - List of databases show state of database (DOWNLOADING, UNPACKING, READY, FAILED)
- - Each database in list contains buttons to Refresh, Remove
- - Selecting a database opens DatabaseScreen.
+ - Database are in pill-like widget
+ - It shall be visible which one is active
+ - Provides navigation to DatabaseScreen and AboutScreen.
+ - Database settings should be in DatabaseScreen, not here
+ - No advanced database operation should be accessible here
+ - Each database should contain buttons to: refresh (if it is from the internet), remove
+ - Each database should contain indicator: state, if active or not
 
 ## DatabaseScreen
- - Displays information about the selected database.
+ - Displays information if it is currently active
  - Provides a top bar with the following actions:
     -- Edit.
     -- Share.
     -- Refresh.
     -- Remove.
- - Displays the current database state.
+ - Displays the current database state (read only?).
  - Displays the database name.
  - Displays the database type.
  - Displays the local file information.
  - Displays the remote URL, if applicable.
+ - Displays the date of creation.
+ - Displays the date of last refresh/update.
  - Displays the number of rows in relevant tables.
  - Provides an action to clear the search history.
  - Provides an action to clear the user's visited entries.
@@ -209,13 +217,15 @@ The screen displays, where available:
  - Provides an action to clear the social data.
 
 ## SourcesScreen
- - Provides bar on top with buttons: add, edit, fetch, remove.
+ - Provides bar on top with buttons: add, fetch
  - Selecting source opens SourceScreen.
  - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
+ - If possible fetch/refresh button should spin if sources are being refreshed
 
 ## SourceScreen
  - Displays information about a source.
  - Provides a top bar with the following actions:
+    -- Fetch / Update
     -- Edit.
     -- Fetch.
     -- Remove.

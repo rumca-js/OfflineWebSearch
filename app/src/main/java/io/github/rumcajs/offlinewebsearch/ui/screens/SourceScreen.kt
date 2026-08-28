@@ -265,29 +265,6 @@ fun SourceScreen(
                     Text("Browse entries")
                 }
             }
-
-            if (!config.networkConfig.disabled && currentSource.url.isNotBlank()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = performRefresh,
-                    enabled = !isRefreshing,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (isRefreshing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Fetching entries...")
-                    } else {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Refresh entries from source")
-                    }
-                }
-            }
         }
     }
 }
