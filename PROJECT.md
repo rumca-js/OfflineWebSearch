@@ -219,6 +219,8 @@ The screen displays, where available:
 ## SourcesScreen
  - Provides bar on top with buttons: add, fetch
  - Selecting source opens SourceScreen.
+ - Provides search widget, similar to EntryListScreen, it should be scrollable
+ - Similarly to EntryListScreen should contain "Search" button with a button to apply filter (order by title, or fetch time)
  - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
  - If possible fetch/refresh button should spin if sources are being refreshed
 
