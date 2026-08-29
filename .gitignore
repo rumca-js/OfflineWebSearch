@@ -53,3 +53,4 @@ app/build/
 # Fastlane keys
 fastlane/*key.json
 
+app/src/main/assets/adi-registration.properties
