@@ -157,8 +157,12 @@ The screen displays, where available:
  - Thumbnail, or video playback frame
  - Title.
  - Link.
+ - Date of publish
+ - Tags, followed with pen icon to edit tags
+ - Source information
+ - Buttons for some operations like: "Check status", "Add vote"
+   -- vote allows user to input digit between -100 and 100
  - Description.
- - Publication date.
  - Other entry metadata.
  - Entry transition pane. The pane shows entries that the user previously visited from the current entry. Entry transitions are stored in UserEntryTransitionHistory.
 

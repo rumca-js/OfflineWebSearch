@@ -34,7 +34,7 @@ fun EntryDetailTopBar(
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
-        title = { Text("Entry Details") },
+        title = { Text("") }, // not text
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
