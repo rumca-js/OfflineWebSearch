@@ -443,35 +443,13 @@ object AppConfigManager {
         }
     }
 
-    // Mutex to ensure only one database is downloaded/unpacked at a time
-    private val downloadMutex = Mutex()
-
     /**
-     * Enqueues database refresh on an application-level CoroutineScope (configScope)
-     * so that only one database is downloaded/unpacked at a time in sequence.
+     * Enqueues database refresh on the background worker
+     * so that databases are downloaded/unpacked sequentially.
      * Returns false if this database is already queued or downloading.
      */
     fun refreshDatabaseInBackground(context: Context, url: String): Boolean {
-        val currentDbState = config.value.databases[url]
-        if (currentDbState?.status == DatabaseStatus.DOWNLOADING || currentDbState?.status == DatabaseStatus.UNPACKING) {
-            Toast.makeText(context, "Database is already downloading or unpacking", Toast.LENGTH_SHORT).show()
-            return false
-        }
-
-        // Add to configuration map immediately so UI shows it in list
-        addDatabase(url)
-
-        val appContext = context.applicationContext
-        configScope.launch {
-            downloadMutex.withLock {
-                try {
-                    saveDatabaseFromInternet(appContext, url, oldUrl = url)
-                } catch (_: Exception) {
-                    // Status is updated to FAILED inside saveDatabaseFromInternet
-                }
-            }
-        }
-        return true
+        return io.github.rumcajs.offlinewebsearch.workers.DatabaseUpdateWorker.enqueueDatabase(context, url)
     }
 
     /**

@@ -277,6 +277,9 @@ Database refresh should make database refresh buttons to be spinning, if possibl
  - it would be best if it could accept new databases to fetch
  - multiple databases should not be processed in parallel. They should be handled sequentially
 
+## Entry enrichment worker
+Used to enhance entry properties (updates title, status\_code, whatever can be updated)
+
 # Code Requirements
  - Use small functions.
  - Keep classes small and focused.
