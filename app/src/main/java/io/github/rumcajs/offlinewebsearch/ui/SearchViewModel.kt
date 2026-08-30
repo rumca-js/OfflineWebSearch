@@ -24,20 +24,32 @@ class SearchViewModel : ViewModel() {
     var showSuggestions by mutableStateOf(false)
     var activeSearchQuery by mutableStateOf("")
     var searchHistory by mutableStateOf<List<String>>(emptyList())
-    var isFilterVisited by mutableStateOf(false)
-    var isFilterReadLater by mutableStateOf(false)
 
-    fun toggleVisitedFilter() {
-        isFilterVisited = !isFilterVisited
-        if (isFilterVisited) {
-            isFilterReadLater = false
-        }
-    }
+    /** Currently active filter / order-by override selected via the filter button. */
+    var activeFilter by mutableStateOf(SearchFilter.None)
+        private set
 
-    fun toggleReadLaterFilter() {
-        isFilterReadLater = !isFilterReadLater
-        if (isFilterReadLater) {
-            isFilterVisited = false
+    /** Convenience accessors used by [fetchPage]. */
+    val isFilterVisited: Boolean get() = activeFilter.filterByVisited
+    val isFilterReadLater: Boolean get() = activeFilter.filterByReadLater
+
+    /**
+     * Applies [filter] as the new active filter and re-fetches data if [context] is provided.
+     * Selecting the already-active filter deactivates it (toggles back to None).
+     */
+    fun setFilter(context: Context? = null, filter: SearchFilter) {
+        activeFilter = if (activeFilter == filter) SearchFilter.None else filter
+        currentPage = 0
+        if (context != null) {
+            viewModelScope.launch {
+                val config = AppConfigManager.config.first()
+                fetchPage(
+                    context,
+                    config.activeDatabaseState,
+                    activeFilter.orderByOverride() ?: config.dbconfig.orderBy,
+                    config.dbconfig.effectiveLinksPerPage
+                )
+            }
         }
     }
 
@@ -129,7 +141,12 @@ class SearchViewModel : ViewModel() {
                 if (searchQuery.isNotBlank() && config.dbconfig.trackUserSearches) {
                     SearchHistoryRepository.recordSearch(context, config.activeDatabaseState, searchQuery)
                 }
-                fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, config.dbconfig.effectiveLinksPerPage)
+                fetchPage(
+                    context,
+                    config.activeDatabaseState,
+                    activeFilter.orderByOverride() ?: config.dbconfig.orderBy,
+                    config.dbconfig.effectiveLinksPerPage
+                )
             }
         }
     }
@@ -224,7 +241,12 @@ class SearchViewModel : ViewModel() {
     private fun refreshCurrentPage(context: Context) {
         viewModelScope.launch {
             val config = AppConfigManager.config.first()
-            fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, config.dbconfig.effectiveLinksPerPage)
+            fetchPage(
+                context,
+                config.activeDatabaseState,
+                activeFilter.orderByOverride() ?: config.dbconfig.orderBy,
+                config.dbconfig.effectiveLinksPerPage
+            )
         }
     }
 

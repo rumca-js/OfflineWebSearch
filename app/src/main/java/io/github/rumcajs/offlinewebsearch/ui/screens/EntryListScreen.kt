@@ -12,10 +12,29 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.ui.SearchFilter
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
-import io.github.rumcajs.offlinewebsearch.ui.components.SearchFilterChipsPane
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchResultsContainer
 
+/**
+ * Primary search screen.
+ *
+ * Displays a search text field, a Search button, and a small filter button
+ * (FilterList icon) to the right of Search. The filter button opens a dropdown
+ * menu with the following options:
+ *  - Visited – restricts results to previously visited entries (shown when visit
+ *    tracking is enabled)
+ *  - Read Later – restricts results to entries saved for later reading (shown when
+ *    the active database is writable)
+ *  - By Date Published – sorts results by publication date
+ *  - By Votes – sorts results by page-rating votes
+ *  - By Visits – sorts results by visit count
+ *
+ * Selecting a filter immediately re-fetches data from the repository.
+ * Selecting the already-active filter deactivates it (acts as a toggle).
+ *
+ * Results are paginated; navigation controls appear below the list.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryListScreen(
@@ -34,14 +53,21 @@ fun EntryListScreen(
     val activeDbState = config.activeDatabaseState
     val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
 
-    // Load data once
+    // Load data once; re-fetches automatically when database or config changes.
     LaunchedEffect(Unit) {
         viewModel.loadDataIfNeeded(context)
     }
 
-    // Reset scroll position when page or search query changes
+    // Reset scroll position when page or search query changes.
     LaunchedEffect(viewModel.currentPage, viewModel.activeSearchQuery) {
         listState.scrollToItem(0)
+    }
+
+    val filterOptions = remember(config.dbconfig.trackUserNavigation, isEditable) {
+        SearchFilter.entryFilterOptions(
+            showVisited = config.dbconfig.trackUserNavigation,
+            showReadLater = isEditable
+        )
     }
 
     Column(
@@ -49,22 +75,6 @@ fun EntryListScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        SearchFilterChipsPane(
-            showVisitedChip = config.dbconfig.trackUserNavigation,
-            isFilterVisited = viewModel.isFilterVisited,
-            onToggleVisited = {
-                viewModel.toggleVisitedFilter()
-                viewModel.currentPage = 0
-                viewModel.performSearch(context)
-            },
-            showReadLaterChip = isEditable,
-            isFilterReadLater = viewModel.isFilterReadLater,
-            onToggleReadLater = {
-                viewModel.toggleReadLaterFilter()
-                viewModel.currentPage = 0
-                viewModel.performSearch(context)
-            }
-        )
         SearchContainer(
             searchQuery = viewModel.searchQuery,
             onSearchQueryChange = {
@@ -78,7 +88,12 @@ fun EntryListScreen(
             onPerformSearch = {
                 viewModel.performSearch(context)
             },
-            isSearchButtonEnabled = viewModel.isSearchButtonEnabled
+            isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
+            filterOptions = filterOptions,
+            activeFilterKey = viewModel.activeFilter.takeIf { it != SearchFilter.None }?.name,
+            onFilterSelected = { option ->
+                viewModel.setFilter(context, SearchFilter.fromKey(option.key))
+            }
         )
         SearchResultsContainer(
             isLoading = viewModel.isLoading,

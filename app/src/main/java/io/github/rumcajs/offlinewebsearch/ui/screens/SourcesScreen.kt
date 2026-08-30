@@ -3,7 +3,6 @@ package io.github.rumcajs.offlinewebsearch.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,9 +11,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,15 +30,48 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import io.github.rumcajs.offlinewebsearch.ui.components.SourceSearchBar
+import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
+import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
 import io.github.rumcajs.offlinewebsearch.data.SourceRefreshState
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
 import kotlinx.coroutines.launch
 
+/** Key constants for [SourcesScreen] filter dropdown options. */
+private const val FILTER_KEY_BY_TITLE = "by_title"
+private const val FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
+
+/** Sort mode applied to the in-memory source list. */
+private enum class SourceOrder { Default, ByTitle, ByFetchTime }
+
+/** [FilterOption] list shown in the [SearchContainer] dropdown for [SourcesScreen]. */
+private val SOURCE_FILTER_OPTIONS = listOf(
+    FilterOption(
+        key = FILTER_KEY_BY_TITLE,
+        label = "By Title",
+        icon = Icons.Default.SortByAlpha
+    ),
+    FilterOption(
+        key = FILTER_KEY_BY_FETCH_TIME,
+        label = "By Fetch Time",
+        icon = Icons.Default.DateRange
+    )
+)
+
 /**
- * Screen displaying the list of sources from `sourcedatamodel` table.
+ * Screen displaying the list of RSS/feed sources from `sourcedatamodel`.
+ *
+ * The search widget is the first item inside a [LazyColumn] so that it scrolls
+ * together with the source list — consistent with [EntryListScreen].
+ *
+ * The widget uses the shared [SearchContainer] component:
+ *  - Full-width text field
+ *  - "Search" button that applies the current query (in-memory filter)
+ *  - Filter icon button opening a dropdown with "By Title" and "By Fetch Time"
+ *
+ * Selecting a filter immediately re-sorts the list; no "Search" press is needed.
+ * Selecting the active filter again deactivates it (toggle).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +87,11 @@ fun SourcesScreen(
     val activeDbState = config.activeDatabaseState
     val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
 
+    // Raw search input (typing in the text field).
     var searchQuery by remember { mutableStateOf("") }
+    // The query that was last submitted via the Search button.
+    var activeSearchQuery by remember { mutableStateOf("") }
+    var sourceOrder by remember { mutableStateOf(SourceOrder.Default) }
     var sources by remember { mutableStateOf<List<Source>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isRefreshingAll by remember { mutableStateOf(false) }
@@ -65,15 +103,46 @@ fun SourcesScreen(
         isLoading = false
     }
 
-    val filteredSources = remember(sources, searchQuery) {
-        if (searchQuery.isBlank()) {
+    /**
+     * Applies [activeSearchQuery] and [sourceOrder] to [sources] to produce the
+     * displayed list.
+     */
+    val filteredSources = remember(sources, activeSearchQuery, sourceOrder) {
+        val base = if (activeSearchQuery.isBlank()) {
             sources
         } else {
-            val query = searchQuery.trim().lowercase()
+            val query = activeSearchQuery.trim().lowercase()
             sources.filter { source ->
                 source.title.lowercase().contains(query) ||
                     source.url.lowercase().contains(query)
             }
+        }
+        when (sourceOrder) {
+            SourceOrder.ByTitle -> base.sortedBy { it.title.lowercase() }
+            // Fetch time is stored in a separate table; sort by id as an insertion-order proxy.
+            SourceOrder.ByFetchTime -> base.sortedBy { it.id ?: Long.MAX_VALUE }
+            SourceOrder.Default -> base
+        }
+    }
+
+    /** Whether the Search button should be enabled (query differs from active query). */
+    val isSearchButtonEnabled = searchQuery != activeSearchQuery
+
+    /** Key of the currently active filter option, or null when none is active. */
+    val activeFilterKey: String? = when (sourceOrder) {
+        SourceOrder.ByTitle -> FILTER_KEY_BY_TITLE
+        SourceOrder.ByFetchTime -> FILTER_KEY_BY_FETCH_TIME
+        SourceOrder.Default -> null
+    }
+
+    /** Called when the user selects an option from the filter dropdown. */
+    val onFilterSelected: (FilterOption) -> Unit = { option ->
+        sourceOrder = when (option.key) {
+            FILTER_KEY_BY_TITLE ->
+                if (sourceOrder == SourceOrder.ByTitle) SourceOrder.Default else SourceOrder.ByTitle
+            FILTER_KEY_BY_FETCH_TIME ->
+                if (sourceOrder == SourceOrder.ByFetchTime) SourceOrder.Default else SourceOrder.ByFetchTime
+            else -> SourceOrder.Default
         }
     }
 
@@ -96,9 +165,7 @@ fun SourcesScreen(
                         activeDatabaseState = activeDbState,
                         source = src
                     )
-                    if (success) {
-                        fetchedCount++
-                    }
+                    if (success) fetchedCount++
                     SourceRefreshState.increment()
                 }
                 sources = SourceRepository.loadSources(context, activeDbState)
@@ -122,15 +189,15 @@ fun SourcesScreen(
                         sourceToDelete = null
                         if (target?.id != null) {
                             scope.launch {
-                                    val (success, err) = SourceRepository.deleteSource(context, activeDbState, target.id)
-                                    if (success) {
-                                        Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
-                                        sources = SourceRepository.loadSources(context, activeDbState)
-                                    } else {
-                                        val msg = err ?: "Failed to delete source"
-                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                                    }
+                                val (success, err) = SourceRepository.deleteSource(context, activeDbState, target.id)
+                                if (success) {
+                                    Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
+                                    sources = SourceRepository.loadSources(context, activeDbState)
+                                } else {
+                                    val msg = err ?: "Failed to delete source"
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                 }
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -158,6 +225,11 @@ fun SourcesScreen(
                     }
                 },
                 actions = {
+                    if (isEditable && onNavigateToAddSource != null) {
+                        IconButton(onClick = onNavigateToAddSource) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Source")
+                        }
+                    }
                     if (isEditable && !config.networkConfig.disabled && sources.isNotEmpty()) {
                         IconButton(
                             onClick = performRefreshAll,
@@ -177,64 +249,81 @@ fun SourcesScreen(
                 }
             )
         },
-        floatingActionButton = {
-            if (isEditable && onNavigateToAddSource != null) {
-                FloatingActionButton(onClick = onNavigateToAddSource) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Source")
-                }
-            }
-        },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Column(
+        // The search widget is the first item in the LazyColumn so it scrolls
+        // together with the source list — consistent with EntryListScreen.
+        LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            SourceSearchBar(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                onClear = { searchQuery = "" },
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+            item(key = "search_widget") {
+                SearchContainer(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    onClearSearch = {
+                        searchQuery = ""
+                        activeSearchQuery = ""
+                    },
+                    onPerformSearch = { activeSearchQuery = searchQuery },
+                    isSearchButtonEnabled = isSearchButtonEnabled,
+                    filterOptions = SOURCE_FILTER_OPTIONS,
+                    activeFilterKey = activeFilterKey,
+                    onFilterSelected = onFilterSelected,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                } else if (sources.isEmpty()) {
-                    Text(
-                        text = "No sources available in current database.",
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else if (filteredSources.isEmpty()) {
-                    Text(
-                        text = "No matching sources found.",
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filteredSources) { source ->
-                            SourceItemRow(
-                                source = source,
-                                isEditable = isEditable,
-                                onClick = { onNavigateToSource(source) },
-                                onEditClick = { onNavigateToEditSource(source) },
-                                onDeleteClick = { sourceToDelete = source }
-                            )
+            when {
+                isLoading -> {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 64.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
+                    }
+                }
+                sources.isEmpty() -> {
+                    item {
+                        Text(
+                            text = "No sources available in current database.",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 64.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                filteredSources.isEmpty() -> {
+                    item {
+                        Text(
+                            text = "No matching sources found.",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 64.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                else -> {
+                    items(filteredSources, key = { it.id ?: it.url }) { source ->
+                        SourceItemRow(
+                            source = source,
+                            isEditable = isEditable,
+                            onClick = { onNavigateToSource(source) },
+                            onEditClick = { onNavigateToEditSource(source) },
+                            onDeleteClick = { sourceToDelete = source }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
@@ -276,7 +365,7 @@ private fun SourceItemRow(
                 .padding(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Thumbnail
+            // Thumbnail / favicon
             if (source.favicon.isNotBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -321,7 +410,7 @@ private fun SourceItemRow(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Action Buttons & Status Chip
+                // Action buttons & status chip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -350,7 +439,8 @@ private fun SourceItemRow(
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete Source",
-                                tint = if (isEditable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                tint = if (isEditable) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                         }
                     }

@@ -221,6 +221,7 @@ The screen displays, where available:
  - Selecting source opens SourceScreen.
  - Provides search widget, similar to EntryListScreen, it should be scrollable
  - Similarly to EntryListScreen should contain "Search" button with a button to apply filter (order by title, or fetch time)
+ - Probably it would have to be a different search widget implementation from EntryListScreen. These can share same base class though
  - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
  - If possible fetch/refresh button should spin if sources are being refreshed
 
@@ -262,6 +263,19 @@ The screen displays, where available:
  - For example, SourceRepository provides access to the sourcedatamodel table.
  - Database access should not be performed directly from UI screens.
  - UI screens should access data through the appropriate repository or data-layer interface.
+
+# Background workers
+Process of workers should be visible on some screens.
+For example source refresh should make refresh button to be spinning, if possible
+Database refresh should make database refresh buttons to be spinning, if possible
+
+## Source refresh
+ - there is a background task that can refresh sources
+ - It would be best if it could accept new sources to refresh
+
+## Database update
+ - it would be best if it could accept new databases to fetch
+ - multiple databases should not be processed in parallel. They should be handled sequentially
 
 # Code Requirements
  - Use small functions.

@@ -74,42 +74,44 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun testFilterChipsMutualExclusivity() {
+    fun testFilterOptionsMutualExclusivity() {
         val viewModel = SearchViewModel()
 
-        // Initial state: both false
+        // Initial state: None
+        assertEquals(io.github.rumcajs.offlinewebsearch.ui.SearchFilter.None, viewModel.activeFilter)
         assertFalse(viewModel.isFilterVisited)
         assertFalse(viewModel.isFilterReadLater)
 
-        // Toggle Visited on
-        viewModel.toggleVisitedFilter()
+        // Select Visited
+        viewModel.setFilter(filter = io.github.rumcajs.offlinewebsearch.ui.SearchFilter.Visited)
+        assertEquals(io.github.rumcajs.offlinewebsearch.ui.SearchFilter.Visited, viewModel.activeFilter)
         assertTrue(viewModel.isFilterVisited)
         assertFalse(viewModel.isFilterReadLater)
 
-        // Toggle Read Later on -> Visited should be turned off
-        viewModel.toggleReadLaterFilter()
+        // Select Read Later -> Visited should be turned off, Read Later active
+        viewModel.setFilter(filter = io.github.rumcajs.offlinewebsearch.ui.SearchFilter.ReadLater)
+        assertEquals(io.github.rumcajs.offlinewebsearch.ui.SearchFilter.ReadLater, viewModel.activeFilter)
         assertFalse(viewModel.isFilterVisited)
         assertTrue(viewModel.isFilterReadLater)
 
-        // Toggle Visited on -> Read Later should be turned off
-        viewModel.toggleVisitedFilter()
+        // Select Visited again -> Read Later turned off, Visited active
+        viewModel.setFilter(filter = io.github.rumcajs.offlinewebsearch.ui.SearchFilter.Visited)
+        assertEquals(io.github.rumcajs.offlinewebsearch.ui.SearchFilter.Visited, viewModel.activeFilter)
         assertTrue(viewModel.isFilterVisited)
         assertFalse(viewModel.isFilterReadLater)
 
-        // Toggle Visited off -> both false
-        viewModel.toggleVisitedFilter()
+        // Toggle Visited off by selecting it again -> resets to None
+        viewModel.setFilter(filter = io.github.rumcajs.offlinewebsearch.ui.SearchFilter.Visited)
+        assertEquals(io.github.rumcajs.offlinewebsearch.ui.SearchFilter.None, viewModel.activeFilter)
         assertFalse(viewModel.isFilterVisited)
         assertFalse(viewModel.isFilterReadLater)
 
-        // Toggle Read Later on -> Read Later true, Visited false
-        viewModel.toggleReadLaterFilter()
-        assertFalse(viewModel.isFilterVisited)
-        assertTrue(viewModel.isFilterReadLater)
-
-        // Toggle Read Later off -> both false
-        viewModel.toggleReadLaterFilter()
+        // Select ByVotes -> neither visited nor read later, but activeFilter is ByVotes
+        viewModel.setFilter(filter = io.github.rumcajs.offlinewebsearch.ui.SearchFilter.ByVotes)
+        assertEquals(io.github.rumcajs.offlinewebsearch.ui.SearchFilter.ByVotes, viewModel.activeFilter)
         assertFalse(viewModel.isFilterVisited)
         assertFalse(viewModel.isFilterReadLater)
+        assertEquals(io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VOTES, viewModel.activeFilter.orderByOverride())
     }
 
     @Test

@@ -361,11 +361,26 @@ private fun getFileName(context: Context, uri: Uri): String? {
 @Composable
 fun DatabaseList(
     databases: Map<String, DatabaseState>,
-    onItemClick: ((String, DatabaseState) -> Unit)? = null,
+    onItemClick: ((String?, DatabaseState) -> Unit)? = null,
     onEdit: (String) -> Unit,
     onDelete: (String, DatabaseState) -> Unit,
     onUpdate: (String, DatabaseState) -> Unit
 ) {
+    // The "Default (Assets)" database is always available even though it has no
+    // entry in the databases map. Show it as a permanent, read-only first item.
+    val defaultState = DatabaseState(
+        url = "",
+        localFileName = "",
+        status = io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY,
+        progress = 1f,
+        isReadOnly = true
+    )
+    DefaultDatabaseItem(
+        onItemClick = if (onItemClick != null) {
+            { onItemClick(null, defaultState) }
+        } else null
+    )
+
     databases.forEach { (url, state) ->
         DatabaseItem(
             state = state,
@@ -374,6 +389,52 @@ fun DatabaseList(
             onDelete = { onDelete(url, state) },
             onUpdate = { onUpdate(url, state) }
         )
+    }
+}
+
+/**
+ * A fixed, non-interactive pill row representing the built-in "Default (Assets)" database.
+ *
+ * This database is always present (backed by bundled asset files), so it is shown
+ * permanently at the top of the list regardless of the user-added database map.
+ * It cannot be edited, deleted, or refreshed.
+ *
+ * @param onItemClick Optional callback to navigate to the database detail screen.
+ */
+@Composable
+private fun DefaultDatabaseItem(
+    onItemClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .then(
+                    if (onItemClick != null) Modifier.clickable { onItemClick() }
+                    else Modifier
+                )
+                .padding(vertical = 4.dp)
+        ) {
+            Text(
+                text = "Default (Assets)",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Row(
+                modifier = Modifier.padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                StatusBadge(io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY)
+                ReadOnlyBadge(isReadOnly = true)
+            }
+        }
+        // No edit / delete / refresh buttons for the default database.
     }
 }
 
