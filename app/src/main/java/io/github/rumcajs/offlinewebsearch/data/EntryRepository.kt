@@ -236,6 +236,61 @@ object EntryRepository : RepositoryInterface {
         }
     }
 
+    const val MIN_PAGE_RATING_VOTES = -100
+    const val MAX_PAGE_RATING_VOTES = 100
+
+    fun getMinPageRatingVotes(): Int = MIN_PAGE_RATING_VOTES
+    fun getMaxPageRatingVotes(): Int = MAX_PAGE_RATING_VOTES
+
+    /**
+     * Adjusts the page_rating_votes count for an entry in the SQLite database by [delta] (clamped between MIN_PAGE_RATING_VOTES and MAX_PAGE_RATING_VOTES).
+     * @return Pair where first is true on success and second is the new vote total (or null on failure).
+     */
+    suspend fun adjustVotesInSql(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long?,
+        delta: Int
+    ): Pair<Boolean, Int?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || id == null) return@withContext Pair(false, null)
+        if (activeDatabaseState.extension != ".db") return@withContext Pair(false, null)
+        if (activeDatabaseState.isReadOnly) return@withContext Pair(false, null)
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, null)
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            var currentVotes = 0
+            val cursor = db.rawQuery("SELECT page_rating_votes FROM ${getTableName()} WHERE id = ? LIMIT 1", arrayOf(id.toString()))
+            cursor.use { c ->
+                if (c.moveToFirst() && !c.isNull(0)) {
+                    currentVotes = c.getInt(0)
+                }
+            }
+
+            val newVotes = (currentVotes + delta).coerceIn(MIN_PAGE_RATING_VOTES, MAX_PAGE_RATING_VOTES)
+            val values = android.content.ContentValues().apply {
+                put("page_rating_votes", newVotes)
+            }
+            val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
+            db.close()
+            if (rows > 0) Pair(true, newVotes) else Pair(false, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, null)
+        }
+    }
+
+    /**
+     * Adds a vote (+1 by default) for an entry in the SQLite database.
+     */
+    suspend fun addVoteInSql(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long?
+    ): Pair<Boolean, Int?> = adjustVotesInSql(context, activeDatabaseState, id, delta = 1)
+
     /**
      * Increments the page_rating_visits count for an entry in the SQLite database.
      */

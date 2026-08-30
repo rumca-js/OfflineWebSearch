@@ -209,11 +209,14 @@ fun DatabaseScreen(
                 }
             }
 
-            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseStatePane(state = state)
+            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseConfigPane(
+                url = url,
+                dbConfig = dbConfig
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseConfigurationPane(dbConfig = dbConfig)
+            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseStatePane(state = state)
 
             Spacer(modifier = Modifier.height(24.dp))
 

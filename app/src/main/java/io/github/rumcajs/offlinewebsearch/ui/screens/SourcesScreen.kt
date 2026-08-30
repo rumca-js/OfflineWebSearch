@@ -293,7 +293,7 @@ fun SourcesScreen(
                 sources.isEmpty() -> {
                     item {
                         Text(
-                            text = "No sources available in current database.",
+                            text = "No sources available in current database. Feeds and RSS sources can be added via the add button.",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 64.dp),

@@ -218,4 +218,74 @@ class EntryRepositoryTest {
         assertTrue("Row IDs must be distinct", id1 != id2)
         assertTrue("Both row IDs should be positive", id1 > 0 && id2 > 0)
     }
+
+    // ── Votes: addVoteInSql and adjustVotesInSql ──────────────────────────────
+
+    @Test
+    fun `addVoteInSql increments vote count by 1`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 10))
+        val (ok, newVotes) = EntryRepository.addVoteInSql(context, dbState, rowId)
+
+        assertTrue(ok)
+        assertEquals(11, newVotes)
+
+        val stored = queryEntry(rowId)
+        assertEquals(11, stored?.page_rating_votes)
+    }
+
+    @Test
+    fun `adjustVotesInSql clamps vote count at MAX_PAGE_RATING_VOTES 100`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 99))
+        val (ok, newVotes) = EntryRepository.adjustVotesInSql(context, dbState, rowId, delta = 5)
+
+        assertTrue(ok)
+        assertEquals(EntryRepository.MAX_PAGE_RATING_VOTES, newVotes)
+        assertEquals(100, newVotes)
+
+        val stored = queryEntry(rowId)
+        assertEquals(100, stored?.page_rating_votes)
+    }
+
+    @Test
+    fun `adjustVotesInSql clamps vote count at MIN_PAGE_RATING_VOTES -100`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = -95))
+        val (ok, newVotes) = EntryRepository.adjustVotesInSql(context, dbState, rowId, delta = -10)
+
+        assertTrue(ok)
+        assertEquals(EntryRepository.MIN_PAGE_RATING_VOTES, newVotes)
+        assertEquals(-100, newVotes)
+
+        val stored = queryEntry(rowId)
+        assertEquals(-100, stored?.page_rating_votes)
+    }
+
+    @Test
+    fun `adjustVotesInSql fails when database is read-only`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry())
+        val readOnlyState = dbState.copy(isReadOnly = true)
+        val (ok, newVotes) = EntryRepository.adjustVotesInSql(context, readOnlyState, rowId, delta = 1)
+
+        assertFalse(ok)
+        assertNull(newVotes)
+    }
+
+    // ── Tags: EntryCompactedTagsRepository replace and load ───────────────────
+
+    @Test
+    fun `deleteTagsForEntry and insertTag replaces tags for entry`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(tags = listOf("old1", "old2")))
+        assertEquals(listOf("old1", "old2"), queryTags(rowId))
+
+        // Replace tags
+        val (delOk, _) = EntryCompactedTagsRepository.deleteTagsForEntry(context, dbState, rowId)
+        assertTrue(delOk)
+
+        val (ins1, _) = EntryCompactedTagsRepository.insertTag(context, dbState, "news", rowId)
+        val (ins2, _) = EntryCompactedTagsRepository.insertTag(context, dbState, "tech", rowId)
+        assertTrue(ins1)
+        assertTrue(ins2)
+
+        val loadedTags = EntryCompactedTagsRepository.loadTagsForEntry(context, dbState, rowId).map { it.tag }
+        assertEquals(listOf("news", "tech"), loadedTags)
+    }
 }

@@ -106,6 +106,19 @@ object AppConfigManager {
         }
     }
 
+    fun setDatabaseConfig(url: String?, update: (DatabaseConfiguration) -> DatabaseConfiguration) {
+        updateConfig { currentConfig ->
+            if (url != null) {
+                val currentDbConfig = currentConfig.dbConfigs[url] ?: DatabaseConfiguration()
+                val newDbConfig = update(currentDbConfig)
+                currentConfig.copy(dbConfigs = currentConfig.dbConfigs + (url to newDbConfig))
+            } else {
+                val newDefault = update(currentConfig.defaultDbConfig)
+                currentConfig.copy(defaultDbConfig = newDefault)
+            }
+        }
+    }
+
     fun setDirectLinks(enabled: Boolean) {
         updateConfig { currentConfig ->
             currentConfig.updateActiveDbConfig { it.copy(directLinks = enabled) }

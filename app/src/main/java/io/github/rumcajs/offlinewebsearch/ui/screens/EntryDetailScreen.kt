@@ -78,6 +78,24 @@ fun EntryDetailScreen(
                 entry = entry,
                 isEditable = isEditable,
                 isReadLater = isReadLater,
+                onAddVote = if (isEditable && entry.id != null) {
+                    {
+                        scope.launch {
+                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.addVoteInSql(
+                                context,
+                                activeDbState,
+                                entry.id
+                            )
+                            if (success && newVotes != null) {
+                                val updatedEntry = entry.copy(page_rating_votes = newVotes)
+                                onSelectEntry?.invoke(updatedEntry)
+                                Toast.makeText(context, "Vote added (Total: $newVotes)", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to add vote", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } else null,
                 onToggleReadLater = {
                     val entryId = entry.id ?: return@EntryDetailTopBar
                     scope.launch {
@@ -217,6 +235,10 @@ fun EntryDetailScreen(
                 )
             }
 
+            var showTagsDialog by remember { mutableStateOf(false) }
+            var tagsInput by remember(entry.tags) { mutableStateOf(entry.tags?.joinToString(", ") ?: "") }
+            var isSavingTags by remember { mutableStateOf(false) }
+
             entry.tags?.let { tags ->
                 if (tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -237,6 +259,94 @@ fun EntryDetailScreen(
                         }
                     }
                 }
+            }
+
+            if (isEditable && entry.id != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedButton(
+                    onClick = {
+                        tagsInput = entry.tags?.joinToString(", ") ?: ""
+                        showTagsDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Edit Tags")
+                }
+            }
+
+            if (showTagsDialog && entry.id != null) {
+                AlertDialog(
+                    onDismissRequest = { if (!isSavingTags) showTagsDialog = false },
+                    title = { Text("Edit Tags") },
+                    text = {
+                        Column {
+                            Text(
+                                text = "Enter tags separated with ',' character:",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = tagsInput,
+                                onValueChange = { tagsInput = it },
+                                label = { Text("Tags") },
+                                placeholder = { Text("tag1, tag2, tag3") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = false,
+                                maxLines = 4
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val newTags = tagsInput.split(",")
+                                    .map { it.trim() }
+                                    .filter { it.isNotEmpty() }
+                                val entryId = entry.id
+                                val dbState = activeDbState
+                                if (entryId != null && dbState != null) {
+                                    scope.launch {
+                                        isSavingTags = true
+                                        try {
+                                            io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository.deleteTagsForEntry(
+                                                context,
+                                                dbState,
+                                                entryId
+                                            )
+                                            for (tag in newTags) {
+                                                io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository.insertTag(
+                                                    context,
+                                                    dbState,
+                                                    tag,
+                                                    entryId
+                                                )
+                                            }
+                                            val updatedEntry = entry.copy(tags = newTags)
+                                            onSelectEntry?.invoke(updatedEntry)
+                                            Toast.makeText(context, "Tags updated", Toast.LENGTH_SHORT).show()
+                                            showTagsDialog = false
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, e.message ?: "Failed to update tags", Toast.LENGTH_LONG).show()
+                                        } finally {
+                                            isSavingTags = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isSavingTags
+                        ) {
+                            Text("Save")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showTagsDialog = false },
+                            enabled = !isSavingTags
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             // Source pane (if source_id or source_url is set)
