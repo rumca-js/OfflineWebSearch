@@ -209,7 +209,7 @@ object EntryVisitHistoryRepository : RepositoryInterface {
             db.close()
 
             if (lastVisitedEntryId != null && lastVisitedEntryId != entryId) {
-                EntryTransitionHistoryRepository.recordTransition(
+                EntryTransitionHistoryRepository.insertTransition(
                     context = context,
                     activeDatabaseState = activeDatabaseState,
                     fromEntryId = lastVisitedEntryId,

@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.data.ReadLater
@@ -41,7 +40,7 @@ fun ReadLaterScreen(
     fun loadData() {
         scope.launch {
             isLoading = true
-            readLaterEntries = ReadLaterRepository.loadReadLaterEntries(context, activeDbState)
+            readLaterEntries = ReadLaterRepository.getReadLaterEntries(context, activeDbState)
             isLoading = false
         }
     }
@@ -60,7 +59,7 @@ fun ReadLaterScreen(
                     onClick = {
                         showClearDialog = false
                         scope.launch {
-                            ReadLaterRepository.clearReadLater(context, activeDbState)
+                            ReadLaterRepository.clear(context, activeDbState)
                             loadData()
                         }
                     }

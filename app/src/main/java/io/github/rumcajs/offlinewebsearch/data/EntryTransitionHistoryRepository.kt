@@ -48,53 +48,6 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
     }
 
     /**
-     * Loads transition records for a given originating entry ID [fromEntryId].
-     */
-    suspend fun loadTransitionsFrom(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        fromEntryId: Long,
-        limit: Int = MAX_NUMBER_OF_DISPLAYED_ENTRIES
-    ): List<EntryTransitionHistory> = withContext(Dispatchers.IO) {
-        val transitions = mutableListOf<EntryTransitionHistory>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
-            return@withContext transitions
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext transitions
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val sqlText = "SELECT id, counter, entry_from_id, entry_to_id FROM ${getTableName()} WHERE entry_from_id = ? ORDER BY counter DESC, id DESC LIMIT ?"
-            val cursor = db.rawQuery(sqlText, arrayOf(fromEntryId.toString(), limit.toString()))
-            cursor.use { c ->
-                while (c.moveToNext()) {
-                    val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))
-                    val counter = if (c.isNull(c.getColumnIndexOrThrow("counter"))) null else c.getInt(c.getColumnIndexOrThrow("counter"))
-                    val entryFromId = if (c.isNull(c.getColumnIndexOrThrow("entry_from_id"))) null else c.getLong(c.getColumnIndexOrThrow("entry_from_id"))
-                    val entryToId = if (c.isNull(c.getColumnIndexOrThrow("entry_to_id"))) null else c.getLong(c.getColumnIndexOrThrow("entry_to_id"))
-
-                    transitions.add(
-                        EntryTransitionHistory(
-                            id = id,
-                            counter = counter,
-                            entry_from_id = entryFromId,
-                            entry_to_id = entryToId
-                        )
-                    )
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        transitions
-    }
-
-    /**
      * Result wrapper for loading transitioned entries with potential error messaging.
      */
     data class TransitionLoadResult(
@@ -105,7 +58,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
     /**
      * Loads destination [Entry] objects that were transitioned to from [fromEntryId], ordered by transition counter descending.
      */
-    suspend fun loadTransitionedEntriesFrom(
+    suspend fun getTransitionedEntriesFrom(
         context: Context,
         activeDatabaseState: DatabaseState?,
         fromEntryId: Long,
@@ -168,7 +121,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
      * Records or updates a transition from [fromEntryId] to [toEntryId] in `entrytransitionhistory`.
      * Increments the transition counter if an entry transition record already exists, or inserts a new one with counter 1.
      */
-    suspend fun recordTransition(
+    suspend fun insertTransition(
         context: Context,
         activeDatabaseState: DatabaseState?,
         fromEntryId: Long,
@@ -224,15 +177,6 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
     }
 
     /**
-     * Deletes a transition record by ID (alias for [deleteById]).
-     */
-    suspend fun deleteTransition(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
-
-    /**
      * TODO. I think it can be moved to RepositoryInterface
      * Clears all transition history records from `entrytransitionhistory`.
      */
@@ -258,13 +202,5 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
-
-    /**
-     * Clears all transition history records from `entrytransitionhistory` (alias for [clear]).
-     */
-    suspend fun clearTransitionHistory(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
 

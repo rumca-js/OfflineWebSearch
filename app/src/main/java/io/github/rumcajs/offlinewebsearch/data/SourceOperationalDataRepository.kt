@@ -108,7 +108,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
     /**
      * Updates or inserts a fetch timestamp record in `sourceoperationaldata` for [sourceObjId].
      */
-    suspend fun recordSourceFetch(
+    suspend fun setSourceFetch(
         context: Context,
         activeDatabaseState: DatabaseState?,
         sourceObjId: Long,
@@ -155,7 +155,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
     /**
      * Updates or inserts a fetch timestamp record in `sourceoperationaldata` for the source identified by [sourceUrl].
      */
-    suspend fun recordSourceFetchByUrl(
+    suspend fun setSourceFetchByUrl(
         context: Context,
         activeDatabaseState: DatabaseState?,
         sourceUrl: String,
@@ -184,7 +184,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
             }
 
             db.close()
-            recordSourceFetch(context, activeDatabaseState, sourceId, fetchTime)
+            setSourceFetch(context, activeDatabaseState, sourceId, fetchTime)
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")

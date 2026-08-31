@@ -488,7 +488,7 @@ object SourceRepository : RepositoryInterface {
                 db.close()
             }
 
-            SourceOperationalDataRepository.recordSourceFetchByUrl(
+            SourceOperationalDataRepository.setSourceFetchByUrl(
                 context = context,
                 activeDatabaseState = activeDatabaseState,
                 sourceUrl = urlObj.url

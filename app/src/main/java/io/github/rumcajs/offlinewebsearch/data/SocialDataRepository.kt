@@ -184,16 +184,6 @@ object SocialDataRepository : RepositoryInterface {
     }
 
     /**
-     * Deletes a record from `socialdata` by [id] (alias for [deleteById]).
-     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
-     */
-    suspend fun deleteSocialData(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
-
-    /**
      * Clears all records from the `socialdata` table.
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
@@ -218,14 +208,6 @@ object SocialDataRepository : RepositoryInterface {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
-
-    /**
-     * Clears all records from the `socialdata` table (alias for [clear]).
-     */
-    suspend fun clearSocialData(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
 
 

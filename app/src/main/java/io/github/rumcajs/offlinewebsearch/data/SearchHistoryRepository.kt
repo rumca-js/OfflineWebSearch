@@ -52,7 +52,7 @@ object SearchHistoryRepository : RepositoryInterface {
      * Loads search history entries ordered by date descending.
      * @param limit Maximum number of recent search records to retrieve (default 50).
      */
-    suspend fun loadSearchHistory(
+    suspend fun getSearchHistory(
         context: Context,
         activeDatabaseState: DatabaseState?,
         limit: Int = 50
@@ -94,59 +94,10 @@ object SearchHistoryRepository : RepositoryInterface {
     }
 
     /**
-     * Returns search suggestions matching a prefix or query string, sorted by date descending.
-     * Used by search suggestions UI.
-     */
-    suspend fun getSearchSuggestions(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        prefix: String,
-        limit: Int = 10
-    ): List<String> = withContext(Dispatchers.IO) {
-        val suggestions = mutableListOf<String>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
-            return@withContext suggestions
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext suggestions
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val sqlText = if (prefix.isBlank()) {
-                "SELECT DISTINCT search_query FROM ${getTableName()} WHERE search_query IS NOT NULL AND search_query != '' ORDER BY date DESC, id DESC LIMIT ?"
-            } else {
-                "SELECT DISTINCT search_query FROM ${getTableName()} WHERE search_query LIKE ? AND search_query != '' ORDER BY date DESC, id DESC LIMIT ?"
-            }
-            val selectionArgs = if (prefix.isBlank()) {
-                arrayOf(limit.toString())
-            } else {
-                arrayOf("%$prefix%", limit.toString())
-            }
-
-            val cursor = db.rawQuery(sqlText, selectionArgs)
-            cursor.use { c ->
-                while (c.moveToNext()) {
-                    val query = c.getString(0)
-                    if (!query.isNullOrBlank()) {
-                        suggestions.add(query)
-                    }
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        suggestions
-    }
-
-    /**
      * Records a user search query into the `searchhistory` table.
      * Replaces or updates existing matching search query timestamp or creates a new entry.
      */
-    suspend fun recordSearch(
+    suspend fun insertSearch(
         context: Context,
         activeDatabaseState: DatabaseState?,
         query: String
@@ -206,15 +157,6 @@ object SearchHistoryRepository : RepositoryInterface {
     }
 
     /**
-     * Deletes a search history record by ID (alias for [deleteById]).
-     */
-    suspend fun deleteSearch(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
-
-    /**
      * Clears all search history records from `searchhistory`.
      */
     override suspend fun clear(
@@ -239,14 +181,6 @@ object SearchHistoryRepository : RepositoryInterface {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
-
-    /**
-     * Clears all search history records from `searchhistory` (alias for [clear]).
-     */
-    suspend fun clearSearchHistory(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
 
 

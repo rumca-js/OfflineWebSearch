@@ -112,7 +112,7 @@ class SearchViewModel : ViewModel() {
                     currentPage = 0
                     val activeState = config.activeDatabaseState
                     if (activeState != null && activeState.extension == ".db") {
-                        val historyList = SearchHistoryRepository.loadSearchHistory(context, activeState)
+                        val historyList = SearchHistoryRepository.getSearchHistory(context, activeState)
                         searchHistory = historyList.map { it.search_query }
                     }
                     fetchPage(context, config.activeDatabaseState, config.dbconfig.orderBy, activeLinksPerPage)
@@ -139,7 +139,7 @@ class SearchViewModel : ViewModel() {
             viewModelScope.launch {
                 val config = AppConfigManager.config.first()
                 if (searchQuery.isNotBlank() && config.dbconfig.trackUserSearches) {
-                    SearchHistoryRepository.recordSearch(context, config.activeDatabaseState, searchQuery)
+                    SearchHistoryRepository.insertSearch(context, config.activeDatabaseState, searchQuery)
                 }
                 fetchPage(
                     context,

@@ -285,7 +285,7 @@ class EntryRepositoryTest {
         assertTrue(ins1)
         assertTrue(ins2)
 
-        val loadedTags = EntryCompactedTagsRepository.loadTagsForEntry(context, dbState, rowId).map { it.tag }
+        val loadedTags = EntryCompactedTagsRepository.getTagsForEntry(context, dbState, rowId).map { it.tag }
         assertEquals(listOf("news", "tech"), loadedTags)
     }
 }

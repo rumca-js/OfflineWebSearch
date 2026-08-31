@@ -57,7 +57,7 @@ object EntryCompactedTagsRepository : RepositoryInterface {
      * @param entryId The entry whose tags are requested.
      * @return List of [EntryCompactedTag] rows for this entry.
      */
-    suspend fun loadTagsForEntry(
+    suspend fun getTagsForEntry(
         context: Context,
         activeDatabaseState: DatabaseState?,
         entryId: Long
@@ -74,45 +74,6 @@ object EntryCompactedTagsRepository : RepositoryInterface {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             val sqlText = "SELECT id, tag, entry_id FROM ${getTableName()} WHERE entry_id = ? ORDER BY id ASC"
             val cursor = db.rawQuery(sqlText, arrayOf(entryId.toString()))
-            cursor.use { c ->
-                while (c.moveToNext()) {
-                    val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))
-                    val tag = c.getString(c.getColumnIndexOrThrow("tag")) ?: ""
-                    val eId = if (c.isNull(c.getColumnIndexOrThrow("entry_id"))) null else c.getLong(c.getColumnIndexOrThrow("entry_id"))
-                    tags.add(EntryCompactedTag(id = id, tag = tag, entry_id = eId))
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        tags
-    }
-
-    /**
-     * Loads all rows in the `entrycompactedtags` table, ordered by entry_id and id ascending.
-     *
-     * @param context Application context.
-     * @param activeDatabaseState Current database state.
-     * @return Full list of [EntryCompactedTag] rows.
-     */
-    suspend fun loadAll(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): List<EntryCompactedTag> = withContext(Dispatchers.IO) {
-        val tags = mutableListOf<EntryCompactedTag>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
-            return@withContext tags
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext tags
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, tag, entry_id FROM ${getTableName()} ORDER BY entry_id ASC, id ASC"
-            val cursor = db.rawQuery(sqlText, null)
             cursor.use { c ->
                 while (c.moveToNext()) {
                     val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))

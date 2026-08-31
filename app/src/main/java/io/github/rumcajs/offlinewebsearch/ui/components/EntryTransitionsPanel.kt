@@ -1,14 +1,11 @@
 package io.github.rumcajs.offlinewebsearch.ui.components
 
-import android.content.Context
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -16,7 +13,6 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistory
 import io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository
-import io.github.rumcajs.offlinewebsearch.util.EntryUtils
 
 /**
  * Component that displays a list/panel of transition links to other entries
@@ -44,7 +40,7 @@ fun EntryTransitionsPanel(
 
     LaunchedEffect(fromEntryId, activeDbState, maxEntries) {
         if (activeDbState != null) {
-            val res = EntryTransitionHistoryRepository.loadTransitionedEntriesFrom(
+            val res = EntryTransitionHistoryRepository.getTransitionedEntriesFrom(
                 context = context,
                 activeDatabaseState = activeDbState,
                 fromEntryId = fromEntryId,
@@ -97,7 +93,7 @@ fun EntryTransitionsPanel(
                             if (activeDbState != null && config.dbconfig.trackUserNavigation) {
                                 selectedEntry.id?.let { targetId ->
                                     coroutineScope.launch {
-                                        EntryTransitionHistoryRepository.recordTransition(
+                                        EntryTransitionHistoryRepository.insertTransition(
                                             context,
                                             activeDbState,
                                             fromEntryId,

@@ -43,60 +43,9 @@ object ReadLaterRepository : RepositoryInterface {
     }
 
     /**
-     * Loads all ReadLater records from the database, optionally filtered by [userId].
-     */
-    suspend fun loadReadLaterList(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        userId: Long? = null
-    ): List<ReadLater> = withContext(Dispatchers.IO) {
-        val list = mutableListOf<ReadLater>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
-            return@withContext list
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext list
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-
-            val query = if (userId != null) {
-                "SELECT id, entry_id, user_id FROM ${getTableName()} WHERE user_id = ? ORDER BY id DESC"
-            } else {
-                "SELECT id, entry_id, user_id FROM ${getTableName()} ORDER BY id DESC"
-            }
-            val args = if (userId != null) arrayOf(userId.toString()) else null
-
-            val cursor = db.rawQuery(query, args)
-            cursor.use { c ->
-                while (c.moveToNext()) {
-                    val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))
-                    val entryId = if (c.isNull(c.getColumnIndexOrThrow("entry_id"))) null else c.getLong(c.getColumnIndexOrThrow("entry_id"))
-                    val uId = if (c.isNull(c.getColumnIndexOrThrow("user_id"))) null else c.getLong(c.getColumnIndexOrThrow("user_id"))
-
-                    list.add(
-                        ReadLater(
-                            id = id,
-                            entry_id = entryId,
-                            user_id = uId
-                        )
-                    )
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        list
-    }
-
-    /**
      * Loads ReadLater items joined with their corresponding [Entry] from `linkdatamodel`.
      */
-    suspend fun loadReadLaterEntries(
+    suspend fun getReadLaterEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
         userId: Long? = null
@@ -257,15 +206,6 @@ object ReadLaterRepository : RepositoryInterface {
     }
 
     /**
-     * Deletes a ReadLater record by its primary key [id] (alias for [deleteById]).
-     */
-    suspend fun deleteReadLater(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
-
-    /**
      * Clears all records from the `readlater` table.
      */
     override suspend fun clear(
@@ -290,14 +230,6 @@ object ReadLaterRepository : RepositoryInterface {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
-
-    /**
-     * Clears all records from the `readlater` table (alias for [clear]).
-     */
-    suspend fun clearReadLater(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
 
 
