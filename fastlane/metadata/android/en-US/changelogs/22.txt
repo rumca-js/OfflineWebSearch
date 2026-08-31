@@ -1,0 +1,1 @@
+Provided entry list filter menu. Provided ability to change entry vote, tags. Refactored workers.
