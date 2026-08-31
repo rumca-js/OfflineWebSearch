@@ -78,9 +78,9 @@ object EntryRepository : RepositoryInterface {
     ): Int = withContext(Dispatchers.IO) {
         when {
             activeDatabaseState == null ->
-                filterInMemory(loadEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater).size
+                filterInMemory(getEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater).size
             activeDatabaseState.extension != ".db" ->
-                filterInMemory(loadEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater).size
+                filterInMemory(getEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater).size
             else ->
                 countEntries(context, activeDatabaseState, searchQuery, filterByVisited, filterByReadLater)
         }
@@ -102,15 +102,15 @@ object EntryRepository : RepositoryInterface {
     ): List<Entry> = withContext(Dispatchers.IO) {
         when {
             activeDatabaseState == null -> {
-                val all = filterInMemory(loadEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater)
+                val all = filterInMemory(getEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater)
                 all.sortedByOrderBy(orderBy).drop(offset).take(pageSize)
             }
             activeDatabaseState.extension != ".db" -> {
-                val all = filterInMemory(loadEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater)
+                val all = filterInMemory(getEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater)
                 all.sortedByOrderBy(orderBy).drop(offset).take(pageSize)
             }
             else ->
-                loadPageFromSql(context, activeDatabaseState, searchQuery, orderBy, offset, pageSize, filterByVisited, filterByReadLater)
+                getPageFromSql(context, activeDatabaseState, searchQuery, orderBy, offset, pageSize, filterByVisited, filterByReadLater)
         }
     }
 
@@ -427,7 +427,7 @@ object EntryRepository : RepositoryInterface {
         }
     }
 
-    private fun loadPageFromSql(
+    private fun getPageFromSql(
         context: Context,
         state: DatabaseState,
         searchQuery: String,
@@ -631,7 +631,7 @@ object EntryRepository : RepositoryInterface {
     // Private helpers – JSON / assets
     // ──────────────────────────────────────────────────────────────────────────
 
-    private fun loadEntriesFromAssets(context: Context, assets: List<String>): List<Entry> {
+    private fun getEntriesFromAssets(context: Context, assets: List<String>): List<Entry> {
         val loaded = mutableListOf<Entry>()
         assets.forEach { fileName ->
             try {
@@ -647,7 +647,7 @@ object EntryRepository : RepositoryInterface {
         return loaded
     }
 
-    private fun loadEntriesFromJson(context: Context, state: DatabaseState): List<Entry> {
+    private fun getEntriesFromJson(context: Context, state: DatabaseState): List<Entry> {
         val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return emptyList()
         return try {
