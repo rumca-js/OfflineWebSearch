@@ -4,13 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -417,7 +410,7 @@ fun EntryDetailScreen(
                                     scope.launch {
                                         isSavingVote = true
                                         try {
-                                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.setVote(
+                                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.setVoteSql(
                                                 context,
                                                 dbState,
                                                 entryId,

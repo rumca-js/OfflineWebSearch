@@ -534,23 +534,6 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
-     * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [sourceUrl].
-     * Creates a single [Url] instance and passes it to metadata update and entry insertion.
-     * @return Pair(success, resultMessage)
-     */
-    suspend fun updateSource(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        sourceUrl: String
-    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (sourceUrl.isBlank()) {
-            return@withContext Pair(false, "Source URL is empty")
-        }
-        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
-        updateSource(context, activeDatabaseState, urlObj)
-    }
-
-    /**
      * Checks fetch times of all enabled sources and fetches any sources whose fetch timestamp is older
      * than 1 hour, or never fetched.
      * @return number of successfully refreshed sources.

@@ -63,7 +63,7 @@ fun EntryEditScreen(
             false
         } else if (isAddMode) {
             val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-            val (success, rowId, err) = EntryRepository.addEntry(
+            val (success, rowId, err) = EntryRepository.addEntrySql(
                 context = context,
                 activeDatabaseState = activeDbState,
                 entry = entry.copy(
@@ -94,7 +94,7 @@ fun EntryEditScreen(
 
             success
         } else {
-            val success = EntryRepository.updateEntry(
+            val success = EntryRepository.updateEntrySql(
                 context = context,
                 activeDatabaseState = activeDbState,
                 id = entry.id,
