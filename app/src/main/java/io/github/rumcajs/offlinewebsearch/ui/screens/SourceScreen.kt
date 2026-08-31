@@ -90,7 +90,7 @@ fun SourceScreen(
                 onFinished = { success, msg ->
                     scope.launch {
                         if (success) {
-                            val updatedSources = SourceRepository.getAllSources(context, activeDbState)
+                            val updatedSources = SourceRepository.getSourcesByFetchTime(context, activeDbState)
                             val updated = updatedSources.firstOrNull { it.id == currentSource.id || it.url == currentSource.url }
                             if (updated != null) {
                                 currentSource = updated

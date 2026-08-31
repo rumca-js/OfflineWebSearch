@@ -550,7 +550,7 @@ object SourceRepository : RepositoryInterface {
             return@withContext 0
         }
 
-        val sources = getAllSources(context, activeDatabaseState).filter { it.enabled && it.url.isNotBlank() }
+        val sources = getSourcesByFetchTime(context, activeDatabaseState).filter { it.enabled && it.url.isNotBlank() }
         if (sources.isEmpty()) return@withContext 0
 
         var refreshedCount = 0
