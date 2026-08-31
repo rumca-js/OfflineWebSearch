@@ -99,7 +99,7 @@ fun SourcesScreen(
 
     LaunchedEffect(config.activeDatabase) {
         isLoading = true
-        sources = SourceRepository.loadSources(context, activeDbState)
+        sources = SourceRepository.getAllSources(context, activeDbState)
         isLoading = false
     }
 
@@ -161,7 +161,7 @@ fun SourcesScreen(
                 sources = sources,
                 onFinished = { fetchedCount ->
                     scope.launch {
-                        sources = SourceRepository.loadSources(context, activeDbState)
+                        sources = SourceRepository.getSourcesByFetchTime(context, activeDbState)
                         isRefreshingAll = false
                         Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
                     }
@@ -186,7 +186,7 @@ fun SourcesScreen(
                                 val (success, err) = SourceRepository.deleteSource(context, activeDbState, target.id)
                                 if (success) {
                                     Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
-                                    sources = SourceRepository.loadSources(context, activeDbState)
+                                    sources = SourceRepository.getAllSources(context, activeDbState)
                                 } else {
                                     val msg = err ?: "Failed to delete source"
                                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()

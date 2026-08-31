@@ -45,10 +45,10 @@ fun SourcePane(
     LaunchedEffect(sourceId, sourceUrl, config.activeDatabaseState) {
         matchingSource = when {
             sourceId != null && sourceId != 0L -> {
-                SourceRepository.findSourceById(context, config.activeDatabaseState, sourceId)
+                SourceRepository.getSourceById(context, config.activeDatabaseState, sourceId)
             }
             !sourceUrl.isNullOrBlank() -> {
-                SourceRepository.findSourceByUrl(context, config.activeDatabaseState, sourceUrl)
+                SourceRepository.getSourceByUrl(context, config.activeDatabaseState, sourceUrl)
             }
             else -> null
         }

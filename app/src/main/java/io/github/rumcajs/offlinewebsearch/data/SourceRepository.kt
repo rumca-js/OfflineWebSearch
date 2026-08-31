@@ -23,7 +23,10 @@ object SourceRepository : RepositoryInterface {
 
     override fun getTableName(): String = "sourcedatamodel"
 
-    suspend fun loadSources(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
+    /**
+     * This function return all sources
+     */
+    suspend fun getAllSources(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
         val sources = mutableListOf<Source>()
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
             return@withContext sources
@@ -63,6 +66,52 @@ object SourceRepository : RepositoryInterface {
         sources
     }
 
+    /**
+     * Source for refresh
+     */
+    suspend fun getSourcesByFetchTime(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
+        val sources = mutableListOf<Source>()
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+            return@withContext sources
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext sources
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon FROM ${getTableName()} AS s " +
+                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_obj_id ORDER BY sod.date_fetched ASC";
+            val cursor = db.rawQuery(sqlText, null)
+            cursor.use {
+                while (it.moveToNext()) {
+                    val id = it.getLong(it.getColumnIndexOrThrow("s.id"))
+                    val enabledVal = it.getInt(it.getColumnIndexOrThrow("s.enabled"))
+                    val url = it.getString(it.getColumnIndexOrThrow("s.url")) ?: ""
+                    val title = it.getString(it.getColumnIndexOrThrow("s.title")) ?: ""
+                    val favicon = it.getString(it.getColumnIndexOrThrow("s.favicon")) ?: ""
+
+                    if (enabledVal == 1) {
+                        sources.add(
+                            Source(
+                                id = id,
+                                enabled = true,
+                                url = url,
+                                title = title,
+                                favicon = favicon
+                            )
+                        )
+                    }
+                }
+            }
+            db.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        sources
+    }
+
     private val sourceTitleCache = java.util.concurrent.ConcurrentHashMap<Pair<String, Long>, String?>()
 
     /**
@@ -89,7 +138,7 @@ object SourceRepository : RepositoryInterface {
         val cacheKey = Pair(activeDatabaseState.localFileName, sourceId)
         sourceTitleCache[cacheKey]?.let { return@withContext it }
 
-        val source = findSourceById(context, activeDatabaseState, sourceId)
+        val source = getSourceById(context, activeDatabaseState, sourceId)
         val title = source?.title?.takeIf { it.isNotBlank() }
         if (title != null) {
             sourceTitleCache[cacheKey] = title
@@ -100,7 +149,7 @@ object SourceRepository : RepositoryInterface {
     /**
      * Finds a source in `sourcedatamodel` matching [sourceId].
      */
-    suspend fun findSourceById(context: Context, activeDatabaseState: DatabaseState?, sourceId: Long): Source? = withContext(Dispatchers.IO) {
+    suspend fun getSourceById(context: Context, activeDatabaseState: DatabaseState?, sourceId: Long): Source? = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
         val file = File(context.filesDir, activeDatabaseState.localFileName)
         if (!file.exists()) return@withContext null
@@ -130,7 +179,7 @@ object SourceRepository : RepositoryInterface {
     /**
      * Finds a source in `sourcedatamodel` matching [sourceUrl].
      */
-    suspend fun findSourceByUrl(context: Context, activeDatabaseState: DatabaseState?, sourceUrl: String): Source? = withContext(Dispatchers.IO) {
+    suspend fun getSourceByUrl(context: Context, activeDatabaseState: DatabaseState?, sourceUrl: String): Source? = withContext(Dispatchers.IO) {
         if (sourceUrl.isBlank()) return@withContext null
         if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
         val file = File(context.filesDir, activeDatabaseState.localFileName)
@@ -453,25 +502,6 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
-     * Fetches entries from [sourceUrl] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
-     * Existing entries (matching by link) are not duplicated.
-     * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
-     * @return Pair(success, resultMessage)
-     */
-    suspend fun fetchAndInsertSourceEntries(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        sourceUrl: String,
-        source: Source? = null
-    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (sourceUrl.isBlank()) {
-            return@withContext Pair(false, "Source URL is empty")
-        }
-        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
-        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj, source)
-    }
-
-    /**
      * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [urlObj].
      * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
      * @return Pair(success, resultMessage)
@@ -525,7 +555,7 @@ object SourceRepository : RepositoryInterface {
      * than 1 hour, or never fetched.
      * @return number of successfully refreshed sources.
      */
-    suspend fun fetchOutdatedSources(
+    suspend fun updateOutdatedSources(
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Int = withContext(Dispatchers.IO) {
@@ -537,7 +567,7 @@ object SourceRepository : RepositoryInterface {
             return@withContext 0
         }
 
-        val sources = loadSources(context, activeDatabaseState).filter { it.enabled && it.url.isNotBlank() }
+        val sources = getAllSources(context, activeDatabaseState).filter { it.enabled && it.url.isNotBlank() }
         if (sources.isEmpty()) return@withContext 0
 
         var refreshedCount = 0

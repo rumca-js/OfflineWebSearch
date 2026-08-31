@@ -62,7 +62,7 @@ class SourceRepositoryTest {
         val (ok, _) = SourceRepository.insertSource(context, dbState, title, url, enabled = true)
         assertTrue(ok)
 
-        val found = SourceRepository.findSourceByUrl(context, dbState, url)
+        val found = SourceRepository.getSourceByUrl(context, dbState, url)
         assertNotNull("Source should be findable by URL after insert", found)
         assertEquals(title, found!!.title)
         assertEquals(url, found.url)
@@ -74,7 +74,7 @@ class SourceRepositoryTest {
         val url = "https://disabled-source.com/feed.rss"
         SourceRepository.insertSource(context, dbState, "Disabled Source", url, enabled = false)
 
-        val found = SourceRepository.findSourceByUrl(context, dbState, url)
+        val found = SourceRepository.getSourceByUrl(context, dbState, url)
         assertNotNull(found)
         assertFalse("enabled should be false", found!!.enabled)
     }
@@ -97,11 +97,11 @@ class SourceRepositoryTest {
 
     @Test
     fun `insertSource increments row count`() = runBlocking {
-        val countBefore = SourceRepository.loadSources(context, dbState).size
+        val countBefore = SourceRepository.getAllSources(context, dbState).size
 
         SourceRepository.insertSource(context, dbState, "Counter Test", "https://counter.test/rss", true)
 
-        val countAfter = SourceRepository.loadSources(context, dbState).size
+        val countAfter = SourceRepository.getAllSources(context, dbState).size
         assertEquals("Row count should increase by 1", countBefore + 1, countAfter)
     }
 

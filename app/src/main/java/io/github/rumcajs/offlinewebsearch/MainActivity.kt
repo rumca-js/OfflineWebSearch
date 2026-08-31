@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -63,7 +62,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val cfg = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
                             val activeState = cfg.activeDatabaseState
                             if (activeState != null && !activeState.isReadOnly && activeState.extension == ".db" && !cfg.networkConfig.disabled) {
-                                val count = io.github.rumcajs.offlinewebsearch.data.SourceRepository.fetchOutdatedSources(context, activeState)
+                                val count = io.github.rumcajs.offlinewebsearch.data.SourceRepository.updateOutdatedSources(context, activeState)
                                 if (count > 0) {
                                     searchViewModel.refreshPage(context)
                                 }

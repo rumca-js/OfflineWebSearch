@@ -1,7 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.workers
 
 import android.content.Context
-import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.Source
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
@@ -120,7 +119,7 @@ object SourceRefreshWorker {
                 task.onFinished?.invoke(fetchedCount)
             }
             is RefreshTask.OutdatedSources -> {
-                val refreshed = SourceRepository.fetchOutdatedSources(task.context, task.dbState)
+                val refreshed = SourceRepository.updateOutdatedSources(task.context, task.dbState)
                 task.onFinished?.invoke(refreshed)
             }
         }
