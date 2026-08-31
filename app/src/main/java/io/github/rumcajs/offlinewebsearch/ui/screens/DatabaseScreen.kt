@@ -117,18 +117,14 @@ fun DatabaseScreen(
             },
             onDismiss = { if (!isVerifying) showEditDialog = false },
             onSave = {
-                scope.launch {
-                    isVerifying = true
-                    verificationError = null
-                    try {
-                        AppConfigManager.saveDatabaseFromInternet(context, urlInput, oldUrl = url)
-                        showEditDialog = false
-                        Toast.makeText(context, "Database updated", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        verificationError = e.message ?: "Failed to update database"
-                    } finally {
-                        isVerifying = false
-                    }
+                val isZip = urlInput.endsWith(".db.zip", ignoreCase = true) || urlInput.endsWith(".zip", ignoreCase = true)
+                val newState = DatabaseState.fromUrl(urlInput)
+                if (newState.extension != ".json" && newState.extension != ".db" && !isZip) {
+                    verificationError = "URL must end with .json, .db, .zip, or .db.zip"
+                } else {
+                    showEditDialog = false
+                    AppConfigManager.refreshDatabaseInBackground(context, urlInput)
+                    Toast.makeText(context, "Database update started", Toast.LENGTH_SHORT).show()
                 }
             }
         )

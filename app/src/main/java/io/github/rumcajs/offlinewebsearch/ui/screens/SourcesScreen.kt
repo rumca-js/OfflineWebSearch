@@ -34,8 +34,8 @@ import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
-import io.github.rumcajs.offlinewebsearch.data.SourceRefreshState
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
 
 /** Key constants for [SourcesScreen] filter dropdown options. */
@@ -155,24 +155,18 @@ fun SourcesScreen(
             Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
         } else {
             isRefreshingAll = true
-            scope.launch {
-                val enabledSources = sources.filter { it.enabled && it.url.isNotBlank() }
-                SourceRefreshState.start(enabledSources.size)
-                var fetchedCount = 0
-                for (src in enabledSources) {
-                    val (success, _) = SourceRepository.updateSource(
-                        context = context,
-                        activeDatabaseState = activeDbState,
-                        source = src
-                    )
-                    if (success) fetchedCount++
-                    SourceRefreshState.increment()
+            SourceRefreshWorker.enqueueSources(
+                context = context,
+                dbState = activeDbState,
+                sources = sources,
+                onFinished = { fetchedCount ->
+                    scope.launch {
+                        sources = SourceRepository.loadSources(context, activeDbState)
+                        isRefreshingAll = false
+                        Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                sources = SourceRepository.loadSources(context, activeDbState)
-                isRefreshingAll = false
-                SourceRefreshState.finish()
-                Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
-            }
+            )
         }
     }
 

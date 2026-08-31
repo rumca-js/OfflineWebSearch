@@ -32,7 +32,12 @@ object SourceRefreshWorker {
     val progress: StateFlow<WorkerProgress> = _progress.asStateFlow()
 
     private sealed class RefreshTask {
-        data class SingleSource(val context: Context, val dbState: DatabaseState, val source: Source) : RefreshTask()
+        data class SingleSource(
+            val context: Context,
+            val dbState: DatabaseState,
+            val source: Source,
+            val onFinished: ((Boolean, String?) -> Unit)? = null
+        ) : RefreshTask()
         data class OutdatedSources(val context: Context, val dbState: DatabaseState, val onFinished: ((Int) -> Unit)? = null) : RefreshTask()
         data class BatchSources(val context: Context, val dbState: DatabaseState, val sources: List<Source>, val onFinished: ((Int) -> Unit)? = null) : RefreshTask()
     }
@@ -72,9 +77,10 @@ object SourceRefreshWorker {
     fun enqueueSource(
         context: Context,
         dbState: DatabaseState,
-        source: Source
+        source: Source,
+        onFinished: ((Boolean, String?) -> Unit)? = null
     ) {
-        taskChannel.trySend(RefreshTask.SingleSource(context.applicationContext, dbState, source))
+        taskChannel.trySend(RefreshTask.SingleSource(context.applicationContext, dbState, source, onFinished))
     }
 
     /**
@@ -92,8 +98,9 @@ object SourceRefreshWorker {
         when (task) {
             is RefreshTask.SingleSource -> {
                 _progress.value = WorkerProgress(total = 1, done = 0, isRunning = true, currentItem = task.source.title)
-                SourceRepository.updateSource(task.context, task.dbState, task.source)
+                val (success, msg) = SourceRepository.updateSource(task.context, task.dbState, task.source)
                 _progress.value = WorkerProgress(total = 1, done = 1, isRunning = false, currentItem = null)
+                task.onFinished?.invoke(success, msg)
             }
             is RefreshTask.BatchSources -> {
                 val total = task.sources.size

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
+import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import coil.compose.AsyncImage
@@ -82,27 +83,29 @@ fun SourceScreen(
             Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
         } else {
             isRefreshing = true
-            scope.launch {
-                val (success, msg) = SourceRepository.updateSource(
-                    context = context,
-                    activeDatabaseState = activeDbState,
-                    source = currentSource
-                )
-                if (success) {
-                    val updatedSources = SourceRepository.loadSources(context, activeDbState)
-                    val updated = updatedSources.firstOrNull { it.id == currentSource.id || it.url == currentSource.url }
-                    if (updated != null) {
-                        currentSource = updated
+            SourceRefreshWorker.enqueueSource(
+                context = context,
+                dbState = activeDbState,
+                source = currentSource,
+                onFinished = { success, msg ->
+                    scope.launch {
+                        if (success) {
+                            val updatedSources = SourceRepository.loadSources(context, activeDbState)
+                            val updated = updatedSources.firstOrNull { it.id == currentSource.id || it.url == currentSource.url }
+                            if (updated != null) {
+                                currentSource = updated
+                            }
+                            val sourceId = currentSource.id
+                            if (sourceId != null) {
+                                operationalData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, sourceId)
+                            }
+                            onRefreshSuccess?.invoke()
+                        }
+                        isRefreshing = false
+                        Toast.makeText(context, msg ?: if (success) "Source refreshed" else "Failed to refresh source", Toast.LENGTH_LONG).show()
                     }
-                    val sourceId = currentSource.id
-                    if (sourceId != null) {
-                        operationalData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, sourceId)
-                    }
-                    onRefreshSuccess?.invoke()
                 }
-                isRefreshing = false
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-            }
+            )
         }
     }
 
