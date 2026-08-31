@@ -14,7 +14,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * Unit tests for [EntryRepository.addEntryToSql].
+ * Unit tests for [EntryRepository.addEntry].
  *
  * Uses Robolectric + [RepositoryTestHelper] to provide a writable copy of
  * `assets/table.db` for each test case.
@@ -91,22 +91,22 @@ class EntryRepositoryTest {
         }
     }
 
-    // ── addEntryToSql: return value ───────────────────────────────────────────
+    // ── addEntry: return value ───────────────────────────────────────────
 
     @Test
-    fun `addEntryToSql returns success triple for valid entry`() = runBlocking {
-        val (ok, rowId, error) = EntryRepository.addEntryToSql(context, dbState, minimalEntry())
+    fun `addEntry returns success triple for valid entry`() = runBlocking {
+        val (ok, rowId, error) = EntryRepository.addEntry(context, dbState, minimalEntry())
         assertTrue("Expected success but got: $error", ok)
         assertTrue("rowId should be positive", rowId > 0)
         assertNull(error)
     }
 
-    // ── addEntryToSql: persistence ────────────────────────────────────────────
+    // ── addEntry: persistence ────────────────────────────────────────────
 
     @Test
-    fun `addEntryToSql persists link and title in linkdatamodel`() = runBlocking {
+    fun `addEntry persists link and title in linkdatamodel`() = runBlocking {
         val entry = Entry(link = "https://persist.example.com", title = "Persisted Title")
-        val (ok, rowId, _) = EntryRepository.addEntryToSql(context, dbState, entry)
+        val (ok, rowId, _) = EntryRepository.addEntry(context, dbState, entry)
         assertTrue(ok)
 
         val stored = queryEntry(rowId)
@@ -116,9 +116,9 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `addEntryToSql persists bookmarked true`() = runBlocking {
+    fun `addEntry persists bookmarked true`() = runBlocking {
         val entry = minimalEntry().copy(bookmarked = true)
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, entry)
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, entry)
 
         val stored = queryEntry(rowId)
         assertNotNull(stored)
@@ -126,9 +126,9 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `addEntryToSql persists bookmarked false`() = runBlocking {
+    fun `addEntry persists bookmarked false`() = runBlocking {
         val entry = minimalEntry().copy(bookmarked = false)
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, entry)
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, entry)
 
         val stored = queryEntry(rowId)
         assertNotNull(stored)
@@ -136,12 +136,12 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `addEntryToSql persists page rating fields`() = runBlocking {
+    fun `addEntry persists page rating fields`() = runBlocking {
         val entry = minimalEntry().copy(
             page_rating_votes = 42,
             page_rating_visits = 7
         )
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, entry)
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, entry)
 
         val stored = queryEntry(rowId)
         assertNotNull(stored)
@@ -149,12 +149,12 @@ class EntryRepositoryTest {
         assertEquals(7, stored.page_rating_visits)
     }
 
-    // ── addEntryToSql: tags ───────────────────────────────────────────────────
+    // ── addEntry: tags ───────────────────────────────────────────────────
 
     @Test
-    fun `addEntryToSql inserts tags into entrycompactedtags`() = runBlocking {
+    fun `addEntry inserts tags into entrycompactedtags`() = runBlocking {
         val entry = minimalEntry().copy(tags = listOf("kotlin", "android", "sqlite"))
-        val (ok, rowId, _) = EntryRepository.addEntryToSql(context, dbState, entry)
+        val (ok, rowId, _) = EntryRepository.addEntry(context, dbState, entry)
         assertTrue(ok)
 
         val storedTags = queryTags(rowId)
@@ -163,68 +163,68 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `addEntryToSql with null tags inserts no tag rows`() = runBlocking {
+    fun `addEntry with null tags inserts no tag rows`() = runBlocking {
         val entry = minimalEntry().copy(tags = null)
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, entry)
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, entry)
 
         val storedTags = queryTags(rowId)
         assertTrue("No tags should be stored for null tags", storedTags.isEmpty())
     }
 
     @Test
-    fun `addEntryToSql with empty tags list inserts no tag rows`() = runBlocking {
+    fun `addEntry with empty tags list inserts no tag rows`() = runBlocking {
         val entry = minimalEntry().copy(tags = emptyList())
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, entry)
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, entry)
 
         val storedTags = queryTags(rowId)
         assertTrue("No tags should be stored for empty tags list", storedTags.isEmpty())
     }
 
-    // ── addEntryToSql: guard cases ────────────────────────────────────────────
+    // ── addEntry: guard cases ────────────────────────────────────────────
 
     @Test
-    fun `addEntryToSql fails when database is read-only`() = runBlocking {
+    fun `addEntry fails when database is read-only`() = runBlocking {
         val readOnlyState = dbState.copy(isReadOnly = true)
-        val (ok, rowId, error) = EntryRepository.addEntryToSql(context, readOnlyState, minimalEntry())
+        val (ok, rowId, error) = EntryRepository.addEntry(context, readOnlyState, minimalEntry())
         assertFalse(ok)
         assertEquals(-1L, rowId)
         assertNotNull(error)
     }
 
     @Test
-    fun `addEntryToSql fails when database file does not exist`() = runBlocking {
+    fun `addEntry fails when database file does not exist`() = runBlocking {
         val missingState = dbState.copy(localFileName = "nonexistent.db")
-        val (ok, rowId, error) = EntryRepository.addEntryToSql(context, missingState, minimalEntry())
+        val (ok, rowId, error) = EntryRepository.addEntry(context, missingState, minimalEntry())
         assertFalse(ok)
         assertEquals(-1L, rowId)
         assertNotNull(error)
     }
 
     @Test
-    fun `addEntryToSql fails when database extension is not db`() = runBlocking {
+    fun `addEntry fails when database extension is not db`() = runBlocking {
         val jsonState = dbState.copy(localFileName = "some_data.json")
-        val (ok, rowId, error) = EntryRepository.addEntryToSql(context, jsonState, minimalEntry())
+        val (ok, rowId, error) = EntryRepository.addEntry(context, jsonState, minimalEntry())
         assertFalse(ok)
         assertEquals(-1L, rowId)
         assertNotNull(error)
     }
 
-    // ── addEntryToSql: multiple inserts ───────────────────────────────────────
+    // ── addEntry: multiple inserts ───────────────────────────────────────
 
     @Test
-    fun `addEntryToSql each insert gets a unique row id`() = runBlocking {
-        val (_, id1, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry("https://a.com", "A"))
-        val (_, id2, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry("https://b.com", "B"))
+    fun `addEntry each insert gets a unique row id`() = runBlocking {
+        val (_, id1, _) = EntryRepository.addEntry(context, dbState, minimalEntry("https://a.com", "A"))
+        val (_, id2, _) = EntryRepository.addEntry(context, dbState, minimalEntry("https://b.com", "B"))
         assertTrue("Row IDs must be distinct", id1 != id2)
         assertTrue("Both row IDs should be positive", id1 > 0 && id2 > 0)
     }
 
-    // ── Votes: setVoteInSql ──────────────────────────────────────────────────
+    // ── Votes: setVote ──────────────────────────────────────────────────
 
     @Test
-    fun `setVoteInSql updates vote count to integer value`() = runBlocking {
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 10))
-        val (ok, newVotes) = EntryRepository.setVoteInSql(context, dbState, rowId, 42)
+    fun `setVote updates vote count to integer value`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, minimalEntry().copy(page_rating_votes = 10))
+        val (ok, newVotes) = EntryRepository.setVote(context, dbState, rowId, 42)
 
         assertTrue(ok)
         assertEquals(42, newVotes)
@@ -234,9 +234,9 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `setVoteInSql clamps vote count at MAX_PAGE_RATING_VOTES 100`() = runBlocking {
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 10))
-        val (ok, newVotes) = EntryRepository.setVoteInSql(context, dbState, rowId, 150)
+    fun `setVote clamps vote count at MAX_PAGE_RATING_VOTES 100`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, minimalEntry().copy(page_rating_votes = 10))
+        val (ok, newVotes) = EntryRepository.setVote(context, dbState, rowId, 150)
 
         assertTrue(ok)
         assertEquals(EntryRepository.MAX_PAGE_RATING_VOTES, newVotes)
@@ -247,9 +247,9 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `setVoteInSql clamps vote count at MIN_PAGE_RATING_VOTES -100`() = runBlocking {
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 10))
-        val (ok, newVotes) = EntryRepository.setVoteInSql(context, dbState, rowId, -120)
+    fun `setVote clamps vote count at MIN_PAGE_RATING_VOTES -100`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, minimalEntry().copy(page_rating_votes = 10))
+        val (ok, newVotes) = EntryRepository.setVote(context, dbState, rowId, -120)
 
         assertTrue(ok)
         assertEquals(EntryRepository.MIN_PAGE_RATING_VOTES, newVotes)
@@ -260,10 +260,10 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `setVoteInSql fails when database is read-only`() = runBlocking {
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry())
+    fun `setVote fails when database is read-only`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, minimalEntry())
         val readOnlyState = dbState.copy(isReadOnly = true)
-        val (ok, newVotes) = EntryRepository.setVoteInSql(context, readOnlyState, rowId, 5)
+        val (ok, newVotes) = EntryRepository.setVote(context, readOnlyState, rowId, 5)
 
         assertFalse(ok)
         assertNull(newVotes)
@@ -273,7 +273,7 @@ class EntryRepositoryTest {
 
     @Test
     fun `deleteTagsForEntry and insertTag replaces tags for entry`() = runBlocking {
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(tags = listOf("old1", "old2")))
+        val (_, rowId, _) = EntryRepository.addEntry(context, dbState, minimalEntry().copy(tags = listOf("old1", "old2")))
         assertEquals(listOf("old1", "old2"), queryTags(rowId))
 
         // Replace tags

@@ -417,7 +417,7 @@ fun EntryDetailScreen(
                                     scope.launch {
                                         isSavingVote = true
                                         try {
-                                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.setVoteInSql(
+                                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.setVote(
                                                 context,
                                                 dbState,
                                                 entryId,

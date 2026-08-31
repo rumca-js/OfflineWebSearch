@@ -82,7 +82,7 @@ object EntryRepository : RepositoryInterface {
             activeDatabaseState.extension != ".db" ->
                 filterInMemory(loadEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater).size
             else ->
-                countEntriesFromSql(context, activeDatabaseState, searchQuery, filterByVisited, filterByReadLater)
+                countEntries(context, activeDatabaseState, searchQuery, filterByVisited, filterByReadLater)
         }
     }
 
@@ -90,7 +90,7 @@ object EntryRepository : RepositoryInterface {
      * Returns a single page of [pageSize] entries starting at [offset].
      * For SQLite the LIMIT/OFFSET is pushed into the query; JSON/asset sources paginate in memory.
      */
-    suspend fun loadEntriesPage(
+    suspend fun getEntriesPage(
         context: Context,
         activeDatabaseState: DatabaseState? = null,
         searchQuery: String = "",
@@ -123,7 +123,7 @@ object EntryRepository : RepositoryInterface {
      * @return Triple(success, insertedRowId, errorMessage).
      *         [insertedRowId] is the primary key of the new row on success, or -1 on failure.
      */
-    suspend fun addEntryToSql(
+    suspend fun addEntry(
         context: Context,
         activeDatabaseState: DatabaseState,
         entry: Entry
@@ -199,7 +199,7 @@ object EntryRepository : RepositoryInterface {
      * Updates an existing entry's title and description in the database.
      * Entry is identified by its primary key [id] (or [originalLink] if [id] is null).
      */
-    suspend fun updateEntryInSql(
+    suspend fun updateEntry(
         context: Context,
         activeDatabaseState: DatabaseState,
         id: Long?,
@@ -246,7 +246,7 @@ object EntryRepository : RepositoryInterface {
      * Sets the page_rating_votes count for an entry in the SQLite database to [vote] (clamped between MIN_PAGE_RATING_VOTES and MAX_PAGE_RATING_VOTES).
      * @return Pair where first is true on success and second is the new vote total (or null on failure).
      */
-    suspend fun setVoteInSql(
+    suspend fun setVote(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long?,
@@ -277,7 +277,7 @@ object EntryRepository : RepositoryInterface {
     /**
      * Increments the page_rating_visits count for an entry in the SQLite database.
      */
-    suspend fun incrementVisitInSql(
+    suspend fun incrementVisit(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long?,
@@ -352,7 +352,7 @@ object EntryRepository : RepositoryInterface {
      * Entry is identified by its primary key [id] (or [link] if [id] is null).
      * @return true if at least one row was deleted, false otherwise.
      */
-    suspend fun deleteEntryFromSql(
+    suspend fun deleteEntry(
         context: Context,
         activeDatabaseState: DatabaseState,
         id: Long?,
@@ -392,7 +392,7 @@ object EntryRepository : RepositoryInterface {
     // ──────────────────────────────────────────────────────────────────────────
 
 
-    private fun countEntriesFromSql(
+    private fun countEntries(
         context: Context,
         state: DatabaseState,
         searchQuery: String,

@@ -183,7 +183,7 @@ class SearchViewModel : ViewModel() {
 
         viewModelScope.launch {
             val config = AppConfigManager.config.first()
-            EntryRepository.incrementVisitInSql(
+            EntryRepository.incrementVisit(
                 context = context,
                 activeDatabaseState = config.activeDatabaseState,
                 id = entry.id,
@@ -211,7 +211,7 @@ class SearchViewModel : ViewModel() {
                 onResult(false)
                 return@launch
             }
-            val success = EntryRepository.deleteEntryFromSql(
+            val success = EntryRepository.deleteEntry(
                 context = context,
                 activeDatabaseState = dbState,
                 id = entry.id,
@@ -271,7 +271,7 @@ class SearchViewModel : ViewModel() {
             filterByVisited = isFilterVisited,
             filterByReadLater = isFilterReadLater
         )
-        val page = EntryRepository.loadEntriesPage(
+        val page = EntryRepository.getEntriesPage(
             context = context,
             activeDatabaseState = activeDatabaseState,
             searchQuery = activeSearchQuery,
