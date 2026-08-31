@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -163,26 +164,49 @@ fun EntryDetailScreen(
                 )
             }
 
-            Text(
-                text = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayTitle(entry, config.userAge),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 30.sp,
-                color = if (entry.link != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                textDecoration = if (entry.link != null) TextDecoration.Underline else TextDecoration.None,
-                modifier = Modifier.pointerInput(entry.link) {
-                    detectTapGestures(
-                        onTap = {
-                            entry.link?.let { uriHandler.openUri(it) }
-                        },
-                        onLongPress = {
-                            if (!isRestricted) {
-                                copyLink()
-                            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayTitle(entry, config.userAge),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 30.sp,
+                    color = if (entry.link != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    textDecoration = if (entry.link != null) TextDecoration.Underline else TextDecoration.None,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                        .pointerInput(entry.link) {
+                            detectTapGestures(
+                                onTap = {
+                                    entry.link?.let { uriHandler.openUri(it) }
+                                },
+                                onLongPress = {
+                                    if (!isRestricted) {
+                                        copyLink()
+                                    }
+                                }
+                            )
                         }
-                    )
+                )
+                entry.page_rating_votes?.takeIf { it > 0 }?.let { votes ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    ) {
+                        Text(
+                            text = "⭐ $votes",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
-            )
+            }
 
             entry.link?.let { link ->
                 Spacer(modifier = Modifier.height(8.dp))
