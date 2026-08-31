@@ -71,7 +71,7 @@ fun EntryThumbnailPreview(
                 modifier = Modifier.fillMaxSize()
             )
         }
-    } else if (entry.thumbnail != null) {
+    } else if (!entry.thumbnail.isNullOrBlank()) {
         RemoteImage(
             url = entry.thumbnail,
             modifier = modifier

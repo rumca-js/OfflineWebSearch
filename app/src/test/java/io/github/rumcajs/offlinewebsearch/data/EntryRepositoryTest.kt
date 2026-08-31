@@ -219,24 +219,24 @@ class EntryRepositoryTest {
         assertTrue("Both row IDs should be positive", id1 > 0 && id2 > 0)
     }
 
-    // ── Votes: addVoteInSql and adjustVotesInSql ──────────────────────────────
+    // ── Votes: setVoteInSql ──────────────────────────────────────────────────
 
     @Test
-    fun `addVoteInSql increments vote count by 1`() = runBlocking {
+    fun `setVoteInSql updates vote count to integer value`() = runBlocking {
         val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 10))
-        val (ok, newVotes) = EntryRepository.addVoteInSql(context, dbState, rowId)
+        val (ok, newVotes) = EntryRepository.setVoteInSql(context, dbState, rowId, 42)
 
         assertTrue(ok)
-        assertEquals(11, newVotes)
+        assertEquals(42, newVotes)
 
         val stored = queryEntry(rowId)
-        assertEquals(11, stored?.page_rating_votes)
+        assertEquals(42, stored?.page_rating_votes)
     }
 
     @Test
-    fun `adjustVotesInSql clamps vote count at MAX_PAGE_RATING_VOTES 100`() = runBlocking {
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 99))
-        val (ok, newVotes) = EntryRepository.adjustVotesInSql(context, dbState, rowId, delta = 5)
+    fun `setVoteInSql clamps vote count at MAX_PAGE_RATING_VOTES 100`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 10))
+        val (ok, newVotes) = EntryRepository.setVoteInSql(context, dbState, rowId, 150)
 
         assertTrue(ok)
         assertEquals(EntryRepository.MAX_PAGE_RATING_VOTES, newVotes)
@@ -247,9 +247,9 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `adjustVotesInSql clamps vote count at MIN_PAGE_RATING_VOTES -100`() = runBlocking {
-        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = -95))
-        val (ok, newVotes) = EntryRepository.adjustVotesInSql(context, dbState, rowId, delta = -10)
+    fun `setVoteInSql clamps vote count at MIN_PAGE_RATING_VOTES -100`() = runBlocking {
+        val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry().copy(page_rating_votes = 10))
+        val (ok, newVotes) = EntryRepository.setVoteInSql(context, dbState, rowId, -120)
 
         assertTrue(ok)
         assertEquals(EntryRepository.MIN_PAGE_RATING_VOTES, newVotes)
@@ -260,10 +260,10 @@ class EntryRepositoryTest {
     }
 
     @Test
-    fun `adjustVotesInSql fails when database is read-only`() = runBlocking {
+    fun `setVoteInSql fails when database is read-only`() = runBlocking {
         val (_, rowId, _) = EntryRepository.addEntryToSql(context, dbState, minimalEntry())
         val readOnlyState = dbState.copy(isReadOnly = true)
-        val (ok, newVotes) = EntryRepository.adjustVotesInSql(context, readOnlyState, rowId, delta = 1)
+        val (ok, newVotes) = EntryRepository.setVoteInSql(context, readOnlyState, rowId, 5)
 
         assertFalse(ok)
         assertNull(newVotes)

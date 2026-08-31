@@ -1,12 +1,10 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -18,7 +16,6 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.SourceRefreshState
 import io.github.rumcajs.offlinewebsearch.ui.components.DatabasesContainer
-import io.github.rumcajs.offlinewebsearch.ui.components.ReadOnlyBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,74 +74,9 @@ fun OptionsScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Active Database",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        var activeDbExpanded by remember { mutableStateOf(false) }
-
-        ExposedDropdownMenuBox(
-            expanded = activeDbExpanded,
-            onExpandedChange = { activeDbExpanded = it },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                value = config.activeDatabaseDisplayName,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = activeDbExpanded)
-                },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                modifier = Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth()
-            )
-
-            ExposedDropdownMenu(
-                expanded = activeDbExpanded,
-                onDismissRequest = { activeDbExpanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Default (Assets)")
-                            ReadOnlyBadge(isReadOnly = true)
-                        }
-                    },
-                    onClick = {
-                        AppConfigManager.setActiveDatabase(null)
-                        activeDbExpanded = false
-                    },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                )
-
-                config.databases.forEach { (url, state) ->
-                    DropdownMenuItem(
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(state.displayName)
-                                ReadOnlyBadge(isReadOnly = state.isReadOnly)
-                            }
-                        },
-                        onClick = {
-                            AppConfigManager.setActiveDatabase(url)
-                            activeDbExpanded = false
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                    )
-                }
-            }
-        }
-
         // ── Source refresh progress bar ───────────────────────────────────────
         sourceRefreshProgress?.let { progress ->
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Refreshing sources: ${progress.done} / ${progress.total}",
                 style = MaterialTheme.typography.bodySmall,
@@ -155,7 +87,6 @@ fun OptionsScreen(
                 progress = { progress.fraction },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(8.dp))
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))

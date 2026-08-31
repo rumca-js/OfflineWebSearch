@@ -12,11 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryItem
-
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +42,9 @@ fun SearchResultsContainer(
     onRefresh: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val swipeThreshold = 50f
+    var totalDragX by remember { mutableFloatStateOf(0f) }
+
     PullToRefreshBox(
         isRefreshing = isLoading,
         onRefresh = { onRefresh?.invoke() },
@@ -50,7 +58,31 @@ fun SearchResultsContainer(
             } else {
                 // Scrollable entry list
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .pointerInput(currentPage, totalPages) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { totalDragX = 0f },
+                                onDragEnd = {
+                                    if (totalDragX > swipeThreshold) {
+                                        // Swipe right -> Next page
+                                        if (currentPage + 1 < totalPages) {
+                                            onNextPage()
+                                        }
+                                    } else if (totalDragX < -swipeThreshold) {
+                                        // Swipe left -> Previous page
+                                        if (currentPage > 0) {
+                                            onPreviousPage()
+                                        }
+                                    }
+                                    totalDragX = 0f
+                                },
+                                onDragCancel = { totalDragX = 0f },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    totalDragX += dragAmount
+                                }
+                            )
+                        },
                     state = listState
                 ) {
                     if (showSuggestions && suggestions.isNotEmpty()) {

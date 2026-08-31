@@ -12,8 +12,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.RadioButtonChecked
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -215,15 +217,12 @@ fun DatabasesContainer(
 
         DatabaseList(
             databases = config.databases,
+            activeDatabaseUrl = config.activeDatabase,
             onItemClick = { url, state ->
                 onNavigateToDatabaseDetail(url, state)
             },
-            onEdit = { url ->
-                urlInput = url
-                editingUrl = url
-                verificationError = null
-                selectedFileUri = null
-                showAddDialogMode = "url"
+            onSetActive = { url ->
+                AppConfigManager.setActiveDatabase(url)
             },
             onDelete = { url, state ->
                 deletingDb = Pair(url, state)
@@ -361,8 +360,9 @@ private fun getFileName(context: Context, uri: Uri): String? {
 @Composable
 fun DatabaseList(
     databases: Map<String, DatabaseState>,
+    activeDatabaseUrl: String? = null,
     onItemClick: ((String?, DatabaseState) -> Unit)? = null,
-    onEdit: (String) -> Unit,
+    onSetActive: ((String?) -> Unit)? = null,
     onDelete: (String, DatabaseState) -> Unit,
     onUpdate: (String, DatabaseState) -> Unit
 ) {
@@ -375,17 +375,26 @@ fun DatabaseList(
         progress = 1f,
         isReadOnly = true
     )
+    val isDefaultActive = activeDatabaseUrl == null
     DefaultDatabaseItem(
+        isActive = isDefaultActive,
         onItemClick = if (onItemClick != null) {
             { onItemClick(null, defaultState) }
+        } else null,
+        onSetActive = if (onSetActive != null) {
+            { onSetActive(null) }
         } else null
     )
 
     databases.forEach { (url, state) ->
+        val isActive = activeDatabaseUrl == url
         DatabaseItem(
             state = state,
+            isActive = isActive,
             onItemClick = { onItemClick?.invoke(url, state) },
-            onEdit = { onEdit(url) },
+            onSetActive = if (onSetActive != null) {
+                { onSetActive(url) }
+            } else null,
             onDelete = { onDelete(url, state) },
             onUpdate = { onUpdate(url, state) }
         )
@@ -393,17 +402,21 @@ fun DatabaseList(
 }
 
 /**
- * A fixed, non-interactive pill row representing the built-in "Default (Assets)" database.
+ * A fixed row representing the built-in "Default (Assets)" database.
  *
  * This database is always present (backed by bundled asset files), so it is shown
  * permanently at the top of the list regardless of the user-added database map.
  * It cannot be edited, deleted, or refreshed.
  *
+ * @param isActive Whether this database is currently active.
  * @param onItemClick Optional callback to navigate to the database detail screen.
+ * @param onSetActive Optional callback to make this database active.
  */
 @Composable
 private fun DefaultDatabaseItem(
-    onItemClick: (() -> Unit)? = null
+    isActive: Boolean = false,
+    onItemClick: (() -> Unit)? = null,
+    onSetActive: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -420,11 +433,24 @@ private fun DefaultDatabaseItem(
                 )
                 .padding(vertical = 4.dp)
         ) {
-            Text(
-                text = "Default (Assets)",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Default (Assets)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (isActive) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Active",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
             Row(
                 modifier = Modifier.padding(top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -434,6 +460,19 @@ private fun DefaultDatabaseItem(
                 ReadOnlyBadge(isReadOnly = true)
             }
         }
+
+        if (onSetActive != null) {
+            IconButton(
+                onClick = onSetActive,
+                enabled = !isActive
+            ) {
+                Icon(
+                    imageVector = if (isActive) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
+                    contentDescription = if (isActive) "Active database" else "Make active",
+                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         // No edit / delete / refresh buttons for the default database.
     }
 }
@@ -441,8 +480,9 @@ private fun DefaultDatabaseItem(
 @Composable
 fun DatabaseItem(
     state: DatabaseState,
+    isActive: Boolean = false,
     onItemClick: (() -> Unit)? = null,
-    onEdit: () -> Unit,
+    onSetActive: (() -> Unit)? = null,
     onDelete: () -> Unit,
     onUpdate: () -> Unit
 ) {
@@ -469,11 +509,24 @@ fun DatabaseItem(
                 }
                 .padding(vertical = 4.dp)
         ) {
-            Text(
-                text = displayName,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (isActive) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Active",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
             Row(
                 modifier = Modifier.padding(top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -504,13 +557,22 @@ fun DatabaseItem(
             }
         }
 
+        if (onSetActive != null) {
+            IconButton(
+                onClick = onSetActive,
+                enabled = !isActive
+            ) {
+                Icon(
+                    imageVector = if (isActive) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
+                    contentDescription = if (isActive) "Active database" else "Make active",
+                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         if (!isLocal) {
             IconButton(onClick = onUpdate) {
                 Icon(Icons.Default.Refresh, contentDescription = "Update")
             }
-        }
-        IconButton(onClick = onEdit) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit")
         }
         IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, contentDescription = "Delete")

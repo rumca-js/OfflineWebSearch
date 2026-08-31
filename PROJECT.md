@@ -108,6 +108,8 @@ Possible database states include:
     -- when sources are successfully refreshed
     -- when entry is deleted from EntryDetailScreen
     -- back button in itself should not refresh list, as it does not modify Entries, or results
+ - swipe right performs "next" pagination on results
+ - swipe left performs "previous" pagination on results
 
 ### EntryItem - result
 There are several list styles:
@@ -154,7 +156,7 @@ Provides a top bar with the following actions:
  - Remove.
 
 The screen displays, where available:
- - Thumbnail, or video playback frame
+ - Thumbnail, or video playback frame (if thumbnail is available, if icons are enabled in configuration)
  - Title.
  - Link.
  - Date of publish

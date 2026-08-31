@@ -24,14 +24,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
-import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import io.github.rumcajs.offlinewebsearch.data.ReadLaterRepository
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryDetailTopBar
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import io.github.rumcajs.offlinewebsearch.ui.components.SocialDataPane
 import io.github.rumcajs.offlinewebsearch.ui.components.isEmptyOrZero
+import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeVideoHandler
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -78,24 +80,6 @@ fun EntryDetailScreen(
                 entry = entry,
                 isEditable = isEditable,
                 isReadLater = isReadLater,
-                onAddVote = if (isEditable && entry.id != null) {
-                    {
-                        scope.launch {
-                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.addVoteInSql(
-                                context,
-                                activeDbState,
-                                entry.id
-                            )
-                            if (success && newVotes != null) {
-                                val updatedEntry = entry.copy(page_rating_votes = newVotes)
-                                onSelectEntry?.invoke(updatedEntry)
-                                Toast.makeText(context, "Vote added (Total: $newVotes)", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Failed to add vote", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                } else null,
                 onToggleReadLater = {
                     val entryId = entry.id ?: return@EntryDetailTopBar
                     scope.launch {
@@ -164,16 +148,20 @@ fun EntryDetailScreen(
                 }
             }
 
-            EntryThumbnailPreview(
-                entry = entry,
-                isRestricted = isRestricted,
-                videoPreview = config.dbconfig.videoPreview,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                onTap = { entry.link?.let { uriHandler.openUri(it) } },
-                onLongPress = { if (!isRestricted) { copyLink() } }
-            )
+            val hasVideoPreview = config.dbconfig.videoPreview && !isRestricted && entry.link?.let { YouTubeVideoHandler(it).isHandledBy() } == true
+            val hasThumbnail = !entry.thumbnail.isNullOrBlank()
+            if (hasVideoPreview || hasThumbnail) {
+                EntryThumbnailPreview(
+                    entry = entry,
+                    isRestricted = isRestricted,
+                    videoPreview = config.dbconfig.videoPreview,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    onTap = { entry.link?.let { uriHandler.openUri(it) } },
+                    onLongPress = { if (!isRestricted) { copyLink() } }
+                )
+            }
 
             Text(
                 text = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayTitle(entry, config.userAge),
@@ -359,6 +347,90 @@ fun EntryDetailScreen(
                 )
             }
 
+            var showVoteDialog by remember { mutableStateOf(false) }
+            var voteInput by remember(entry.page_rating_votes) { mutableStateOf((entry.page_rating_votes ?: 0).toString()) }
+            var isSavingVote by remember { mutableStateOf(false) }
+            var voteError by remember { mutableStateOf<String?>(null) }
+
+            if (showVoteDialog && entry.id != null) {
+                AlertDialog(
+                    onDismissRequest = { if (!isSavingVote) showVoteDialog = false },
+                    title = { Text("Add Vote") },
+                    text = {
+                        Column {
+                            Text(
+                                text = "Enter a vote value between -100 and 100:",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = voteInput,
+                                onValueChange = {
+                                    voteInput = it
+                                    voteError = null
+                                },
+                                label = { Text("Vote") },
+                                placeholder = { Text("0") },
+                                isError = voteError != null,
+                                supportingText = voteError?.let { { Text(it) } },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val parsed = voteInput.trim().toIntOrNull()
+                                if (parsed == null || parsed < -100 || parsed > 100) {
+                                    voteError = "Please enter an integer between -100 and 100"
+                                    return@Button
+                                }
+                                val entryId = entry.id
+                                val dbState = activeDbState
+                                if (entryId != null && dbState != null) {
+                                    scope.launch {
+                                        isSavingVote = true
+                                        try {
+                                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.setVoteInSql(
+                                                context,
+                                                dbState,
+                                                entryId,
+                                                parsed
+                                            )
+                                            if (success && newVotes != null) {
+                                                val updatedEntry = entry.copy(page_rating_votes = newVotes)
+                                                onSelectEntry?.invoke(updatedEntry)
+                                                Toast.makeText(context, "Vote updated to $newVotes", Toast.LENGTH_SHORT).show()
+                                                showVoteDialog = false
+                                            } else {
+                                                Toast.makeText(context, "Failed to update vote", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, e.message ?: "Failed to update vote", Toast.LENGTH_LONG).show()
+                                        } finally {
+                                            isSavingVote = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isSavingVote
+                        ) {
+                            Text("Save")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showVoteDialog = false },
+                            enabled = !isSavingVote
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
             if (!config.networkConfig.disabled) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -368,8 +440,24 @@ fun EntryDetailScreen(
                 ) {
                     Text("Check status")
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
+
+            if (isEditable && entry.id != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        voteInput = (entry.page_rating_votes ?: 0).toString()
+                        voteError = null
+                        showVoteDialog = true
+                    },
+                    enabled = !isRestricted,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Add vote")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.takeIf { it.isNotBlank() }?.let {
                 Text(

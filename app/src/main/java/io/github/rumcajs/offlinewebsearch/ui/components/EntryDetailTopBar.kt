@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -26,7 +25,6 @@ fun EntryDetailTopBar(
     isEditable: Boolean,
     isReadLater: Boolean,
     onToggleReadLater: () -> Unit,
-    onAddVote: (() -> Unit)? = null,
     onNavigateToEdit: () -> Unit,
     onDeleteClick: () -> Unit,
     onBack: () -> Unit,
@@ -41,14 +39,6 @@ fun EntryDetailTopBar(
             }
         },
         actions = {
-            if (isEditable && entry.id != null && onAddVote != null) {
-                IconButton(onClick = onAddVote) {
-                    Icon(
-                        imageVector = Icons.Default.ThumbUp,
-                        contentDescription = "Vote (+1)"
-                    )
-                }
-            }
             if (isEditable && entry.id != null) {
                 IconButton(onClick = onToggleReadLater) {
                     Icon(
