@@ -37,7 +37,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()}"
+            val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} ORDER BY url"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
