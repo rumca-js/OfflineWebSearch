@@ -65,3 +65,7 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
 # Open Source
 
 This project is open source and welcomes contributions, bug reports, and suggestions.
+
+<div align="center">
+  <img alt="Meme" src="screenshots/why-so-proprietary.png">
+</div>
