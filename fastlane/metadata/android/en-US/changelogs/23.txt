@@ -1,0 +1,1 @@
+Sources are fetched in correct order (oldest first). Entry list screen correctly uses direction of swipe.
