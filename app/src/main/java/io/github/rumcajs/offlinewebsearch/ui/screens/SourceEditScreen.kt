@@ -64,7 +64,7 @@ fun SourceEditScreen(
             errorMessage = if (!success) err else null
             success
         } else {
-            val (success, err) = SourceRepository.updateSource(
+            val (success, err) = SourceRepository.updateSourceProperties(
                 context = context,
                 activeDatabaseState = activeDbState,
                 id = source.id!!,

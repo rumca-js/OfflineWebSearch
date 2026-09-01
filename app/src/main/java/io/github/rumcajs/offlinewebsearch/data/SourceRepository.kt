@@ -37,7 +37,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} ORDER BY url"
+            val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} ORDER BY url, title"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -263,7 +263,7 @@ object SourceRepository : RepositoryInterface {
      * Updates an existing source.
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
-    suspend fun updateSource(
+    suspend fun updateSourceProperties(
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long,
@@ -292,63 +292,6 @@ object SourceRepository : RepositoryInterface {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
-    }
-
-    /**
-     * Deletes a source by ID from `sourcedatamodel` and cleans up associated operational data.
-     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
-     */
-    override suspend fun deleteById(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
-            db.close()
-
-            if (rows > 0) {
-                SourceOperationalDataRepository.deleteOperationalDataBySourceId(context, activeDatabaseState, id)
-                Pair(true, null)
-            } else {
-                Pair(false, "No rows deleted; source may not exist")
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
-        }
-    }
-
-    /**
-     * Deletes a source by ID (alias for [deleteById]).
-     */
-    suspend fun deleteSource(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
-
-    /**
-     * Updates source metadata (such as title and favicon) matching [sourceUrl] in `sourcedatamodel`.
-     */
-    suspend fun updateSourceMetadata(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        sourceUrl: String
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (sourceUrl.isBlank()) {
-            return@withContext Pair(false, "Source URL is empty")
-        }
-        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl)
-        updateSourceMetadata(context, activeDatabaseState, urlObj)
     }
 
     /**
@@ -449,6 +392,7 @@ object SourceRepository : RepositoryInterface {
                         }
                     }
 
+                    // TODO use EntryRepostiroy for that?
                     val values = android.content.ContentValues().apply {
                         put("link", link)
                         put("title", entry.title ?: "")
@@ -488,6 +432,7 @@ object SourceRepository : RepositoryInterface {
                 db.close()
             }
 
+            // TODO change that to use setSourceFetch by source.id
             SourceOperationalDataRepository.setSourceFetchByUrl(
                 context = context,
                 activeDatabaseState = activeDatabaseState,
@@ -506,7 +451,7 @@ object SourceRepository : RepositoryInterface {
      * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
      * @return Pair(success, resultMessage)
      */
-    suspend fun updateSource(
+    suspend fun updateSourceMetaAndEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
         urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url,
@@ -521,7 +466,7 @@ object SourceRepository : RepositoryInterface {
      * Uses [Source.url] for the fetch and [Source.id] for `source_id` on inserted entries.
      * @return Pair(success, resultMessage)
      */
-    suspend fun updateSource(
+    suspend fun updateSourceMetaAndEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
         source: Source
@@ -529,8 +474,23 @@ object SourceRepository : RepositoryInterface {
         if (source.url.isBlank()) {
             return@withContext Pair(false, "Source URL is empty")
         }
-        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(source.url)
-        updateSource(context, activeDatabaseState, urlObj, source)
+        if (!source.enabled) {
+            return@withContext Pair(false, "Source is disabled")
+        }
+
+        val sourceId = source.id;
+        if (sourceId != null) {
+            val data = SourceOperationalDataRepository.getOperationalDataBySourceId(
+                context,
+                activeDatabaseState,
+                sourceId
+            );
+            if (SourceOperationalDataRepository.isFetchOutdated(data?.date_fetched)) {
+                val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(source.url)
+                updateSourceMetaAndEntries(context, activeDatabaseState, urlObj, source)
+            }
+        }
+        return@withContext Pair(false, "Not ready")
     }
 
     /**
@@ -555,20 +515,56 @@ object SourceRepository : RepositoryInterface {
 
         var refreshedCount = 0
         for (source in sources) {
-            val sourceId = source.id
-            val opData = if (sourceId != null) {
-                SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDatabaseState, sourceId)
-            } else null
-
-            if (SourceOperationalDataRepository.isFetchOutdated(opData?.date_fetched)) {
-                val (success, _) = updateSource(context, activeDatabaseState, source)
-                if (success) {
-                    refreshedCount++
-                }
+            val (success, _) = updateSourceMetaAndEntries(context, activeDatabaseState, source)
+            if (success) {
+                refreshedCount++
             }
         }
         refreshedCount
     }
+
+    /**
+     * Deletes a source by ID from `sourcedatamodel` and cleans up associated operational data.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    override suspend fun deleteById(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
+            db.close()
+
+            if (rows > 0) {
+                SourceOperationalDataRepository.deleteOperationalDataBySourceId(context, activeDatabaseState, id)
+                Pair(true, null)
+            } else {
+                Pair(false, "No rows deleted; source may not exist")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Deletes a source by ID (alias for [deleteById]).
+     */
+    suspend fun deleteSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long
+    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
+
 
     /**
      * Clears all records from the `sourcedatamodel` table.

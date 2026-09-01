@@ -97,7 +97,7 @@ object SourceRefreshWorker {
         when (task) {
             is RefreshTask.SingleSource -> {
                 _progress.value = WorkerProgress(total = 1, done = 0, isRunning = true, currentItem = task.source.title)
-                val (success, msg) = SourceRepository.updateSource(task.context, task.dbState, task.source)
+                val (success, msg) = SourceRepository.updateSourceMetaAndEntries(task.context, task.dbState, task.source)
                 _progress.value = WorkerProgress(total = 1, done = 1, isRunning = false, currentItem = null)
                 task.onFinished?.invoke(success, msg)
             }
@@ -107,7 +107,7 @@ object SourceRefreshWorker {
                 var fetchedCount = 0
                 for (src in task.sources) {
                     _progress.update { it.copy(currentItem = src.title) }
-                    val (success, _) = SourceRepository.updateSource(
+                    val (success, _) = SourceRepository.updateSourceMetaAndEntries(
                         context = task.context,
                         activeDatabaseState = task.dbState,
                         source = src
