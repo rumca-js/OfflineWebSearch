@@ -66,6 +66,6 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
 
 This project is open source and welcomes contributions, bug reports, and suggestions.
 
-<div align="center">
+<div align="center" style="width:450px">
   <img alt="Meme" src="screenshot/why-so-proprietary.png">
 </div>
