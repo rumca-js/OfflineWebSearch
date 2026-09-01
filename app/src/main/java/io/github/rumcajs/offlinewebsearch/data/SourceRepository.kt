@@ -464,6 +464,7 @@ object SourceRepository : RepositoryInterface {
     /**
      * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [source].
      * Uses [Source.url] for the fetch and [Source.id] for `source_id` on inserted entries.
+     * Skips fetch if source is disabled or if last fetch was less than an hour ago.
      * @return Pair(success, resultMessage)
      */
     suspend fun updateSourceMetaAndEntries(
@@ -478,19 +479,19 @@ object SourceRepository : RepositoryInterface {
             return@withContext Pair(false, "Source is disabled")
         }
 
-        val sourceId = source.id;
+        val sourceId = source.id
         if (sourceId != null) {
             val data = SourceOperationalDataRepository.getOperationalDataBySourceId(
                 context,
                 activeDatabaseState,
                 sourceId
-            );
-            if (SourceOperationalDataRepository.isFetchOutdated(data?.date_fetched)) {
-                val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(source.url)
-                updateSourceMetaAndEntries(context, activeDatabaseState, urlObj, source)
+            )
+            if (!SourceOperationalDataRepository.isFetchOutdated(data?.date_fetched)) {
+                return@withContext Pair(false, "Source was fetched recently (less than 1 hour ago)")
             }
         }
-        return@withContext Pair(false, "Not ready")
+        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(source.url)
+        updateSourceMetaAndEntries(context, activeDatabaseState, urlObj, source)
     }
 
     /**

@@ -89,7 +89,8 @@ Possible database states include:
 ## EntryListScreen
  - Entries screen is scrollable (search widget, entry results, pagination controls)
  - Provides search widget with full width text input
- - Search widget is followed with "Search" button and a button to select "filters" for search results
+ - Search widget is followed with "Search" button and a button to select "filters" for search results.
+ Filters are read from SQLite table, but if it nos available by default by Date published filter should be used. Always some filter need to be applied
    -- "Visited" filter - entry results should visited entries
    -- "Read Later" filter - entry results should entries marked for read later
    -- "by Date published" - shows entries, but with this order applied
@@ -207,7 +208,7 @@ The screen displays, where available:
  - Provides a top bar with the following actions:
     -- Edit.
     -- Share.
-    -- Refresh.
+    -- Fetch database again
     -- Remove.
  - Displays the current database state (read only?).
  - Displays the database name.
@@ -221,15 +222,18 @@ The screen displays, where available:
  - Provides an action to clear the user's visited entries.
  - Provides an action to clear the user's read later entries.
  - Provides an action to clear the social data.
+ - implement pull to refresh data about database
 
 ## SourcesScreen
  - Provides bar on top with buttons: add, fetch
  - Selecting source opens SourceScreen.
  - Provides search widget, similar to EntryListScreen, it should be scrollable
  - Similarly to EntryListScreen should contain "Search" button with a button to apply filter (order by title, or fetch time)
+ - Filters should be by Url, Title, Fetch time. By default by Url filter should be applied. A filter always need to be applied
  - Probably it would have to be a different search widget implementation from EntryListScreen. These can share same base class though
  - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
  - If possible fetch/refresh button should spin if sources are being refreshed
+ - just as EntryListScreen, pull to refresh sources
 
 ## SourceScreen
  - Displays information about a source.
@@ -278,6 +282,9 @@ Database refresh should make database refresh buttons to be spinning, if possibl
 ## Source refresh
  - there is a background task that can refresh sources
  - It would be best if it could accept new sources to refresh
+ - disabled sources should be skipped
+ - sources that were fetched eariler than hour since source.date\_fetch should be skipped
+ - should use order of sources by last fetched (or that never have been fetched
 
 ## Database update
  - it would be best if it could accept new databases to fetch

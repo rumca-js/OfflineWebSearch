@@ -60,6 +60,11 @@ object AppConfigManager {
         saveConfigAsync() // Offloaded to background thread
     }
 
+    suspend fun reloadConfig(context: Context) = withContext(Dispatchers.IO) {
+        loadPersistedConfigSync(context.applicationContext)
+        loadNetworkConfigSync(context.applicationContext)
+    }
+
     private fun loadPersistedConfigSync(context: Context) {
         try {
             val file = context.getFileStreamPath(APP_CONFIG_FILE_NAME)

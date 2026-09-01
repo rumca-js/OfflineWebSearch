@@ -22,14 +22,15 @@ import java.text.DecimalFormat
 @Composable
 fun DatabaseStatePane(
     state: DatabaseState,
+    refreshTrigger: Long = 0L,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val isSql = state.extension == ".db"
-    var repoCounts by remember(state) { mutableStateOf<Map<RepositoryInterface, Long?>>(emptyMap()) }
-    var isLoadingStats by remember(state) { mutableStateOf(false) }
+    var repoCounts by remember(state, refreshTrigger) { mutableStateOf<Map<RepositoryInterface, Long?>>(emptyMap()) }
+    var isLoadingStats by remember(state, refreshTrigger) { mutableStateOf(false) }
 
-    LaunchedEffect(state) {
+    LaunchedEffect(state, refreshTrigger) {
         if (isSql) {
             isLoadingStats = true
             repoCounts = DatabaseStatsRepository.getRepositoryCounts(context, state)

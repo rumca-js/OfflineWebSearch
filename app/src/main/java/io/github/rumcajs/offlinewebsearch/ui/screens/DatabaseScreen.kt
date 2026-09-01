@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
@@ -143,6 +144,19 @@ fun DatabaseScreen(
         )
     }
 
+    var isRefreshing by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableStateOf(0L) }
+
+    val refreshDatabaseInfo: () -> Unit = {
+        scope.launch {
+            isRefreshing = true
+            AppConfigManager.reloadConfig(context)
+            refreshTrigger = System.currentTimeMillis()
+            isRefreshing = false
+            Toast.makeText(context, "Database information refreshed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -181,92 +195,102 @@ fun DatabaseScreen(
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = refreshDatabaseInfo,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(scrollState)
-                .padding(16.dp)
         ) {
-            if (isActive) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    Text(
-                        text = "Currently Active Database",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(12.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(16.dp)
+            ) {
+                if (isActive) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Text(
+                            text = "Currently Active Database",
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+
+                io.github.rumcajs.offlinewebsearch.ui.components.DatabaseConfigPane(
+                    url = url,
+                    dbConfig = dbConfig
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                io.github.rumcajs.offlinewebsearch.ui.components.DatabaseStatePane(
+                    state = state,
+                    refreshTrigger = refreshTrigger
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "History Actions",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                val canClearHistory = state.extension == ".db" && !state.isReadOnly
+
+                getRepositoriesToClear().forEach { repoClearItem ->
+                    ClearRepositoryButton(
+                        item = repoClearItem,
+                        enabled = canClearHistory,
+                        context = context,
+                        state = state,
+                        scope = scope
                     )
                 }
-            }
 
-            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseConfigPane(
-                url = url,
-                dbConfig = dbConfig
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+                if (!isActive) {
+                    Button(
+                        onClick = onSetActive,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Set as Active Database")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-            io.github.rumcajs.offlinewebsearch.ui.components.DatabaseStatePane(state = state)
+                var isDuplicating by remember { mutableStateOf(false) }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "History Actions",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            val canClearHistory = state.extension == ".db" && !state.isReadOnly
-
-            getRepositoriesToClear().forEach { repoClearItem ->
-                ClearRepositoryButton(
-                    item = repoClearItem,
-                    enabled = canClearHistory,
-                    context = context,
-                    state = state,
-                    scope = scope
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (!isActive) {
-                Button(
-                    onClick = onSetActive,
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            isDuplicating = true
+                            val success = AppConfigManager.duplicateDatabase(context, state)
+                            isDuplicating = false
+                            if (success) {
+                                Toast.makeText(context, "Database copy created", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to create database copy", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    enabled = !isDuplicating,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Set as Active Database")
+                    Text(if (isDuplicating) "Creating Copy..." else "Create a Copy")
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            var isDuplicating by remember { mutableStateOf(false) }
-
-            OutlinedButton(
-                onClick = {
-                    scope.launch {
-                        isDuplicating = true
-                        val success = AppConfigManager.duplicateDatabase(context, state)
-                        isDuplicating = false
-                        if (success) {
-                            Toast.makeText(context, "Database copy created", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "Failed to create database copy", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-                enabled = !isDuplicating,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (isDuplicating) "Creating Copy..." else "Create a Copy")
             }
         }
     }

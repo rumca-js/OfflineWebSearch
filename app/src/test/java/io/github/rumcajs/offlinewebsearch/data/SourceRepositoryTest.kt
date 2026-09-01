@@ -145,4 +145,31 @@ class SourceRepositoryTest {
         assertFalse(ok)
         assertNotNull(error)
     }
+
+    // ── updateSourceMetaAndEntries: skip disabled & recent fetch ──────────────
+
+    @Test
+    fun `updateSourceMetaAndEntries skips disabled source`() = runBlocking {
+        val disabledSource = Source(id = 1L, title = "Disabled", url = "https://example.com/rss", enabled = false)
+        val (ok, reason) = SourceRepository.updateSourceMetaAndEntries(context, dbState, disabledSource)
+        assertFalse(ok)
+        assertEquals("Source is disabled", reason)
+    }
+
+    @Test
+    fun `updateSourceMetaAndEntries skips source fetched less than an hour ago`() = runBlocking {
+        val url = "https://recent.test/rss"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Recent Source", url, enabled = true)
+        assertTrue(okInsert)
+        val inserted = SourceRepository.getSourceByUrl(context, dbState, url)
+        assertNotNull(inserted)
+
+        // Set fetch timestamp to current time (less than 1 hour ago)
+        val nowIso = SourceOperationalDataRepository.getCurrentIsoTimestamp()
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, inserted!!.id!!, nowIso)
+
+        val (ok, reason) = SourceRepository.updateSourceMetaAndEntries(context, dbState, inserted)
+        assertFalse(ok)
+        assertEquals("Source was fetched recently (less than 1 hour ago)", reason)
+    }
 }

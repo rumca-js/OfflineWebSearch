@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,14 +40,20 @@ import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
 
 /** Key constants for [SourcesScreen] filter dropdown options. */
+private const val FILTER_KEY_BY_URL = "by_url"
 private const val FILTER_KEY_BY_TITLE = "by_title"
 private const val FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
 
 /** Sort mode applied to the in-memory source list. */
-private enum class SourceOrder { Default, ByTitle, ByFetchTime }
+private enum class SourceOrder { ByUrl, ByTitle, ByFetchTime }
 
 /** [FilterOption] list shown in the [SearchContainer] dropdown for [SourcesScreen]. */
 private val SOURCE_FILTER_OPTIONS = listOf(
+    FilterOption(
+        key = FILTER_KEY_BY_URL,
+        label = "By Url",
+        icon = Icons.Default.SortByAlpha
+    ),
     FilterOption(
         key = FILTER_KEY_BY_TITLE,
         label = "By Title",
@@ -62,16 +69,19 @@ private val SOURCE_FILTER_OPTIONS = listOf(
 /**
  * Screen displaying the list of RSS/feed sources from `sourcedatamodel`.
  *
+ * Supports pull-to-refresh to reload the source list from the active database.
+ *
  * The search widget is the first item inside a [LazyColumn] so that it scrolls
  * together with the source list — consistent with [EntryListScreen].
  *
  * The widget uses the shared [SearchContainer] component:
  *  - Full-width text field
  *  - "Search" button that applies the current query (in-memory filter)
- *  - Filter icon button opening a dropdown with "By Title" and "By Fetch Time"
+ *  - Filter icon button opening a dropdown with "By Url", "By Title", and "By Fetch Time"
  *
+ * By default, "By Url" filter is applied. A filter is always applied.
  * Selecting a filter immediately re-sorts the list; no "Search" press is needed.
- * Selecting the active filter again deactivates it (toggle).
+ * Selecting an active non-default filter resets back to "By Url".
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,16 +101,22 @@ fun SourcesScreen(
     var searchQuery by remember { mutableStateOf("") }
     // The query that was last submitted via the Search button.
     var activeSearchQuery by remember { mutableStateOf("") }
-    var sourceOrder by remember { mutableStateOf(SourceOrder.Default) }
+    var sourceOrder by remember { mutableStateOf(SourceOrder.ByUrl) }
     var sources by remember { mutableStateOf<List<Source>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isRefreshingAll by remember { mutableStateOf(false) }
     var sourceToDelete by remember { mutableStateOf<Source?>(null) }
 
+    val loadSources: () -> Unit = {
+        scope.launch {
+            isLoading = true
+            sources = SourceRepository.getAllSources(context, activeDbState)
+            isLoading = false
+        }
+    }
+
     LaunchedEffect(config.activeDatabase) {
-        isLoading = true
-        sources = SourceRepository.getAllSources(context, activeDbState)
-        isLoading = false
+        loadSources()
     }
 
     /**
@@ -118,31 +134,32 @@ fun SourcesScreen(
             }
         }
         when (sourceOrder) {
-            SourceOrder.ByTitle -> base.sortedBy { it.title.lowercase() }
+            SourceOrder.ByUrl -> base.sortedWith(compareBy<Source> { it.url.lowercase() }.thenBy { it.title.lowercase() })
+            SourceOrder.ByTitle -> base.sortedWith(compareBy<Source> { it.title.lowercase() }.thenBy { it.url.lowercase() })
             // Fetch time is stored in a separate table; sort by id as an insertion-order proxy.
             SourceOrder.ByFetchTime -> base.sortedBy { it.id ?: Long.MAX_VALUE }
-            SourceOrder.Default -> base
         }
     }
 
     /** Whether the Search button should be enabled (query differs from active query). */
     val isSearchButtonEnabled = searchQuery != activeSearchQuery
 
-    /** Key of the currently active filter option, or null when none is active. */
+    /** Key of the currently active filter option. */
     val activeFilterKey: String? = when (sourceOrder) {
+        SourceOrder.ByUrl -> FILTER_KEY_BY_URL
         SourceOrder.ByTitle -> FILTER_KEY_BY_TITLE
         SourceOrder.ByFetchTime -> FILTER_KEY_BY_FETCH_TIME
-        SourceOrder.Default -> null
     }
 
     /** Called when the user selects an option from the filter dropdown. */
     val onFilterSelected: (FilterOption) -> Unit = { option ->
         sourceOrder = when (option.key) {
+            FILTER_KEY_BY_URL -> SourceOrder.ByUrl
             FILTER_KEY_BY_TITLE ->
-                if (sourceOrder == SourceOrder.ByTitle) SourceOrder.Default else SourceOrder.ByTitle
+                if (sourceOrder == SourceOrder.ByTitle) SourceOrder.ByUrl else SourceOrder.ByTitle
             FILTER_KEY_BY_FETCH_TIME ->
-                if (sourceOrder == SourceOrder.ByFetchTime) SourceOrder.Default else SourceOrder.ByFetchTime
-            else -> SourceOrder.Default
+                if (sourceOrder == SourceOrder.ByFetchTime) SourceOrder.ByUrl else SourceOrder.ByFetchTime
+            else -> SourceOrder.ByUrl
         }
     }
 
@@ -155,18 +172,21 @@ fun SourcesScreen(
             Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
         } else {
             isRefreshingAll = true
-            SourceRefreshWorker.enqueueSources(
-                context = context,
-                dbState = activeDbState,
-                sources = sources,
-                onFinished = { fetchedCount ->
-                    scope.launch {
-                        sources = SourceRepository.getSourcesByFetchTime(context, activeDbState)
-                        isRefreshingAll = false
-                        Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                val orderedSources = SourceRepository.getSourcesByFetchTime(context, activeDbState)
+                SourceRefreshWorker.enqueueSources(
+                    context = context,
+                    dbState = activeDbState,
+                    sources = orderedSources,
+                    onFinished = { fetchedCount ->
+                        scope.launch {
+                            sources = SourceRepository.getSourcesByFetchTime(context, activeDbState)
+                            isRefreshingAll = false
+                            Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 
@@ -245,79 +265,86 @@ fun SourcesScreen(
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        // The search widget is the first item in the LazyColumn so it scrolls
-        // together with the source list — consistent with EntryListScreen.
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = isLoading,
+            onRefresh = loadSources,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            item(key = "search_widget") {
-                SearchContainer(
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = { searchQuery = it },
-                    onClearSearch = {
-                        searchQuery = ""
-                        activeSearchQuery = ""
-                    },
-                    onPerformSearch = { activeSearchQuery = searchQuery },
-                    isSearchButtonEnabled = isSearchButtonEnabled,
-                    filterOptions = SOURCE_FILTER_OPTIONS,
-                    activeFilterKey = activeFilterKey,
-                    onFilterSelected = onFilterSelected,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
+            // The search widget is the first item in the LazyColumn so it scrolls
+            // together with the source list — consistent with EntryListScreen.
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                item(key = "search_widget") {
+                    SearchContainer(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        onClearSearch = {
+                            searchQuery = ""
+                            activeSearchQuery = ""
+                        },
+                        onPerformSearch = { activeSearchQuery = searchQuery },
+                        isSearchButtonEnabled = isSearchButtonEnabled,
+                        filterOptions = SOURCE_FILTER_OPTIONS,
+                        activeFilterKey = activeFilterKey,
+                        onFilterSelected = onFilterSelected,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
 
-            when {
-                isLoading -> {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 64.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                when {
+                    isLoading && sources.isEmpty() -> {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 64.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
-                }
-                sources.isEmpty() -> {
-                    item {
-                        Text(
-                            text = "No sources available in current database. Feeds and RSS sources can be added via the add button.",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 64.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    sources.isEmpty() -> {
+                        item {
+                            Text(
+                                text = "No sources available in current database. Feeds and RSS sources can be added via the add button.",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 64.dp),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                }
-                filteredSources.isEmpty() -> {
-                    item {
-                        Text(
-                            text = "No matching sources found.",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 64.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    filteredSources.isEmpty() -> {
+                        item {
+                            Text(
+                                text = "No matching sources found.",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 64.dp),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                }
-                else -> {
-                    items(filteredSources, key = { it.id ?: it.url }) { source ->
-                        SourceItemRow(
-                            source = source,
-                            isEditable = isEditable,
-                            onClick = { onNavigateToSource(source) },
-                            onEditClick = { onNavigateToEditSource(source) },
-                            onDeleteClick = { sourceToDelete = source }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                    else -> {
+                        items(filteredSources, key = { it.id ?: it.url }) { source ->
+                            SourceItemRow(
+                                source = source,
+                                isEditable = isEditable,
+                                onClick = { onNavigateToSource(source) },
+                                onEditClick = { onNavigateToEditSource(source) },
+                                onDeleteClick = { sourceToDelete = source }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }
