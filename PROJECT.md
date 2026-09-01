@@ -109,8 +109,8 @@ Possible database states include:
     -- when sources are successfully refreshed
     -- when entry is deleted from EntryDetailScreen
     -- back button in itself should not refresh list, as it does not modify Entries, or results
- - swipe right performs "next" pagination on results
- - swipe left performs "previous" pagination on results
+ - swipe left performs "next" pagination on results
+ - swipe right performs "previous" pagination on results
 
 ### EntryItem - result
 There are several list styles:

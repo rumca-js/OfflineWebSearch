@@ -65,14 +65,14 @@ fun SearchResultsContainer(
                                 onDragStart = { totalDragX = 0f },
                                 onDragEnd = {
                                     if (totalDragX > swipeThreshold) {
-                                        // Swipe right -> Next page
-                                        if (currentPage + 1 < totalPages) {
-                                            onNextPage()
-                                        }
-                                    } else if (totalDragX < -swipeThreshold) {
-                                        // Swipe left -> Previous page
+                                        // Swipe right -> Previous page
                                         if (currentPage > 0) {
                                             onPreviousPage()
+                                        }
+                                    } else if (totalDragX < -swipeThreshold) {
+                                        // Swipe left -> Next page (older/next results)
+                                        if (currentPage + 1 < totalPages) {
+                                            onNextPage()
                                         }
                                     }
                                     totalDragX = 0f
