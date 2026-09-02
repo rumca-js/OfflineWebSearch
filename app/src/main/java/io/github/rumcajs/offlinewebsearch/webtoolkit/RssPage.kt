@@ -63,8 +63,8 @@ class RssPage(val link: String, val contents: String) : Page {
                                     }
                                 }
 
-                                // media:thumbnail or enclosure url attribute
-                                if (tag == "thumbnail" || tag == "enclosure") {
+                                // media:thumbnail url attribute
+                                if (tag == "thumbnail") {
                                     val url = parser.getAttributeValue(null, "url")
                                     if (url != null && entryThumbnail == null) {
                                         entryThumbnail = url
