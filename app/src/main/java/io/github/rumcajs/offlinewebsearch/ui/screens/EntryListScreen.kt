@@ -62,14 +62,17 @@ fun EntryListScreen(
     // TODO if filter changes - also scroll
     var previousPage by remember { mutableStateOf<Int?>(null) }
     var previousQuery by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(viewModel.currentPage, viewModel.activeSearchQuery) {
-        if (previousPage != null && previousQuery != null &&
-            (previousPage != viewModel.currentPage || previousQuery != viewModel.activeSearchQuery)
+    var previousFilter by remember { mutableStateOf<SearchFilter?>(null) }
+    LaunchedEffect(viewModel.currentPage, viewModel.activeSearchQuery, viewModel.activeFilter) {
+        if (previousPage != null && previousQuery != null && previousFilter != null &&
+            (previousPage != viewModel.currentPage || previousQuery != viewModel.activeSearchQuery ||
+                    previousFilter != viewModel.activeFilter)
         ) {
             listState.scrollToItem(0)
         }
         previousPage = viewModel.currentPage
         previousQuery = viewModel.activeSearchQuery
+        previousFilter = viewModel.activeFilter
     }
 
     val filterOptions = remember(config.dbconfig.trackUserNavigation, isEditable) {
@@ -102,6 +105,9 @@ fun EntryListScreen(
             activeFilterKey = viewModel.activeFilter.takeIf { it != SearchFilter.None }?.name,
             onFilterSelected = { option ->
                 viewModel.setFilter(context, SearchFilter.fromKey(option.key))
+                coroutineScope.launch {
+                    listState.scrollToItem(0)
+                }
             }
         )
         SearchResultsContainer(
