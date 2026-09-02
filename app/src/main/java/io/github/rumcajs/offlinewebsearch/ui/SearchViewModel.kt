@@ -29,9 +29,13 @@ class SearchViewModel : ViewModel() {
     var activeFilter by mutableStateOf(SearchFilter.None)
         private set
 
+    /** Lazy list state preserved across navigation. */
+    val listState = androidx.compose.foundation.lazy.LazyListState()
+
     /** Convenience accessors used by [fetchPage]. */
     val isFilterVisited: Boolean get() = activeFilter.filterByVisited
     val isFilterReadLater: Boolean get() = activeFilter.filterByReadLater
+    val isFilterVisits: Boolean get() = activeFilter == SearchFilter.ByVisits
 
     /**
      * Applies [filter] as the new active filter and re-fetches data if [context] is provided.

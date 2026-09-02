@@ -306,13 +306,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                         navController.navigate(Screen.SourceDetail.route)
                                     },
                                     onReadLaterChanged = {
-                                        // Refresh list so that removing/adding a Read Later
-                                        // entry is reflected immediately when the filter is active.
-                                        if (searchViewModel.isFilterReadLater) {
-                                            searchViewModel.refreshPage(context)
-                                        }
-                                    },
-                                    onBack = { navController.popBackStack() }
+                                         // Refresh list so that removing/adding a Read Later
+                                         // entry is reflected immediately when the filter is active.
+                                         if (searchViewModel.isFilterReadLater) {
+                                             searchViewModel.refreshPage(context)
+                                         }
+                                     },
+                                     onBack = {
+                                         val cfg = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                                         val isSortingByVisits = searchViewModel.isFilterVisits ||
+                                             (searchViewModel.activeFilter == _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.SearchFilter.None &&
+                                                 cfg.dbconfig.orderBy == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VISITS_DESC)
+                                         if (isSortingByVisits) {
+                                             searchViewModel.refreshPage(context)
+                                         }
+                                         navController.popBackStack()
+                                     }
                                 )
                             }
                         }

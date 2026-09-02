@@ -50,12 +50,8 @@ fun SearchResultsContainer(
         onRefresh = { onRefresh?.invoke() },
         modifier = modifier
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 // Scrollable entry list
                 LazyColumn(
                     modifier = Modifier
@@ -115,7 +111,10 @@ fun SearchResultsContainer(
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
-                    items(filteredData) { entry ->
+                    items(
+                        items = filteredData,
+                        key = { entry -> entry.id ?: entry.link ?: entry.hashCode() }
+                    ) { entry ->
                         EntryItem(
                             entry = entry,
                             onClick = onNavigateToDetail
@@ -179,6 +178,11 @@ fun SearchResultsContainer(
                             }
                         }
                     }
+                }
+            }
+            if (isLoading && filteredData.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
         }

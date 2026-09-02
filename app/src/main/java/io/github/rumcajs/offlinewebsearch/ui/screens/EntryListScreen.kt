@@ -47,7 +47,7 @@ fun EntryListScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
-    val listState = rememberLazyListState()
+    val listState = viewModel.listState
     val coroutineScope = rememberCoroutineScope()
     val config by AppConfigManager.config.collectAsState()
     val activeDbState = config.activeDatabaseState

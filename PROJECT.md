@@ -108,7 +108,6 @@ Possible database states include:
     -- when "Read Later" filter is applied, and "Read Later" table changes
     -- when sources are successfully refreshed
     -- when entry is deleted from EntryDetailScreen
-    -- back button in itself should not refresh list, as it does not modify Entries, or results
  - swipe left performs "next" pagination on results
  - swipe right performs "previous" pagination on results
 
@@ -168,6 +167,7 @@ The screen displays, where available:
  - Description.
  - Other entry metadata.
  - Entry transition pane. The pane shows entries that the user previously visited from the current entry. Entry transitions are stored in UserEntryTransitionHistory.
+ - back button returning to EntryListScreen should not refresh list, nor should scroll to the top, as it does not modify Entries, or results. It should if read later were changed and EntryList is with read later filter, or if EntryList is with sort by Visits
 
 ## EntryEditScreen
  - Allows adding a new entry or editing an existing entry.
@@ -284,7 +284,8 @@ Database refresh should make database refresh buttons to be spinning, if possibl
  - It would be best if it could accept new sources to refresh
  - disabled sources should be skipped
  - sources that were fetched eariler than hour since source.date\_fetch should be skipped
- - should use order of sources by last fetched (or that never have been fetched
+ - should use order of sources by last fetched (or that never have been fetched)
+ - should change date\_fetch, but only after attempt to read source has been made
 
 ## Database update
  - it would be best if it could accept new databases to fetch
