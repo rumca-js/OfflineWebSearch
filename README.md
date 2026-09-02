@@ -58,6 +58,13 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
  - import is fast, since it uses SQLite, so it is easy to reuse in other projects ('linki' app was found to be slow since it performs HTML import export)
  - some apps might be better, but are not open source (eg. obsidian is proprietary)
 
+# Features
+ - Baked in database
+ - Additional database with data are available and ready (feeds, youtube, top domains)
+ - RSS reader
+ - Bookmark managing
+ - Tagging, entry voting
+
 # Screenshots
 
 [Screenshots](https://github.com/rumca-js/OfflineWebSearch/tree/main/screenshot)
