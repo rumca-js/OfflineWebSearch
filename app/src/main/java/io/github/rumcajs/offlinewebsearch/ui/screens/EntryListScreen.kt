@@ -58,9 +58,18 @@ fun EntryListScreen(
         viewModel.loadDataIfNeeded(context)
     }
 
-    // Reset scroll position when page or search query changes.
+    // Reset scroll position only when page or search query actually changes (not on initial composition).
+    // TODO if filter changes - also scroll
+    var previousPage by remember { mutableStateOf<Int?>(null) }
+    var previousQuery by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(viewModel.currentPage, viewModel.activeSearchQuery) {
-        listState.scrollToItem(0)
+        if (previousPage != null && previousQuery != null &&
+            (previousPage != viewModel.currentPage || previousQuery != viewModel.activeSearchQuery)
+        ) {
+            listState.scrollToItem(0)
+        }
+        previousPage = viewModel.currentPage
+        previousQuery = viewModel.activeSearchQuery
     }
 
     val filterOptions = remember(config.dbconfig.trackUserNavigation, isEditable) {

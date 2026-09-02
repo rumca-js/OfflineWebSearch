@@ -95,12 +95,16 @@ class SearchViewModel : ViewModel() {
     private var currentActiveDatabase: String? = null
     private var currentOrderBy: OrderBy? = null
     private var currentLinksPerPage: Int? = null
+    private var isObservingConfig = false
 
     // ──────────────────────────────────────────────────────────────────────────
     // Config watcher – reload when database, order, or linksPerPage changes
     // ──────────────────────────────────────────────────────────────────────────
 
     fun loadDataIfNeeded(context: Context) {
+        if (isObservingConfig) return
+        isObservingConfig = true
+
         viewModelScope.launch {
             AppConfigManager.config.collect { config ->
                 val activeLinksPerPage = config.dbconfig.effectiveLinksPerPage
