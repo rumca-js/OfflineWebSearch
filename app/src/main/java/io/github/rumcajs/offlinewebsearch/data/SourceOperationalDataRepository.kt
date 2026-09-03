@@ -76,7 +76,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         sourceObjId: Long
     ): SourceOperationalData? = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext null
         }
 
@@ -114,7 +114,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
         sourceObjId: Long,
         fetchTime: String = getCurrentIsoTimestamp()
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -162,7 +162,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
         fetchTime: String = getCurrentIsoTimestamp()
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (sourceUrl.isBlank()) return@withContext Pair(false, "Source URL is empty")
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -199,7 +199,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         sourceObjId: Long
     ): Boolean = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext false
         }
 
@@ -226,7 +226,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

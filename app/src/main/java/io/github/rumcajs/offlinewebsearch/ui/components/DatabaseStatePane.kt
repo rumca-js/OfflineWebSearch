@@ -26,7 +26,7 @@ fun DatabaseStatePane(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val isSql = state.extension == ".db"
+    val isSql = state.isSQLite
     var repoCounts by remember(state, refreshTrigger) { mutableStateOf<Map<RepositoryInterface, Long?>>(emptyMap()) }
     var isLoadingStats by remember(state, refreshTrigger) { mutableStateOf(false) }
 

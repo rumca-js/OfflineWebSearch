@@ -40,7 +40,7 @@ object EntryEnrichmentWorker {
         currentTitle: String,
         currentDescription: String
     ) = withContext(Dispatchers.IO) {
-        if (activeDbState.extension != ".db" || activeDbState.isReadOnly) return@withContext
+        if (!activeDbState.isSQLite || activeDbState.isReadOnly) return@withContext
 
         val file = File(context.filesDir, activeDbState.localFileName)
         if (!file.exists()) return@withContext

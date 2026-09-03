@@ -51,7 +51,7 @@ object ReadLaterRepository : RepositoryInterface {
         userId: Long? = null
     ): List<Pair<ReadLater, Entry>> = withContext(Dispatchers.IO) {
         val result = mutableListOf<Pair<ReadLater, Entry>>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext result
         }
 
@@ -108,7 +108,7 @@ object ReadLaterRepository : RepositoryInterface {
         entryId: Long,
         userId: Long = 0
     ): Boolean = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext false
         }
 
@@ -140,7 +140,7 @@ object ReadLaterRepository : RepositoryInterface {
         entryId: Long,
         userId: Long = 0
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -182,7 +182,7 @@ object ReadLaterRepository : RepositoryInterface {
         entryId: Long,
         userId: Long = 0
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -212,7 +212,7 @@ object ReadLaterRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

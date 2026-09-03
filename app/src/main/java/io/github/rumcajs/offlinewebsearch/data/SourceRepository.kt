@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -28,7 +29,7 @@ object SourceRepository : RepositoryInterface {
      */
     suspend fun getAllSources(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
         val sources = mutableListOf<Source>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext sources
         }
 
@@ -71,7 +72,7 @@ object SourceRepository : RepositoryInterface {
      */
     suspend fun getSourcesByFetchTime(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
         val sources = mutableListOf<Source>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext sources
         }
 
@@ -134,7 +135,7 @@ object SourceRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         sourceId: Long
     ): String? = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext null
         val cacheKey = Pair(activeDatabaseState.localFileName, sourceId)
         sourceTitleCache[cacheKey]?.let { return@withContext it }
 
@@ -150,7 +151,7 @@ object SourceRepository : RepositoryInterface {
      * Finds a source in `sourcedatamodel` matching [sourceId].
      */
     suspend fun getSourceById(context: Context, activeDatabaseState: DatabaseState?, sourceId: Long): Source? = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext null
         val file = File(context.filesDir, activeDatabaseState.localFileName)
         if (!file.exists()) return@withContext null
 
@@ -181,7 +182,7 @@ object SourceRepository : RepositoryInterface {
      */
     suspend fun getSourceByUrl(context: Context, activeDatabaseState: DatabaseState?, sourceUrl: String): Source? = withContext(Dispatchers.IO) {
         if (sourceUrl.isBlank()) return@withContext null
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") return@withContext null
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext null
         val file = File(context.filesDir, activeDatabaseState.localFileName)
         if (!file.exists()) return@withContext null
 
@@ -218,7 +219,7 @@ object SourceRepository : RepositoryInterface {
         url: String,
         enabled: Boolean
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -271,7 +272,7 @@ object SourceRepository : RepositoryInterface {
         url: String,
         enabled: Boolean
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -302,7 +303,7 @@ object SourceRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -346,7 +347,7 @@ object SourceRepository : RepositoryInterface {
         if (urlObj.url.isBlank()) {
             return@withContext Pair(false, "Source URL is empty")
         }
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -377,7 +378,7 @@ object SourceRepository : RepositoryInterface {
             var insertedCount = 0
 
             db.beginTransaction()
-            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+            val now = DateUtils.getCurrentTimestamp() // TODO: not ISO?
             try {
 
                 for (entry in entries) {
@@ -503,7 +504,7 @@ object SourceRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Int = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext 0
         }
         val config = AppConfigManager.config.value
@@ -533,7 +534,7 @@ object SourceRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         id: Long
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -575,7 +576,7 @@ object SourceRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

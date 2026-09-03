@@ -49,6 +49,9 @@ data class DatabaseState(
     val isLocal: Boolean
         get() = url.startsWith(LOCAL_PREFIX)
 
+    val isSQLite: Boolean
+        get() = extension == ".db"
+
     val displayName: String
         get() = when {
             isLocal -> url.removePrefix(LOCAL_PREFIX)

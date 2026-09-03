@@ -60,7 +60,7 @@ fun SourceScreen(
 
     val config by AppConfigManager.config.collectAsState()
     val activeDbState = config.activeDatabaseState
-    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly
 
     var currentSource by remember(source) { mutableStateOf(source) }
     var operationalData by remember { mutableStateOf<SourceOperationalData?>(null) }

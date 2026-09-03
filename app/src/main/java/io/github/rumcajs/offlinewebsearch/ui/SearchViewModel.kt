@@ -119,7 +119,7 @@ class SearchViewModel : ViewModel() {
                     pageSize = activeLinksPerPage
                     currentPage = 0
                     val activeState = config.activeDatabaseState
-                    if (activeState != null && activeState.extension == ".db") {
+                    if (activeState != null && activeState.isSQLite) {
                         val historyList = SearchHistoryRepository.getSearchHistory(context, activeState)
                         searchHistory = historyList.map { it.search_query }
                     }

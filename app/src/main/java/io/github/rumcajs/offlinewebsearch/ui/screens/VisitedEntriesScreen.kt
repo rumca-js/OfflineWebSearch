@@ -86,7 +86,7 @@ fun VisitedEntriesScreen(
                     }
                 },
                 actions = {
-                    if (visitedEntries.isNotEmpty() && activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db") {
+                    if (visitedEntries.isNotEmpty() && activeDbState != null && !activeDbState.isReadOnly && activeDbState.isSQLite) {
                         IconButton(onClick = { showClearDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Clear History")
                         }

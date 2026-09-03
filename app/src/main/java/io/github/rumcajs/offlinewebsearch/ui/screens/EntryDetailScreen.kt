@@ -53,11 +53,11 @@ fun EntryDetailScreen(
     var isReadLater by remember { mutableStateOf(false) }
 
     val activeDbState = config.activeDatabaseState
-    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly
 
     LaunchedEffect(entry.id, activeDbState) {
         val entryId = entry.id
-        if (entryId != null && activeDbState != null && activeDbState.extension == ".db") {
+        if (entryId != null && activeDbState != null && activeDbState.isSQLite) {
             isReadLater = ReadLaterRepository.isReadLater(context, activeDbState, entryId)
         } else {
             isReadLater = false

@@ -79,7 +79,7 @@ object EntryRepository : RepositoryInterface {
         when {
             activeDatabaseState == null ->
                 filterInMemory(getEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater).size
-            activeDatabaseState.extension != ".db" ->
+            !activeDatabaseState.isSQLite ->
                 filterInMemory(getEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater).size
             else ->
                 countEntriesSql(context, activeDatabaseState, searchQuery, filterByVisited, filterByReadLater)
@@ -105,7 +105,7 @@ object EntryRepository : RepositoryInterface {
                 val all = filterInMemory(getEntriesFromAssets(context, defaultAssets), searchQuery, filterByVisited, filterByReadLater)
                 all.sortedByOrderBy(orderBy).drop(offset).take(pageSize)
             }
-            activeDatabaseState.extension != ".db" -> {
+            !activeDatabaseState.isSQLite -> {
                 val all = filterInMemory(getEntriesFromJson(context, activeDatabaseState), searchQuery, filterByVisited, filterByReadLater)
                 all.sortedByOrderBy(orderBy).drop(offset).take(pageSize)
             }
@@ -128,8 +128,8 @@ object EntryRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState,
         entry: Entry
     ): Triple<Boolean, Long, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState.extension != ".db") {
-            return@withContext Triple(false, -1L, "Database is not a SQLite .db file")
+        if (!activeDatabaseState.isSQLite) {
+            return@withContext Triple(false, -1L, "Database is not a SQLite file")
         }
         if (activeDatabaseState.isReadOnly) {
             return@withContext Triple(false, -1L, "Database is read-only")
@@ -314,7 +314,7 @@ object EntryRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         id: Long
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -361,7 +361,7 @@ object EntryRepository : RepositoryInterface {
         if (id != null) {
             return@withContext deleteById(context, activeDatabaseState, id).first
         }
-        if (activeDatabaseState.extension != ".db") return@withContext false
+        if (!activeDatabaseState.isSQLite) return@withContext false
         if (activeDatabaseState.isReadOnly) return@withContext false
 
         val file = File(context.filesDir, activeDatabaseState.localFileName)
@@ -711,7 +711,7 @@ object EntryRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

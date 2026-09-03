@@ -41,7 +41,8 @@ object DateUtils {
      * yyyy-MM-dd HH:mm:ss
      */
     fun getCurrentTimestamp(): String {
-        return getCurrentIsoTimestamp();
+        val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+        return now
     }
 
     /**

@@ -36,7 +36,7 @@ fun SourceEditScreen(
     val activeDbState = config.activeDatabaseState
 
     val isAddMode = source.id == null
-    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly
 
     var title by remember { mutableStateOf(source.title) }
     var url by remember { mutableStateOf(source.url) }

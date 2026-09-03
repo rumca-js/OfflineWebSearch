@@ -68,7 +68,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
         if (activeDatabaseState == null) {
             return@withContext TransitionLoadResult(emptyList(), "No active database configured")
         }
-        if (activeDatabaseState.extension != ".db") {
+        if (!activeDatabaseState.isSQLite) {
             return@withContext TransitionLoadResult(emptyList(), null)
         }
 
@@ -130,7 +130,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
         if (fromEntryId == toEntryId) {
             return@withContext Pair(true, null)
         }
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -184,7 +184,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

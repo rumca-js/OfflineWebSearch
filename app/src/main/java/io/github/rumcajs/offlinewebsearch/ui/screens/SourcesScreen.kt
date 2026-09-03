@@ -95,7 +95,7 @@ fun SourcesScreen(
     val scope = rememberCoroutineScope()
     val config by AppConfigManager.config.collectAsState()
     val activeDbState = config.activeDatabaseState
-    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly
 
     // Raw search input (typing in the text field).
     var searchQuery by remember { mutableStateOf("") }
@@ -117,6 +117,14 @@ fun SourcesScreen(
 
     LaunchedEffect(config.activeDatabase) {
         loadSources()
+    }
+
+    fun getSourcesEmptyText() : String
+    {
+        if (isEditable) {
+            return "No sources available in current database. Feeds and RSS sources can be added via the add button."
+        }
+        return "Database is read-only. Cannot edit sources"
     }
 
     /**
@@ -166,7 +174,7 @@ fun SourcesScreen(
     val performRefreshAll: () -> Unit = {
         if (config.networkConfig.disabled) {
             Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
-        } else if (activeDbState == null || activeDbState.isReadOnly || activeDbState.extension != ".db") {
+        } else if (activeDbState == null || activeDbState.isReadOnly || !activeDbState.isSQLite) {
             Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
         } else if (sources.isEmpty()) {
             Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
@@ -313,7 +321,7 @@ fun SourcesScreen(
                     sources.isEmpty() -> {
                         item {
                             Text(
-                                text = "No sources available in current database. Feeds and RSS sources can be added via the add button.",
+                                text = getSourcesEmptyText(),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 64.dp),

@@ -55,7 +55,7 @@ object SocialDataRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         entryId: Long
     ): SocialData? = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext null
         }
 
@@ -109,7 +109,7 @@ object SocialDataRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         socialData: SocialData
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -152,7 +152,7 @@ object SocialDataRepository : RepositoryInterface {
         if (socialData.id == null) {
             return@withContext Pair(false, "SocialData ID is required for update")
         }
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -191,7 +191,7 @@ object SocialDataRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

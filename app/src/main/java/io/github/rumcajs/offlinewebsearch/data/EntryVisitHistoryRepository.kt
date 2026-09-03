@@ -56,7 +56,7 @@ object EntryVisitHistoryRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?
     ): List<EntryVisitHistory> = withContext(Dispatchers.IO) {
         val history = mutableListOf<EntryVisitHistory>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext history
         }
 
@@ -102,7 +102,7 @@ object EntryVisitHistoryRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?
     ): List<Pair<EntryVisitHistory, Entry>> = withContext(Dispatchers.IO) {
         val result = mutableListOf<Pair<EntryVisitHistory, Entry>>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext result
         }
 
@@ -156,7 +156,7 @@ object EntryVisitHistoryRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         entryId: Long
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -240,7 +240,7 @@ object EntryVisitHistoryRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

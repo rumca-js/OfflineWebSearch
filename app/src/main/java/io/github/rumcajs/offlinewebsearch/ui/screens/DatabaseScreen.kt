@@ -247,7 +247,7 @@ fun DatabaseScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                val canClearHistory = state.extension == ".db" && !state.isReadOnly
+                val canClearHistory = state.isSQLite && !state.isReadOnly
 
                 getRepositoriesToClear().forEach { repoClearItem ->
                     ClearRepositoryButton(

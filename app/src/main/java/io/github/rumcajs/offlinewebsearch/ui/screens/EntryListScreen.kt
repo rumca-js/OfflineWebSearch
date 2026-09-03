@@ -51,7 +51,7 @@ fun EntryListScreen(
     val coroutineScope = rememberCoroutineScope()
     val config by AppConfigManager.config.collectAsState()
     val activeDbState = config.activeDatabaseState
-    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly
 
     // Load data once; re-fetches automatically when database or config changes.
     LaunchedEffect(Unit) {

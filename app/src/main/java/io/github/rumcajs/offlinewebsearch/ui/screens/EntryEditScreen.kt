@@ -17,6 +17,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
 import io.github.rumcajs.offlinewebsearch.data.EntryEnrichmentWorker
 import io.github.rumcajs.offlinewebsearch.data.EntryRepository
+import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -41,7 +42,7 @@ fun EntryEditScreen(
     val config by AppConfigManager.config.collectAsState()
     val activeDbState = config.activeDatabaseState
 
-    val isEditable = activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db"
+    val isEditable = activeDbState != null && !activeDbState.isReadOnly
 
     var title by remember { mutableStateOf(entry.title ?: "") }
     var link by remember { mutableStateOf(entry.link ?: "") }
@@ -62,7 +63,7 @@ fun EntryEditScreen(
             errorMessage = "No active database selected"
             false
         } else if (isAddMode) {
-            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+            val now = DateUtils.getCurrentTimestamp() // TODO - not ISO?
             val (success, rowId, err) = EntryRepository.addEntrySql(
                 context = context,
                 activeDatabaseState = activeDbState,

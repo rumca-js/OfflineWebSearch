@@ -58,7 +58,7 @@ object SearchHistoryRepository : RepositoryInterface {
         limit: Int = 50
     ): List<SearchHistory> = withContext(Dispatchers.IO) {
         val history = mutableListOf<SearchHistory>()
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db") {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
             return@withContext history
         }
 
@@ -106,7 +106,7 @@ object SearchHistoryRepository : RepositoryInterface {
         if (trimmedQuery.isEmpty()) {
             return@withContext Pair(true, null)
         }
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -163,7 +163,7 @@ object SearchHistoryRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || activeDatabaseState.extension != ".db" || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 

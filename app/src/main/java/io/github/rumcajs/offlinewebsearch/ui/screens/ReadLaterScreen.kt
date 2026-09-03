@@ -85,7 +85,7 @@ fun ReadLaterScreen(
                     }
                 },
                 actions = {
-                    if (readLaterEntries.isNotEmpty() && activeDbState != null && !activeDbState.isReadOnly && activeDbState.extension == ".db") {
+                    if (readLaterEntries.isNotEmpty() && activeDbState != null && !activeDbState.isReadOnly && activeDbState.isSQLite) {
                         IconButton(onClick = { showClearDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Clear All")
                         }
