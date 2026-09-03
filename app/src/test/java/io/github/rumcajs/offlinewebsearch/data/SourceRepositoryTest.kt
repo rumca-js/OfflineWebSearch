@@ -172,4 +172,32 @@ class SourceRepositoryTest {
         assertFalse(ok)
         assertEquals("Source was fetched recently (less than 1 hour ago)", reason)
     }
+
+    @Test
+    fun `getOperationalDataBySourceId reads all table columns`() = runBlocking {
+        val db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
+        SourceOperationalDataRepository.ensureTableExists(db)
+        val sourceObjId = 9999L
+        val values = android.content.ContentValues().apply {
+            put("date_fetched", "2026-09-03T18:00:00Z")
+            put("source_obj_id", sourceObjId)
+            put("import_seconds", 42)
+            put("number_of_entries", 150)
+            put("page_hash", byteArrayOf(1, 2, 3, 4))
+            put("body_hash", byteArrayOf(5, 6, 7, 8))
+            put("consecutive_errors", 3)
+        }
+        db.insert("sourceoperationaldata", null, values)
+        db.close()
+
+        val data = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceObjId)
+        assertNotNull(data)
+        assertEquals("2026-09-03T18:00:00Z", data!!.date_fetched)
+        assertEquals(sourceObjId, data.source_obj_id)
+        assertEquals(42, data.import_seconds)
+        assertEquals(150, data.number_of_entries)
+        assertArrayEquals(byteArrayOf(1, 2, 3, 4), data.page_hash)
+        assertArrayEquals(byteArrayOf(5, 6, 7, 8), data.body_hash)
+        assertEquals(3, data.consecutive_errors)
+    }
 }

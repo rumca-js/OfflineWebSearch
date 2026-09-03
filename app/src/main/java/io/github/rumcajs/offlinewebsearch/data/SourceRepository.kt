@@ -17,10 +17,14 @@ data class Source(
     val enabled: Boolean = true,
     val url: String = "",
     val title: String = "",
-    val favicon: String = ""
+    val favicon: String = "",
+    val source_type: String? = null
 )
 
 object SourceRepository : RepositoryInterface {
+    val SOURCE_TYPE_RSS = "RSS"
+    val SOURCE_TYPE_PARSE = "Parse"
+    val SOURCE_TYPE_EMAIL = "Email"
 
     override fun getTableName(): String = "sourcedatamodel"
 
@@ -38,7 +42,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} ORDER BY url, title"
+            val sqlText = "SELECT id, enabled, url, title, favicon, source_type FROM ${getTableName()} ORDER BY url, title"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -47,6 +51,7 @@ object SourceRepository : RepositoryInterface {
                     val url = it.getString(it.getColumnIndexOrThrow("url")) ?: ""
                     val title = it.getString(it.getColumnIndexOrThrow("title")) ?: ""
                     val favicon = it.getString(it.getColumnIndexOrThrow("favicon")) ?: ""
+                    val sourceType = it.getString(it.getColumnIndexOrThrow("source_type"))
 
                     sources.add(
                         Source(
@@ -54,7 +59,8 @@ object SourceRepository : RepositoryInterface {
                             enabled = enabledVal == 1,
                             url = url,
                             title = title,
-                            favicon = favicon
+                            favicon = favicon,
+                            source_type = sourceType
                         )
                     )
                 }
@@ -81,7 +87,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon FROM ${getTableName()} AS s " +
+            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon, s.source_type FROM ${getTableName()} AS s " +
                     "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_obj_id ORDER BY sod.date_fetched ASC";
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
@@ -91,6 +97,7 @@ object SourceRepository : RepositoryInterface {
                     val url = it.getString(it.getColumnIndexOrThrow("s.url")) ?: ""
                     val title = it.getString(it.getColumnIndexOrThrow("s.title")) ?: ""
                     val favicon = it.getString(it.getColumnIndexOrThrow("s.favicon")) ?: ""
+                    val sourceType = it.getString(it.getColumnIndexOrThrow("s.source_type"))
 
                     if (enabledVal == 1) {
                         sources.add(
@@ -99,7 +106,8 @@ object SourceRepository : RepositoryInterface {
                                 enabled = true,
                                 url = url,
                                 title = title,
-                                favicon = favicon
+                                favicon = favicon,
+                                source_type = sourceType
                             )
                         )
                     }
@@ -158,7 +166,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} WHERE id = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type FROM ${getTableName()} WHERE id = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -167,7 +175,8 @@ object SourceRepository : RepositoryInterface {
                         val url = c.getString(c.getColumnIndexOrThrow("url")) ?: ""
                         val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
                         val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
-                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon)
+                        val sourceType = c.getString(c.getColumnIndexOrThrow("source_type"))
+                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType)
                     } else null
                 }
             }
@@ -189,7 +198,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon FROM ${getTableName()} WHERE url = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type FROM ${getTableName()} WHERE url = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -198,7 +207,8 @@ object SourceRepository : RepositoryInterface {
                         val url = c.getString(c.getColumnIndexOrThrow("url")) ?: ""
                         val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
                         val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
-                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon)
+                        val sourceType = c.getString(c.getColumnIndexOrThrow("source_type"))
+                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType)
                     } else null
                 }
             }

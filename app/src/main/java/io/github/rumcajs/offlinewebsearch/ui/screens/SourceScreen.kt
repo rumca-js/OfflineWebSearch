@@ -210,21 +210,6 @@ fun SourceScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            DetailRow(
-                label = "ID",
-                value = currentSource.id?.toString() ?: "N/A"
-            )
-
-            DetailRow(
-                label = "Status",
-                value = if (currentSource.enabled) "Enabled" else "Disabled"
-            )
-
-            DetailRow(
-                label = "Last Fetched",
-                value = operationalData?.date_fetched ?: "Never"
-            )
-
             if (currentSource.url.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -256,6 +241,51 @@ fun SourceScreen(
                     )
                 }
             }
+
+            DetailRow(
+                label = "ID",
+                value = currentSource.id?.toString() ?: "N/A"
+            )
+
+            DetailRow(
+                label = "Status",
+                value = if (currentSource.enabled) "Enabled" else "Disabled"
+            )
+
+            DetailRow(
+                label = "Type",
+                value = currentSource.source_type?.takeIf { it.isNotBlank() } ?: SourceRepository.SOURCE_TYPE_RSS
+            )
+
+            DetailRow(
+                label = "Last Fetched",
+                value = operationalData?.date_fetched ?: "Never"
+            )
+
+            DetailRow(
+                label = "Import Duration",
+                value = operationalData?.import_seconds?.let { "${it}s" } ?: "N/A"
+            )
+
+            DetailRow(
+                label = "Number of Entries",
+                value = operationalData?.number_of_entries?.toString() ?: "N/A"
+            )
+
+            DetailRow(
+                label = "Consecutive Errors",
+                value = operationalData?.consecutive_errors?.toString() ?: "0"
+            )
+
+            DetailRow(
+                label = "Page Hash",
+                value = operationalData?.page_hash?.joinToString("") { "%02x".format(it) }?.takeIf { it.isNotBlank() } ?: "N/A"
+            )
+
+            DetailRow(
+                label = "Body Hash",
+                value = operationalData?.body_hash?.joinToString("") { "%02x".format(it) }?.takeIf { it.isNotBlank() } ?: "N/A"
+            )
 
             if (onBrowseEntries != null) {
                 Spacer(modifier = Modifier.height(16.dp))

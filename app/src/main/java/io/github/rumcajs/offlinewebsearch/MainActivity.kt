@@ -366,7 +366,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.LinkPreview.route) {
                             searchViewModel.previewUrl?.let { url ->
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryStatusScreen(
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.UrlStatusScreen(
                                     url = url,
                                     onNavigateToLinkData = {
                                         searchViewModel.previewUrl = url
@@ -378,7 +378,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.LinkData.route) {
                             searchViewModel.previewUrl?.let { url ->
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryPreviewScreen(
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.UrlPreviewScreen(
                                     url = url,
                                     onBack = { navController.popBackStack() },
                                     onNavigateToDetail = { entry ->

@@ -17,7 +17,7 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EntryStatusScreen(
+fun UrlStatusScreen(
     url: String,
     onNavigateToLinkData: () -> Unit,
     onBack: () -> Unit
