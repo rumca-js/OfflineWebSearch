@@ -81,6 +81,7 @@ Possible database states include:
  - DatabaseScreen - Shows information and actions for a database.
  - SourceScreen - Shows information and actions for a source.
  - SourceEditScreen - Adds or edits a source.
+ - SourceUrlEditPreviewScreen - Preview screen shown when adding a source by URL. Fetches RSS feed data to pre-populate fields.
  - SourcesScreen - Shows the list of configured sources.
  - AboutScreen - Shows information about the application.
  - VisitedEntriesScreen - To be removed
@@ -193,41 +194,6 @@ The screen displays, where available:
  - Provides an Update entry data button.
  - The button updates the stored entry metadata.
 
-## OptionsScreen
- - Displays the configured databases (list).
- - Provides button to add new databases: from preselected list, new empty database, from local file, from url
- - preselected list button navigates to DatabasePreselectedListScreen
- - Database settings should be in DatabaseScreen, not here
- - No advanced database operation should be accessible here
- - Database are in pill-like widget
- - If database is active, then it should have primary color frame. If android does not provide "primary" color for android app theme, then define it somewhere in app configuration
- - Each database should contain indicator: state, if active or not
- - Each database should contain buttons to: refresh (if it is from the internet), remove (should not contain badge, nor combo indicating it is active)
- - single tap on database makes it's active
- - long press transitions to DatabaseScreen
- - Provides button to navigate to AboutScreen.
-
-## DatabaseScreen
- - Displays information if it is currently active
- - Provides a top bar with the following actions:
-    -- Edit.
-    -- Share.
-    -- Fetch database again
-    -- Remove.
- - Displays the current database state (read only?).
- - Displays the database name.
- - Displays the database type.
- - Displays the local file information.
- - Displays the remote URL, if applicable.
- - Displays the date of creation.
- - Displays the date of last refresh/update.
- - Displays the number of rows in relevant tables.
- - Provides an action to clear the search history.
- - Provides an action to clear the user's visited entries.
- - Provides an action to clear the user's read later entries.
- - Provides an action to clear the social data.
- - implement pull to refresh data about database
-
 ## SourcesScreen
  - Provides bar on top with buttons: add, fetch
  - Selecting source opens SourceScreen.
@@ -254,15 +220,58 @@ The screen displays, where available:
 
 ## SourceEditScreen
  - Allows adding a new RSS source or editing an existing source.
- - Provides input fields for source title, URL, and enabled status.
+ - Provides input fields for source title, URL, and enabled status via shared SourceFormPane component.
  - Saves changes to the sourcedatamodel table in the active database.
  - Only accessible when the active database is writable.
 
+## SourceUrlEditPreviewScreen
+ - Shown when the user taps the Add (+) button in SourcesScreen.
+ - Fetches RSS/feed data from the given URL using Url.kt in the background.
+ - Auto-populates title from the feed once loaded.
+ - Shares same form fields (title, URL, enabled) with SourceEditScreen via SourceFormPane.
+ - Displays additional feed info: HTTP status code, Content-Type, Content-Length, and RSS entry count.
+ - On success, inserts the new source into the sourcedatamodel table.
+
+## OptionsScreen
+- Displays the configured databases (list).
+- Provides button to add new databases: from preselected list, new empty database, from local file, from url
+- preselected list button navigates to DatabasePreselectedListScreen
+- Database settings should be in DatabaseScreen, not here
+- No advanced database operation should be accessible here
+- Database are in pill-like widget
+- If database is active, then it should have primary color frame. If android does not provide "primary" color for android app theme, then define it somewhere in app configuration
+- Each database should contain indicator: state, if active or not
+- Each database should contain buttons to: refresh (if it is from the internet), remove (should not contain badge, nor combo indicating it is active)
+- single tap on database makes it's active
+- long press transitions to DatabaseScreen
+- Provides button to navigate to AboutScreen.
+
+## DatabaseScreen
+- Displays information if it is currently active
+- Provides a top bar with the following actions:
+  -- Edit.
+  -- Share.
+  -- Fetch database again
+  -- Remove.
+- Displays the current database state (read only?).
+- Displays the database name.
+- Displays the database type.
+- Displays the local file information.
+- Displays the remote URL, if applicable.
+- Displays the date of creation.
+- Displays the date of last refresh/update.
+- Displays the number of rows in relevant tables.
+- Provides an action to clear the search history.
+- Provides an action to clear the user's visited entries.
+- Provides an action to clear the user's read later entries.
+- Provides an action to clear the social data.
+- implement pull to refresh data about database
+
 ## DatabasePreselectedListScreen
- - provides filter widget (user can provide text input to filter databases)
- - loads list of databases from github
- - shows databases in pill shaped rows
- - user can select database by a single tap. This action returns to OptionsScreen
+- provides filter widget (user can provide text input to filter databases)
+- loads list of databases from github
+- shows databases in pill shaped rows
+- user can select database by a single tap. This action returns to OptionsScreen
 
 # Browsing
  - Every entry visit is recorded (if configured so).

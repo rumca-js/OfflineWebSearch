@@ -9,13 +9,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Source
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.ui.components.SourceFormPane
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.coroutines.launch
 
@@ -127,66 +127,19 @@ fun SourceEditScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            if (!isEditable) {
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    Text(
-                        text = "Database is read-only. Editing is disabled.",
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-
-            OutlinedTextField(
-                value = title,
-                onValueChange = { if (isEditable) title = it },
-                label = { Text("Title") },
-                enabled = isEditable,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = url,
-                onValueChange = {
-                    if (isEditable) {
-                        url = it
-                        urlError = null
-                    }
+            SourceFormPane(
+                title = title,
+                onTitleChange = { title = it },
+                url = url,
+                onUrlChange = {
+                    url = it
+                    urlError = null
                 },
-                label = { Text("URL") },
-                enabled = isEditable,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                isError = urlError != null,
-                supportingText = urlError?.let { { Text(it) } }
+                enabled = enabled,
+                onEnabledChange = { enabled = it },
+                isEditable = isEditable,
+                urlError = urlError
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = enabled,
-                    onCheckedChange = { if (isEditable) enabled = it },
-                    enabled = isEditable
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Enabled",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

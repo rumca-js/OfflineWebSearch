@@ -42,6 +42,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object EntryAdd : Screen("entry_add", "Add Entry", Icons.Filled.Edit)
     object SourceDetail : Screen("source_detail", "Source Detail", Icons.AutoMirrored.Filled.List)
     object SourceEdit : Screen("source_edit", "Source Edit", Icons.Filled.Edit)
+    object SourceUrlEditPreview : Screen("source_url_edit_preview", "Add Source Preview", Icons.Filled.Edit)
     object Visited : Screen("visited", "Visited", Icons.AutoMirrored.Filled.List)
     object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)
 }
@@ -161,8 +162,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     navController.navigate(Screen.SourceEdit.route)
                                 },
                                 onNavigateToAddSource = {
-                                    searchViewModel.selectedSource = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Source()
-                                    navController.navigate(Screen.SourceEdit.route)
+                                    navController.navigate(Screen.SourceUrlEditPreview.route)
                                 }
                             )
                         }
@@ -218,6 +218,15 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     onBack = { navController.popBackStack() }
                                 )
                             }
+                        }
+                        composable(Screen.SourceUrlEditPreview.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceUrlEditPreviewScreen(
+                                onSourceAdded = { addedSource ->
+                                    searchViewModel.selectedSource = addedSource
+                                    navController.popBackStack()
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                         composable(Screen.Databases.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabasesScreen(
