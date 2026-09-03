@@ -172,7 +172,7 @@ fun DatabasesScreen(
                 },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Preselected list", fontSize = 12.sp)
+                Text("From preselected list", fontSize = 12.sp)
             }
         }
 
