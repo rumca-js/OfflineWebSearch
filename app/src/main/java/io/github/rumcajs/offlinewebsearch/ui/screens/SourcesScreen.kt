@@ -288,21 +288,39 @@ fun SourcesScreen(
                     .padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                item(key = "search_widget") {
-                    SearchContainer(
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = { searchQuery = it },
-                        onClearSearch = {
-                            searchQuery = ""
-                            activeSearchQuery = ""
-                        },
-                        onPerformSearch = { activeSearchQuery = searchQuery },
-                        isSearchButtonEnabled = isSearchButtonEnabled,
-                        filterOptions = SOURCE_FILTER_OPTIONS,
-                        activeFilterKey = activeFilterKey,
-                        onFilterSelected = onFilterSelected,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
+                if (isEditable) {
+                    item(key = "search_widget") {
+                        SearchContainer(
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = { searchQuery = it },
+                            onClearSearch = {
+                                searchQuery = ""
+                                activeSearchQuery = ""
+                            },
+                            onPerformSearch = { activeSearchQuery = searchQuery },
+                            isSearchButtonEnabled = isSearchButtonEnabled,
+                            filterOptions = SOURCE_FILTER_OPTIONS,
+                            activeFilterKey = activeFilterKey,
+                            onFilterSelected = onFilterSelected,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                } else {
+                    item(key = "readonly_banner") {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Database is read-only. Editing is disabled.",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
                 }
 
                 when {
