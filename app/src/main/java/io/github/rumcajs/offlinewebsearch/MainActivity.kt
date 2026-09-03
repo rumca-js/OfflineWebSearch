@@ -37,6 +37,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object LinkPreview : Screen("link_preview", "Link Preview", Icons.Filled.Search)
     object LinkData : Screen("link_data", "Link Data", Icons.Filled.Search)
     object DatabaseDetail : Screen("database_detail", "Database Detail", Icons.Filled.Storage)
+    object DatabasePreselectedList : Screen("database_preselected_list", "Preselected Databases", Icons.Filled.Storage)
     object Edit : Screen("edit", "Edit Entry", Icons.Filled.Edit)
     object EntryAdd : Screen("entry_add", "Add Entry", Icons.Filled.Edit)
     object SourceDetail : Screen("source_detail", "Source Detail", Icons.AutoMirrored.Filled.List)
@@ -265,9 +266,22 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     searchViewModel.selectedDatabaseState = state
                                     navController.navigate(Screen.DatabaseDetail.route)
                                 },
+                                onNavigateToPreselectedList = {
+                                    navController.navigate(Screen.DatabasePreselectedList.route)
+                                },
                                 onNavigateToAbout = {
                                     navController.navigate(Screen.About.route)
                                 }
+                            )
+                        }
+                        composable(Screen.DatabasePreselectedList.route) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabasePreselectedListScreen(
+                                onDatabaseSelected = { dbUrl ->
+                                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.refreshDatabaseInBackground(context, dbUrl)
+                                    navController.popBackStack()
+                                },
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable(Screen.Detail.route) {

@@ -195,6 +195,8 @@ The screen displays, where available:
 
 ## OptionsScreen
  - Displays the configured databases (list).
+ - Provides button to add new databases: from preselected list, new empty database, from local file, from url
+ - preselected list button navigates to DatabasePreselectedListScreen
  - Database settings should be in DatabaseScreen, not here
  - No advanced database operation should be accessible here
  - Database are in pill-like widget
@@ -255,6 +257,12 @@ The screen displays, where available:
  - Provides input fields for source title, URL, and enabled status.
  - Saves changes to the sourcedatamodel table in the active database.
  - Only accessible when the active database is writable.
+
+## DatabasePreselectedListScreen
+ - provides filter widget (user can provide text input to filter databases)
+ - loads list of databases from github
+ - shows databases in pill shaped rows
+ - user can select database by a single tap. This action returns to OptionsScreen
 
 # Browsing
  - Every entry visit is recorded (if configured so).
