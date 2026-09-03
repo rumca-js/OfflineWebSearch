@@ -443,12 +443,26 @@ object SourceRepository : RepositoryInterface {
                 db.close()
             }
 
-            // TODO change that to use setSourceFetch by source.id
-            SourceOperationalDataRepository.setSourceFetchByUrl(
-                context = context,
-                activeDatabaseState = activeDatabaseState,
-                sourceUrl = urlObj.url
-            )
+            val sourceId = source?.id?.takeIf { it != 0L }
+            if (sourceId != null) {
+                SourceOperationalDataRepository.setSourceFetch(
+                    context = context,
+                    activeDatabaseState = activeDatabaseState,
+                    sourceObjId = sourceId,
+                    numberOfEntries = entries.size,
+                    pageHash = page.getHash(),
+                    bodyHash = page.getBodyHash()
+                )
+            } else {
+                SourceOperationalDataRepository.setSourceFetchByUrl(
+                    context = context,
+                    activeDatabaseState = activeDatabaseState,
+                    sourceUrl = urlObj.url,
+                    numberOfEntries = entries.size,
+                    pageHash = page.getHash(),
+                    bodyHash = page.getBodyHash()
+                )
+            }
 
             Pair(true, "Successfully inserted $insertedCount new entries")
         } catch (e: Exception) {

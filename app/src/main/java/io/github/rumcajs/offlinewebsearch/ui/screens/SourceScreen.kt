@@ -258,6 +258,11 @@ fun SourceScreen(
             )
 
             DetailRow(
+                label = "Favicon",
+                value = currentSource.favicon.takeIf { it.isNotBlank() } ?: ""
+            )
+
+            DetailRow(
                 label = "Last Fetched",
                 value = operationalData?.date_fetched ?: "Never"
             )

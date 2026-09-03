@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
+import kotlin.Int
 
 /**
  * Data class representing operational metadata for a source stored in the `sourceoperationaldata` table.
@@ -176,13 +177,17 @@ object SourceOperationalDataRepository : RepositoryInterface {
     }
 
     /**
-     * Updates or inserts a fetch timestamp record in `sourceoperationaldata` for [sourceObjId].
+     * Updates or inserts a fetch record in `sourceoperationaldata` for [sourceObjId].
+     * Optionally persists [numberOfEntries], [pageHash], and [bodyHash] when provided.
      */
     suspend fun setSourceFetch(
         context: Context,
         activeDatabaseState: DatabaseState?,
         sourceObjId: Long,
-        fetchTime: String = getCurrentIsoTimestamp()
+        fetchTime: String = getCurrentIsoTimestamp(),
+        numberOfEntries: Int? = null,
+        pageHash: ByteArray? = null,
+        bodyHash: ByteArray? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -204,12 +209,18 @@ object SourceOperationalDataRepository : RepositoryInterface {
             if (existingId != null) {
                 val values = ContentValues().apply {
                     put("date_fetched", fetchTime)
+                    numberOfEntries?.let { put("number_of_entries", it) }
+                    pageHash?.let { put("page_hash", it) }
+                    bodyHash?.let { put("body_hash", it) }
                 }
                 db.update(getTableName(), values, "id = ?", arrayOf(existingId.toString()))
             } else {
                 val values = ContentValues().apply {
                     put("date_fetched", fetchTime)
                     put("source_obj_id", sourceObjId)
+                    numberOfEntries?.let { put("number_of_entries", it) }
+                    pageHash?.let { put("page_hash", it) }
+                    bodyHash?.let { put("body_hash", it) }
                 }
                 db.insert(getTableName(), null, values)
             }
@@ -229,7 +240,10 @@ object SourceOperationalDataRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?,
         sourceUrl: String,
-        fetchTime: String = getCurrentIsoTimestamp()
+        fetchTime: String = getCurrentIsoTimestamp(),
+        numberOfEntries: Int? = null,
+        pageHash: ByteArray? = null,
+        bodyHash: ByteArray? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (sourceUrl.isBlank()) return@withContext Pair(false, "Source URL is empty")
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
@@ -254,7 +268,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
             }
 
             db.close()
-            setSourceFetch(context, activeDatabaseState, sourceId, fetchTime)
+            setSourceFetch(context, activeDatabaseState, sourceId, fetchTime, numberOfEntries, pageHash, bodyHash)
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")

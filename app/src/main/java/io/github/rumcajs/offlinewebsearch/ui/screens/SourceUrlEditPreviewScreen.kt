@@ -57,22 +57,31 @@ fun SourceUrlEditPreviewScreen(
     var urlError by remember { mutableStateOf<String?>(null) }
     var previewResponseObject by remember { mutableStateOf<PageResponseObject?>(null) }
     var rssEntryCount by remember { mutableStateOf<Int?>(null) }
+    var isRssPageFetched by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
-    val canSave = url.isNotBlank()
+    /**
+     * Returns true when the save action should be enabled:
+     * the URL field is non-blank, URL data has been fetched,
+     * and the fetched page is an [RssPage].
+     */
+    fun isSaveEnabled() = url.isNotBlank() && isRssPageFetched && !isSaving
 
     // Fetch RSS preview data using Url whenever url changes or refresh is tapped
     LaunchedEffect(url, refreshTrigger) {
         if (url.isBlank() || config.networkConfig.disabled) {
             previewResponseObject = null
             rssEntryCount = null
+            isRssPageFetched = false
             return@LaunchedEffect
         }
         if (!UrlLocation(url).isWebLink()) {
+            isRssPageFetched = false
             return@LaunchedEffect
         }
 
         isLoadingPreview = true
+        isRssPageFetched = false
         try {
             val urlObj = Url(url)
             val resp = urlObj.getResponse()
@@ -90,6 +99,7 @@ fun SourceUrlEditPreviewScreen(
                 }
                 if (page is RssPage) {
                     rssEntryCount = page.getEntries().size
+                    isRssPageFetched = true
                 } else {
                     rssEntryCount = null
                 }
@@ -163,7 +173,7 @@ fun SourceUrlEditPreviewScreen(
                                     }
                                 }
                             },
-                            enabled = canSave && !isSaving
+                            enabled = isSaveEnabled()
                         ) {
                             Icon(Icons.Default.Save, contentDescription = "Save")
                         }
@@ -376,7 +386,7 @@ fun SourceUrlEditPreviewScreen(
                             }
                         }
                     },
-                    enabled = canSave && !isSaving,
+                    enabled = isSaveEnabled(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isSaving) {
