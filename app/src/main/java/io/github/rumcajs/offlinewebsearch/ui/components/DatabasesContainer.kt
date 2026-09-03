@@ -7,20 +7,22 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -376,28 +378,34 @@ fun DatabaseList(
         isReadOnly = true
     )
     val isDefaultActive = activeDatabaseUrl == null
-    DefaultDatabaseItem(
-        isActive = isDefaultActive,
-        onItemClick = if (onItemClick != null) {
-            { onItemClick(null, defaultState) }
-        } else null,
-        onSetActive = if (onSetActive != null) {
-            { onSetActive(null) }
-        } else null
-    )
 
-    databases.forEach { (url, state) ->
-        val isActive = activeDatabaseUrl == url
-        DatabaseItem(
-            state = state,
-            isActive = isActive,
-            onItemClick = { onItemClick?.invoke(url, state) },
-            onSetActive = if (onSetActive != null) {
-                { onSetActive(url) }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        DefaultDatabaseItem(
+            isActive = isDefaultActive,
+            onItemClick = if (onItemClick != null) {
+                { onItemClick(null, defaultState) }
             } else null,
-            onDelete = { onDelete(url, state) },
-            onUpdate = { onUpdate(url, state) }
+            onSetActive = if (onSetActive != null) {
+                { onSetActive(null) }
+            } else null
         )
+
+        databases.forEach { (url, state) ->
+            val isActive = activeDatabaseUrl == url
+            DatabaseItem(
+                state = state,
+                isActive = isActive,
+                onItemClick = { onItemClick?.invoke(url, state) },
+                onSetActive = if (onSetActive != null) {
+                    { onSetActive(url) }
+                } else null,
+                onDelete = { onDelete(url, state) },
+                onUpdate = { onUpdate(url, state) }
+            )
+        }
     }
 }
 
@@ -409,74 +417,63 @@ fun DatabaseList(
  * It cannot be edited, deleted, or refreshed.
  *
  * @param isActive Whether this database is currently active.
- * @param onItemClick Optional callback to navigate to the database detail screen.
- * @param onSetActive Optional callback to make this database active.
+ * @param onItemClick Optional callback to navigate to the database detail screen on long press.
+ * @param onSetActive Optional callback to make this database active on single tap.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DefaultDatabaseItem(
     isActive: Boolean = false,
     onItemClick: (() -> Unit)? = null,
     onSetActive: (() -> Unit)? = null
 ) {
-    Row(
+    val shape = RoundedCornerShape(24.dp)
+    val borderStroke = if (isActive) {
+        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    }
+
+    Surface(
+        shape = shape,
+        border = borderStroke,
+        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(shape)
+            .combinedClickable(
+                onClick = { onSetActive?.invoke() },
+                onLongClick = { onItemClick?.invoke() }
+            )
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .then(
-                    if (onItemClick != null) Modifier.clickable { onItemClick() }
-                    else Modifier
-                )
-                .padding(vertical = 4.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "Default (Assets)",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                if (isActive) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Active",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    StatusBadge(io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY)
+                    ReadOnlyBadge(isReadOnly = true)
                 }
             }
-            Row(
-                modifier = Modifier.padding(top = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                StatusBadge(io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY)
-                ReadOnlyBadge(isReadOnly = true)
-            }
         }
-
-        if (onSetActive != null) {
-            IconButton(
-                onClick = onSetActive,
-                enabled = !isActive
-            ) {
-                Icon(
-                    imageVector = if (isActive) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = if (isActive) "Active database" else "Make active",
-                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        // No edit / delete / refresh buttons for the default database.
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun DatabaseItem(
     state: DatabaseState,
@@ -489,93 +486,66 @@ fun DatabaseItem(
     val isLocal = state.isLocal
     val displayName = state.displayName
 
-    var isExpanded by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(24.dp)
+    val borderStroke = if (isActive) {
+        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    }
 
-    Row(
+    Surface(
+        shape = shape,
+        border = borderStroke,
+        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(shape)
+            .combinedClickable(
+                onClick = { onSetActive?.invoke() },
+                onLongClick = { onItemClick?.invoke() }
+            )
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .clickable {
-                    if (onItemClick != null) {
-                        onItemClick()
-                    } else {
-                        isExpanded = !isExpanded
-                    }
-                }
-                .padding(vertical = 4.dp)
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = displayName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                if (isActive) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Active",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    StatusBadge(state.status)
+                    ReadOnlyBadge(isReadOnly = state.isReadOnly)
                 }
-            }
-            Row(
-                modifier = Modifier.padding(top = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                StatusBadge(state.status)
-                ReadOnlyBadge(isReadOnly = state.isReadOnly)
-            }
 
-            AnimatedVisibility(visible = isExpanded) {
-                if (state.url.isNotBlank()) {
+                if (state.status == io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
                     Text(
-                        text = state.url,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = state.errorMessage,
+                        color = Color(0xFFC62828),
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
             }
 
-            if (state.status == io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
-                Text(
-                    text = state.errorMessage,
-                    color = Color(0xFFC62828),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+            if (!isLocal) {
+                IconButton(onClick = onUpdate) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Update")
+                }
             }
-        }
-
-        if (onSetActive != null) {
-            IconButton(
-                onClick = onSetActive,
-                enabled = !isActive
-            ) {
-                Icon(
-                    imageVector = if (isActive) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = if (isActive) "Active database" else "Make active",
-                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete")
             }
-        }
-        if (!isLocal) {
-            IconButton(onClick = onUpdate) {
-                Icon(Icons.Default.Refresh, contentDescription = "Update")
-            }
-        }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete")
         }
     }
 }

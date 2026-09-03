@@ -194,14 +194,16 @@ The screen displays, where available:
  - The button updates the stored entry metadata.
 
 ## OptionsScreen
- - Displays the configured databases.
- - Database are in pill-like widget
- - It shall be visible which one is active
- - Provides navigation to DatabaseScreen and AboutScreen.
+ - Displays the configured databases (list).
  - Database settings should be in DatabaseScreen, not here
  - No advanced database operation should be accessible here
- - Each database should contain buttons to: refresh (if it is from the internet), remove
+ - Database are in pill-like widget
+ - If database is active, then it should have primary color frame. If android does not provide "primary" color for android app theme, then define it somewhere in app configuration
  - Each database should contain indicator: state, if active or not
+ - Each database should contain buttons to: refresh (if it is from the internet), remove (should not contain badge, nor combo indicating it is active)
+ - single tap on database makes it's active
+ - long press transitions to DatabaseScreen
+ - Provides button to navigate to AboutScreen.
 
 ## DatabaseScreen
  - Displays information if it is currently active
