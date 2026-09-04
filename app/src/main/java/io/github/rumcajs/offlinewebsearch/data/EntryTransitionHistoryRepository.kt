@@ -82,7 +82,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
             ensureTableExists(db)
             val sqlText = """
                 SELECT t.id AS t_id, t.counter AS t_counter, t.entry_from_id AS t_entry_from_id, t.entry_to_id AS t_entry_to_id,
-                       ${EntryRepository.ENTRY_SELECT_COLUMNS}
+                       ${EntrySqliteRepository.ENTRY_SELECT_COLUMNS}
                 FROM ${getTableName()} t
                 INNER JOIN linkdatamodel l ON t.entry_to_id = l.id
                 WHERE t.entry_from_id = ?
@@ -105,7 +105,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
                         entry_to_id = tEntryToId
                     )
 
-                    val entry = EntryRepository.cursorToEntry(c)
+                    val entry = EntrySqliteRepository.cursorToEntry(c)
                     result.add(Pair(transition, entry))
                 }
             }

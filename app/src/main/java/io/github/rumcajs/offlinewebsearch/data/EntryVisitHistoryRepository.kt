@@ -114,7 +114,7 @@ object EntryVisitHistoryRepository : RepositoryInterface {
             ensureTableExists(db)
             val sqlText = """
                 SELECT v.id AS v_id, v.visits AS v_visits, v.date_last_visit AS v_date_last_visit, v.entry_id AS v_entry_id,
-                       ${EntryRepository.ENTRY_SELECT_COLUMNS}
+                       ${EntrySqliteRepository.ENTRY_SELECT_COLUMNS}
                 FROM ${getTableName()} v
                 INNER JOIN linkdatamodel l ON v.entry_id = l.id
                 ORDER BY v.date_last_visit DESC, v.id DESC
@@ -135,7 +135,7 @@ object EntryVisitHistoryRepository : RepositoryInterface {
                         entry_id = vEntryId
                     )
 
-                    val entry = EntryRepository.cursorToEntry(c)
+                    val entry = EntrySqliteRepository.cursorToEntry(c)
                     result.add(Pair(visit, entry))
                 }
             }

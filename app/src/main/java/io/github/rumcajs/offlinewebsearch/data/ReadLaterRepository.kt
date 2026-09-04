@@ -67,7 +67,7 @@ object ReadLaterRepository : RepositoryInterface {
 
             val sqlText = """
                 SELECT r.id AS r_id, r.entry_id AS r_entry_id, r.user_id AS r_user_id,
-                       ${EntryRepository.ENTRY_SELECT_COLUMNS}
+                       ${EntrySqliteRepository.ENTRY_SELECT_COLUMNS}
                 FROM ${getTableName()} r
                 INNER JOIN linkdatamodel l ON r.entry_id = l.id
                 $whereClause
@@ -87,7 +87,7 @@ object ReadLaterRepository : RepositoryInterface {
                         user_id = rUserId
                     )
 
-                    val entry = EntryRepository.cursorToEntry(c)
+                    val entry = EntrySqliteRepository.cursorToEntry(c)
                     result.add(Pair(readLater, entry))
                 }
             }

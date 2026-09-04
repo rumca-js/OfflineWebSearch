@@ -12,6 +12,84 @@ import java.io.File
  */
 object EntrySqliteRepository : EntryRepository() {
 
+    /** Standard column selection list for queries on `linkdatamodel` (aliased as `l`). */
+    const val ENTRY_SELECT_COLUMNS = "l.id, l.link, l.title, l.description, l.author, l.album, l.language, l.page_rating_votes, l.page_rating_visits, l.page_rating, l.thumbnail, l.date_created, l.date_published, l.date_dead_since, l.age, l.status_code, l.manual_status_code, l.bookmarked, l.source_id, l.source_url"
+
+    /** Column selection list for `socialdata` (aliased as `s`). */
+    const val SOCIAL_DATA_SELECT_COLUMNS = "s.id AS s_id, s.entry_id AS s_entry_id, s.thumbs_up, s.thumbs_down, s.view_count, s.rating AS s_rating, s.upvote_ratio, s.upvote_diff, s.upvote_view_ratio, s.stars, s.followers_count, s.date_updated"
+
+    /** Maps a cursor row to an [Entry]. */
+    fun cursorToEntry(c: android.database.Cursor): Entry {
+        val id = c.getLong(c.getColumnIndexOrThrow("id"))
+        val title = c.getString(c.getColumnIndexOrThrow("title"))
+        val description = c.getString(c.getColumnIndexOrThrow("description"))
+        val thumbnail = c.getString(c.getColumnIndexOrThrow("thumbnail"))
+        val link = c.getString(c.getColumnIndexOrThrow("link"))
+        val votes = c.getInt(c.getColumnIndexOrThrow("page_rating_votes"))
+        val visits = c.getInt(c.getColumnIndexOrThrow("page_rating_visits"))
+        val rating = c.getInt(c.getColumnIndexOrThrow("page_rating"))
+        val dateCreated = c.getString(c.getColumnIndexOrThrow("date_created"))
+        val datePublished = c.getString(c.getColumnIndexOrThrow("date_published"))
+        val dateDeadSince = c.getString(c.getColumnIndexOrThrow("date_dead_since"))
+        val author = c.getString(c.getColumnIndexOrThrow("author"))
+        val album = c.getString(c.getColumnIndexOrThrow("album"))
+        val language = c.getString(c.getColumnIndexOrThrow("language"))
+        val age = c.getInt(c.getColumnIndexOrThrow("age"))
+        val statusCode = c.getInt(c.getColumnIndexOrThrow("status_code"))
+        val manualStatusCode = c.getInt(c.getColumnIndexOrThrow("manual_status_code"))
+        val bookmarked = c.getInt(c.getColumnIndexOrThrow("bookmarked")) == 1
+        val sourceIdIndex = c.getColumnIndex("source_id")
+        val sourceId = if (sourceIdIndex != -1 && !c.isNull(sourceIdIndex)) c.getLong(sourceIdIndex) else null
+        val sourceUrlIndex = c.getColumnIndex("source_url")
+        val sourceUrl = if (sourceUrlIndex != -1 && !c.isNull(sourceUrlIndex)) c.getString(sourceUrlIndex) else null
+        val tagIndex = c.getColumnIndex("tag")
+        val tagString = if (tagIndex != -1 && !c.isNull(tagIndex)) c.getString(tagIndex) else null
+        val tags = tagString?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+
+        val sIdIndex = c.getColumnIndex("s_id")
+        val socialData = if (sIdIndex != -1 && !c.isNull(sIdIndex)) {
+            SocialData(
+                id = c.getLong(sIdIndex),
+                entryId = if (c.isNull(c.getColumnIndexOrThrow("s_entry_id"))) null else c.getLong(c.getColumnIndexOrThrow("s_entry_id")),
+                thumbsUp = if (c.isNull(c.getColumnIndexOrThrow("thumbs_up"))) null else c.getInt(c.getColumnIndexOrThrow("thumbs_up")),
+                thumbsDown = if (c.isNull(c.getColumnIndexOrThrow("thumbs_down"))) null else c.getInt(c.getColumnIndexOrThrow("thumbs_down")),
+                viewCount = if (c.isNull(c.getColumnIndexOrThrow("view_count"))) null else c.getInt(c.getColumnIndexOrThrow("view_count")),
+                rating = if (c.isNull(c.getColumnIndexOrThrow("s_rating"))) null else c.getInt(c.getColumnIndexOrThrow("s_rating")),
+                upvoteRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_ratio")),
+                upvoteDiff = if (c.isNull(c.getColumnIndexOrThrow("upvote_diff"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_diff")),
+                upvoteViewRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_view_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_view_ratio")),
+                stars = if (c.isNull(c.getColumnIndexOrThrow("stars"))) null else c.getInt(c.getColumnIndexOrThrow("stars")),
+                followersCount = if (c.isNull(c.getColumnIndexOrThrow("followers_count"))) null else c.getInt(c.getColumnIndexOrThrow("followers_count")),
+                dateUpdated = c.getString(c.getColumnIndexOrThrow("date_updated"))
+            )
+        } else null
+
+        return Entry(
+            id = id,
+            link = link,
+            title = title,
+            description = description,
+            thumbnail = thumbnail,
+            author = author,
+            album = album,
+            language = language,
+            page_rating_votes = votes,
+            page_rating_visits = visits,
+            page_rating = rating,
+            date_created = dateCreated,
+            date_published = datePublished,
+            date_dead_since = dateDeadSince,
+            age = age,
+            status_code = statusCode,
+            manual_status_code = manualStatusCode,
+            bookmarked = bookmarked,
+            source_id = sourceId,
+            source_url = sourceUrl,
+            tags = tags,
+            socialData = socialData
+        )
+    }
+
     override fun getTableName(): String = "linkdatamodel"
 
     override suspend fun countEntries(
