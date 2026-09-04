@@ -1,30 +1,16 @@
 package io.github.rumcajs.offlinewebsearch.ui.components
 
-import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.ui.screens.DetailRow
-import io.github.rumcajs.offlinewebsearch.ui.screens.LinkRow
 import io.github.rumcajs.offlinewebsearch.util.EntryUtils
-import io.github.rumcajs.offlinewebsearch.util.UrlServices
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
 import io.github.rumcajs.offlinewebsearch.webtoolkit.OdyseeChannelHandler
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RedditChannelHandler
@@ -39,8 +25,6 @@ fun EntryMetadataPane(
     isRestricted: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val uriHandler = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val config by AppConfigManager.config.collectAsState()
 
@@ -49,111 +33,65 @@ fun EntryMetadataPane(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Display channel
+        // Resolve channel and feed links from handler, rendered as PropertiesPane sections
         entry.link?.let { link ->
             val handler = HandlerBuilder(link).build()
+
+            // Display channel if available and entry is not itself a channel page
             val channel = handler?.getChannel() ?: ""
             val isChannel = handler is YouTubeChannelHandler || handler is RedditChannelHandler || handler is OdyseeChannelHandler
             if (channel.isNotEmpty() && !isChannel) {
-                DetailRow(
-                    label = "Channel",
-                    value = channel
+                PropertiesPane(
+                    properties = listOf(
+                        PropertyItem(label = "Channel", value = channel)
+                    )
                 )
             }
-        }
 
-        // Resolve and display feeds
-        entry.link?.let { link ->
-            val handler = HandlerBuilder(link).build()
+            // Display feed links (excluding the entry link itself)
             val feeds = handler?.getFeeds()?.filter { it != link } ?: emptyList()
             if (feeds.isNotEmpty()) {
-                feeds.forEach { feedUrl ->
-                    LinkRow(
-                        label = "Feed Link",
-                        url = feedUrl,
-                        isRestricted = isRestricted,
-                        toastMessage = "Feed link copied"
-                    )
-                }
+                PropertiesPane(
+                    properties = feeds.map { feedUrl ->
+                        PropertyItem(
+                            label = "Feed Link",
+                            value = feedUrl,
+                            type = PropertyType.LINK,
+                            isRestricted = isRestricted,
+                            toastMessage = "Feed link copied"
+                        )
+                    }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
-        // Entry detail properties, metadata
-        DetailRow(
-            label = "Created",
-            value = EntryUtils.getFormattedDate(entry.date_created)
-        )
-        DetailRow(
-            label = "Dead",
-            value = EntryUtils.getFormattedDate(entry.date_dead_since)
-        )
-        DetailRow(
-            label = "Bookmarked",
-            value = if (entry.bookmarked == true) "Yes" else "No"
-        )
-
-        DetailRow(
-            label = "Author",
-            value = displayAuthor ?: "NA"
-        )
-        DetailRow(
-            label = "Album",
-            value = entry.album ?: "NA"
-        )
-        DetailRow(
-            label = "Language",
-            value = entry.language ?: "NA"
-        )
-
-        DetailRow(
-            label = "Rating",
-            value = EntryUtils.getFormattedRating(entry)
-        )
-        DetailRow(
-            label = "Votes",
-            value = EntryUtils.getFormattedVotes(entry)
-        )
-        DetailRow(
-            label = "Visits",
-            value = EntryUtils.getFormattedVisits(entry)
-        )
-
-        DetailRow(
-            label = "Status Code",
-            value = (entry.status_code ?: 0).toString()
-        )
-        DetailRow(
-            label = "Manual Status Code",
-            value = (entry.manual_status_code ?: 0).toString()
-        )
-
-        entry.thumbnail?.let { thumbUrl ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .pointerInput(thumbUrl) {
-                        detectTapGestures(
-                            onLongPress = {
-                                clipboardManager.setText(AnnotatedString(thumbUrl))
-                                Toast.makeText(context, "Thumbnail link copied", Toast.LENGTH_SHORT).show()
-                            },
-                            onTap = {
-                                uriHandler.openUri(thumbUrl)
-                            }
+        // Entry detail properties and metadata
+        PropertiesPane(
+            properties = buildList {
+                add(PropertyItem(label = "Created", value = EntryUtils.getFormattedDate(entry.date_created)))
+                add(PropertyItem(label = "Dead", value = EntryUtils.getFormattedDate(entry.date_dead_since)))
+                add(PropertyItem(label = "Bookmarked", value = if (entry.bookmarked == true) "Yes" else "No"))
+                add(PropertyItem(label = "Author", value = displayAuthor ?: "NA"))
+                add(PropertyItem(label = "Album", value = entry.album ?: "NA"))
+                add(PropertyItem(label = "Language", value = entry.language ?: "NA"))
+                add(PropertyItem(label = "Rating", value = EntryUtils.getFormattedRating(entry)))
+                add(PropertyItem(label = "Votes", value = EntryUtils.getFormattedVotes(entry)))
+                add(PropertyItem(label = "Visits", value = EntryUtils.getFormattedVisits(entry)))
+                add(PropertyItem(label = "Status Code", value = (entry.status_code ?: 0).toString()))
+                add(PropertyItem(label = "Manual Status Code", value = (entry.manual_status_code ?: 0).toString()))
+                entry.thumbnail?.let { thumbUrl ->
+                    add(
+                        PropertyItem(
+                            label = "Thumbnail",
+                            value = thumbUrl,
+                            type = PropertyType.LINK,
+                            isRestricted = isRestricted,
+                            toastMessage = "Thumbnail link copied"
                         )
-                    },
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = "Thumbnail", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
-                Text(
-                    text = "Link (Long press to copy)",
-                    color = MaterialTheme.colorScheme.primary,
-                    textDecoration = TextDecoration.Underline,
-                    fontSize = 14.sp
-                )
+                    )
+                }
             }
-        }
+        )
     }
 }

@@ -2,7 +2,6 @@ package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,14 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.automirrored.filled.List
@@ -38,6 +32,9 @@ import io.github.rumcajs.offlinewebsearch.data.Source
 import io.github.rumcajs.offlinewebsearch.data.SourceOperationalData
 import io.github.rumcajs.offlinewebsearch.data.SourceOperationalDataRepository
 import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.ui.components.PropertiesPane
+import io.github.rumcajs.offlinewebsearch.ui.components.PropertyItem
+import io.github.rumcajs.offlinewebsearch.ui.components.PropertyType
 import kotlinx.coroutines.launch
 
 /**
@@ -53,8 +50,6 @@ fun SourceScreen(
     onRefreshSuccess: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
-    val uriHandler = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -210,87 +205,32 @@ fun SourceScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (currentSource.url.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .pointerInput(currentSource.url) {
-                            detectTapGestures(
-                                onTap = { uriHandler.openUri(currentSource.url) },
-                                onLongPress = {
-                                    clipboardManager.setText(AnnotatedString(currentSource.url))
-                                    Toast.makeText(context, "Source URL copied to clipboard", Toast.LENGTH_SHORT).show()
-                                }
+            // Source properties displayed as a unified properties list
+            PropertiesPane(
+                properties = buildList {
+                    if (currentSource.url.isNotBlank()) {
+                        add(
+                            PropertyItem(
+                                label = "URL",
+                                value = currentSource.url,
+                                type = PropertyType.LINK,
+                                toastMessage = "Source URL copied to clipboard"
                             )
-                        },
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "URL",
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = currentSource.url,
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
+                        )
+                    }
+                    add(PropertyItem(label = "ID", value = currentSource.id?.toString() ?: "N/A"))
+                    add(PropertyItem(label = "Status", value = if (currentSource.enabled) "Enabled" else "Disabled"))
+                    add(PropertyItem(label = "Type", value = currentSource.source_type?.takeIf { it.isNotBlank() } ?: SourceRepository.SOURCE_TYPE_RSS))
+                    add(PropertyItem(label = "Favicon", value = currentSource.favicon.takeIf { it.isNotBlank() } ?: "", type= PropertyType.LINK))
+                    add(PropertyItem(label = "Last Fetched", value = operationalData?.date_fetched ?: "Never"))
+                    add(PropertyItem(label = "Import Duration", value = operationalData?.import_seconds?.let { "${it}s" } ?: "N/A"))
+                    add(PropertyItem(label = "Number of Entries", value = operationalData?.number_of_entries?.toString() ?: "N/A"))
+                    add(PropertyItem(label = "Consecutive Errors", value = operationalData?.consecutive_errors?.toString() ?: "0"))
+                    add(PropertyItem(label = "Page Hash", value = operationalData?.page_hash?.joinToString("") { "%02x".format(it) }?.takeIf { it.isNotBlank() } ?: "N/A"))
+                    add(PropertyItem(label = "Body Hash", value = operationalData?.body_hash?.joinToString("") { "%02x".format(it) }?.takeIf { it.isNotBlank() } ?: "N/A"))
                 }
-            }
-
-            DetailRow(
-                label = "ID",
-                value = currentSource.id?.toString() ?: "N/A"
             )
 
-            DetailRow(
-                label = "Status",
-                value = if (currentSource.enabled) "Enabled" else "Disabled"
-            )
-
-            DetailRow(
-                label = "Type",
-                value = currentSource.source_type?.takeIf { it.isNotBlank() } ?: SourceRepository.SOURCE_TYPE_RSS
-            )
-
-            DetailRow(
-                label = "Favicon",
-                value = currentSource.favicon.takeIf { it.isNotBlank() } ?: ""
-            )
-
-            DetailRow(
-                label = "Last Fetched",
-                value = operationalData?.date_fetched ?: "Never"
-            )
-
-            DetailRow(
-                label = "Import Duration",
-                value = operationalData?.import_seconds?.let { "${it}s" } ?: "N/A"
-            )
-
-            DetailRow(
-                label = "Number of Entries",
-                value = operationalData?.number_of_entries?.toString() ?: "N/A"
-            )
-
-            DetailRow(
-                label = "Consecutive Errors",
-                value = operationalData?.consecutive_errors?.toString() ?: "0"
-            )
-
-            DetailRow(
-                label = "Page Hash",
-                value = operationalData?.page_hash?.joinToString("") { "%02x".format(it) }?.takeIf { it.isNotBlank() } ?: "N/A"
-            )
-
-            DetailRow(
-                label = "Body Hash",
-                value = operationalData?.body_hash?.joinToString("") { "%02x".format(it) }?.takeIf { it.isNotBlank() } ?: "N/A"
-            )
 
             if (onBrowseEntries != null) {
                 Spacer(modifier = Modifier.height(16.dp))

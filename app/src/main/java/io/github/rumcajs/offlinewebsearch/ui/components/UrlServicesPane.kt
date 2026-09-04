@@ -1,11 +1,8 @@
 package io.github.rumcajs.offlinewebsearch.ui.components
 
-import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.ui.screens.LinkRow
 import io.github.rumcajs.offlinewebsearch.util.UrlServices
 
 /**
@@ -22,14 +19,17 @@ fun UrlServicesPane(
     val serviceLinks = urlServices.getServiceLinks(link)
     if (serviceLinks.isEmpty()) return
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        serviceLinks.forEach { (serviceName, serviceUrl) ->
-            LinkRow(
+    PropertiesPane(
+        modifier = modifier,
+        properties = serviceLinks.map { (serviceName, serviceUrl) ->
+            PropertyItem(
                 label = serviceName,
-                url = serviceUrl,
+                value = serviceUrl,
+                type = PropertyType.LINK,
                 isRestricted = isRestricted,
                 toastMessage = "$serviceName link copied"
             )
         }
-    }
+    )
 }
+
