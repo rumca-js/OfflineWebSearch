@@ -422,11 +422,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
         navController: androidx.navigation.NavController? = null
     ) {
         io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setActiveDatabase(databaseUrl)
-        //searchViewModel.resetToDefaults()
+        searchViewModel.resetToDefaults()
 
         // If the user changed the database from DatabaseDetail (or another sub-screen),
         // pop back to OptionsScreen so OptionsScreen remains the current screen.
-        /*
+        /* TODO this does not work
         navController?.let { nav ->
             val currentRoute = nav.currentDestination?.route
             if (currentRoute == Screen.DatabaseDetail.route) {

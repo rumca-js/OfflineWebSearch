@@ -174,6 +174,13 @@ class SearchViewModel : ViewModel() {
         showSuggestions = false
         activeFilter = SearchFilter.None
         currentPage = 0
+
+        /* TODO this does not work
+        searchQuery = ""
+        activeSearchQuery = ""
+        showSuggestions = false
+        activeFilter = SearchFilter.None
+        currentPage = 0
         selectedEntry = null
         previewUrl = null
         selectedDatabaseUrl = null
@@ -184,6 +191,7 @@ class SearchViewModel : ViewModel() {
                 listState.scrollToItem(0)
             } catch (_: Exception) {}
         }
+         */
     }
 
     // ──────────────────────────────────────────────────────────────────────────
