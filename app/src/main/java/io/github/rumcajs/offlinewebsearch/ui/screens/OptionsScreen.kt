@@ -23,7 +23,8 @@ fun OptionsScreen(
     onNavigateToDatabases: () -> Unit = {},
     onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> },
     onNavigateToPreselectedList: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {}
+    onNavigateToAbout: () -> Unit = {},
+    onSetActive: (String?) -> Unit
 ) {
     val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
     val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
@@ -95,7 +96,8 @@ fun OptionsScreen(
 
         DatabasesContainer(
             onNavigateToDatabaseDetail = onNavigateToDatabaseDetail,
-            onNavigateToPreselectedList = onNavigateToPreselectedList
+            onNavigateToPreselectedList = onNavigateToPreselectedList,
+            onSetActive = onSetActive
         )
 
         Spacer(modifier = Modifier.height(16.dp))

@@ -164,6 +164,28 @@ class SearchViewModel : ViewModel() {
         currentPage = 0
     }
 
+    /**
+     * Resets screen states to their defaults (clears query, reset filters, selections,
+     * pagination, and scroll state).
+     */
+    fun resetToDefaults() {
+        searchQuery = ""
+        activeSearchQuery = ""
+        showSuggestions = false
+        activeFilter = SearchFilter.None
+        currentPage = 0
+        selectedEntry = null
+        previewUrl = null
+        selectedDatabaseUrl = null
+        selectedDatabaseState = null
+        selectedSource = null
+        viewModelScope.launch {
+            try {
+                listState.scrollToItem(0)
+            } catch (_: Exception) {}
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Pagination
     // ──────────────────────────────────────────────────────────────────────────

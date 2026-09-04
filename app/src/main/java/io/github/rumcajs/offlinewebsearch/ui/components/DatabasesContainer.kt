@@ -39,7 +39,8 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 @Composable
 fun DatabasesContainer(
     onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> },
-    onNavigateToPreselectedList: () -> Unit = {}
+    onNavigateToPreselectedList: () -> Unit = {},
+    onSetActive: (String?) -> Unit
 ) {
     val config by AppConfigManager.config.collectAsState()
     val scope = rememberCoroutineScope()
@@ -196,7 +197,7 @@ fun DatabasesContainer(
                 onNavigateToDatabaseDetail(url, state)
             },
             onSetActive = { url ->
-                AppConfigManager.setActiveDatabase(url)
+                onSetActive(url)
             },
             onDelete = { url, state ->
                 deletingDb = Pair(url, state)
@@ -313,7 +314,7 @@ fun DatabaseList(
     databases: Map<String, DatabaseState>,
     activeDatabaseUrl: String? = null,
     onItemClick: ((String?, DatabaseState) -> Unit)? = null,
-    onSetActive: ((String?) -> Unit)? = null,
+    onSetActive: (String?) -> Unit,
     onDelete: (String, DatabaseState) -> Unit,
     onUpdate: (String, DatabaseState) -> Unit
 ) {
@@ -337,9 +338,7 @@ fun DatabaseList(
             onItemClick = if (onItemClick != null) {
                 { onItemClick(null, defaultState) }
             } else null,
-            onSetActive = if (onSetActive != null) {
-                { onSetActive(null) }
-            } else null
+            onSetActive = { onSetActive(null) }
         )
 
         databases.forEach { (url, state) ->
@@ -348,9 +347,7 @@ fun DatabaseList(
                 state = state,
                 isActive = isActive,
                 onItemClick = { onItemClick?.invoke(url, state) },
-                onSetActive = if (onSetActive != null) {
-                    { onSetActive(url) }
-                } else null,
+                onSetActive = { onSetActive(url) },
                 onDelete = { onDelete(url, state) },
                 onUpdate = { onUpdate(url, state) }
             )
@@ -374,7 +371,7 @@ fun DatabaseList(
 private fun DefaultDatabaseItem(
     isActive: Boolean = false,
     onItemClick: (() -> Unit)? = null,
-    onSetActive: (() -> Unit)? = null
+    onSetActive: () -> Unit
 ) {
     val shape = RoundedCornerShape(24.dp)
     val borderStroke = if (isActive) {
@@ -391,7 +388,7 @@ private fun DefaultDatabaseItem(
             .fillMaxWidth()
             .clip(shape)
             .combinedClickable(
-                onClick = { onSetActive?.invoke() },
+                onClick = onSetActive,
                 onLongClick = { onItemClick?.invoke() }
             )
     ) {
@@ -428,7 +425,7 @@ fun DatabaseItem(
     state: DatabaseState,
     isActive: Boolean = false,
     onItemClick: (() -> Unit)? = null,
-    onSetActive: (() -> Unit)? = null,
+    onSetActive: () -> Unit,
     onDelete: () -> Unit,
     onUpdate: () -> Unit
 ) {
@@ -450,7 +447,7 @@ fun DatabaseItem(
             .fillMaxWidth()
             .clip(shape)
             .combinedClickable(
-                onClick = { onSetActive?.invoke() },
+                onClick = onSetActive,
                 onLongClick = { onItemClick?.invoke() }
             )
     ) {

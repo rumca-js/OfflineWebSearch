@@ -234,6 +234,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     searchViewModel.selectedDatabaseUrl = url
                                     searchViewModel.selectedDatabaseState = state
                                     navController.navigate(Screen.DatabaseDetail.route)
+                                },
+                                onSetActive = { url ->
+                                    handleDatabaseChange(url, searchViewModel, navController)
                                 }
                             )
                         }
@@ -260,7 +263,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     dbConfig = dbConfig,
                                     isActive = isActive,
                                     onBack = { navController.popBackStack() },
-                                    onSetActive = { _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setActiveDatabase(url) }
+                                    onSetActive = { handleDatabaseChange(url, searchViewModel, navController) }
                                 )
                             }
                         }
@@ -268,7 +271,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         composable(Screen.Options.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionsScreen(
                                 onNavigateToDatabases = {
-                                    navController.navigate(_root_ide_package_.io.github.rumcajs.offlinewebsearch.Screen.Databases.route)
+                                    navController.navigate(Screen.Databases.route)
                                 },
                                 onNavigateToDatabaseDetail = { url, state ->
                                     searchViewModel.selectedDatabaseUrl = url
@@ -280,6 +283,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 },
                                 onNavigateToAbout = {
                                     navController.navigate(Screen.About.route)
+                                },
+                                onSetActive = { url ->
+                                    handleDatabaseChange(url, searchViewModel, navController)
                                 }
                             )
                         }
@@ -399,6 +405,31 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Handles changing (activating) the selected database and resets screens to defaults.
+     *
+     * @param databaseUrl The URL/key of the database to activate, or null for default (Assets).
+     * @param searchViewModel The ViewModel to reset screen defaults on.
+     * @param navController The NavController to reset backstack and routes back to defaults.
+     */
+    fun handleDatabaseChange(
+        databaseUrl: String?,
+        searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel,
+        navController: androidx.navigation.NavController? = null
+    ) {
+        io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setActiveDatabase(databaseUrl)
+        searchViewModel.resetToDefaults()
+
+        // If the user changed the database from DatabaseDetail (or another sub-screen),
+        // pop back to OptionsScreen so OptionsScreen remains the current screen.
+        navController?.let { nav ->
+            val currentRoute = nav.currentDestination?.route
+            if (currentRoute == Screen.DatabaseDetail.route) {
+                nav.popBackStack()
             }
         }
     }

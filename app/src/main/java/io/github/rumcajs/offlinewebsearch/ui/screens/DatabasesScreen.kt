@@ -34,7 +34,8 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatabasesScreen(
-    onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> }
+    onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> },
+    onSetActive: (String?) -> Unit
 ) {
     val config by AppConfigManager.config.collectAsState()
     val scope = rememberCoroutineScope()
@@ -195,7 +196,7 @@ fun DatabasesScreen(
                 onNavigateToDatabaseDetail(null, defaultState)
             },
             onSetActive = {
-                AppConfigManager.setActiveDatabase(null)
+                onSetActive(null)
             }
         )
 
@@ -213,7 +214,7 @@ fun DatabasesScreen(
                     onNavigateToDatabaseDetail(url, state)
                 },
                 onSetActive = {
-                    AppConfigManager.setActiveDatabase(url)
+                    onSetActive(url)
                 },
                 onEdit = {
                     urlInput = url
