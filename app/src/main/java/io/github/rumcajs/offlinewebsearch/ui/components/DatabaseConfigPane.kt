@@ -22,6 +22,8 @@ import io.github.rumcajs.offlinewebsearch.data.ViewStyle
  *
  * @param url The URL / key of the database whose configuration is being modified (or null for default).
  * @param dbConfig The current [DatabaseConfiguration] for this database.
+ * @param isReadOnly Whether the database is read-only. When true, tracking options are hidden
+ *   because user activity cannot be written to the database.
  * @param modifier Optional modifier for the container Column.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,6 +31,7 @@ import io.github.rumcajs.offlinewebsearch.data.ViewStyle
 fun DatabaseConfigPane(
     url: String?,
     dbConfig: DatabaseConfiguration,
+    isReadOnly: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -64,21 +67,24 @@ fun DatabaseConfigPane(
             }
         )
 
-        DatabaseConfigOptionItem(
-            label = "Track user searches",
-            checked = dbConfig.trackUserSearches,
-            onCheckedChange = { checked ->
-                AppConfigManager.setDatabaseConfig(url) { it.copy(trackUserSearches = checked) }
-            }
-        )
+        // Tracking options require writing to the database; hide them for read-only databases.
+        if (!isReadOnly) {
+            DatabaseConfigOptionItem(
+                label = "Track user searches",
+                checked = dbConfig.trackUserSearches,
+                onCheckedChange = { checked ->
+                    AppConfigManager.setDatabaseConfig(url) { it.copy(trackUserSearches = checked) }
+                }
+            )
 
-        DatabaseConfigOptionItem(
-            label = "Track user navigation",
-            checked = dbConfig.trackUserNavigation,
-            onCheckedChange = { checked ->
-                AppConfigManager.setDatabaseConfig(url) { it.copy(trackUserNavigation = checked) }
-            }
-        )
+            DatabaseConfigOptionItem(
+                label = "Track user navigation",
+                checked = dbConfig.trackUserNavigation,
+                onCheckedChange = { checked ->
+                    AppConfigManager.setDatabaseConfig(url) { it.copy(trackUserNavigation = checked) }
+                }
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 

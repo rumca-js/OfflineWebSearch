@@ -231,7 +231,8 @@ fun DatabaseScreen(
 
                 io.github.rumcajs.offlinewebsearch.ui.components.DatabaseConfigPane(
                     url = url,
-                    dbConfig = dbConfig
+                    dbConfig = dbConfig,
+                    isReadOnly = state.isReadOnly
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -244,7 +245,7 @@ fun DatabaseScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "History Actions",
+                    text = "Actions",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -253,14 +254,16 @@ fun DatabaseScreen(
 
                 val canClearHistory = state.isSQLite && !state.isReadOnly
 
-                getRepositoriesToClear().forEach { repoClearItem ->
-                    ClearRepositoryButton(
-                        item = repoClearItem,
-                        enabled = canClearHistory,
-                        context = context,
-                        state = state,
-                        scope = scope
-                    )
+                if (!state.isReadOnly) {
+                    getRepositoriesToClear().forEach { repoClearItem ->
+                        ClearRepositoryButton(
+                            item = repoClearItem,
+                            enabled = canClearHistory,
+                            context = context,
+                            state = state,
+                            scope = scope
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
