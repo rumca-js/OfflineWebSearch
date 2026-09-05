@@ -244,21 +244,19 @@ fun DatabaseScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(
-                    text = "Actions",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                val canClearHistory = state.isSQLite && !state.isReadOnly
-
                 if (!state.isReadOnly) {
+                    Text(
+                        text = "Actions",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
                     getRepositoriesToClear().forEach { repoClearItem ->
                         ClearRepositoryButton(
                             item = repoClearItem,
-                            enabled = canClearHistory,
+                            enabled = true,
                             context = context,
                             state = state,
                             scope = scope
