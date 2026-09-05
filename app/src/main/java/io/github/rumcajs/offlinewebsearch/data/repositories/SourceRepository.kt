@@ -1,15 +1,19 @@
-package io.github.rumcajs.offlinewebsearch.data
+package io.github.rumcajs.offlinewebsearch.data.repositories
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
+import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
 data class Source(
@@ -121,7 +125,7 @@ object SourceRepository : RepositoryInterface {
         sources
     }
 
-    private val sourceTitleCache = java.util.concurrent.ConcurrentHashMap<Pair<String, Long>, String?>()
+    private val sourceTitleCache = ConcurrentHashMap<Pair<String, Long>, String?>()
 
     /**
      * Clears cached source titles.
@@ -238,7 +242,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val values = android.content.ContentValues().apply {
+            val values = ContentValues().apply {
                 put("title", title)
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
@@ -291,7 +295,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val values = android.content.ContentValues().apply {
+            val values = ContentValues().apply {
                 put("title", title)
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
@@ -311,7 +315,7 @@ object SourceRepository : RepositoryInterface {
     suspend fun updateSourceMetadata(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url
+        urlObj: Url
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -330,7 +334,7 @@ object SourceRepository : RepositoryInterface {
             }
 
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val sourceValues = android.content.ContentValues()
+            val sourceValues = ContentValues()
             if (!title.isNullOrBlank()) sourceValues.put("title", title)
             if (!favicon.isNullOrBlank()) sourceValues.put("favicon", favicon)
             val rows = db.update(getTableName(), sourceValues, "url = ?", arrayOf(urlObj.url))
@@ -351,7 +355,7 @@ object SourceRepository : RepositoryInterface {
     suspend fun fetchAndInsertSourceEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url,
+        urlObj: Url,
         source: Source? = null
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         if (urlObj.url.isBlank()) {
@@ -369,13 +373,13 @@ object SourceRepository : RepositoryInterface {
         try {
             val resp = urlObj.getResponse()
 
-            if (resp.error != null || !io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils.isStatusCodeValid(resp.statusCode)) {
+            if (resp.error != null || !NetworkUtils.isStatusCodeValid(resp.statusCode)) {
                 val errorMsg = resp.error ?: "HTTP status ${resp.statusCode}"
                 return@withContext Pair(false, "Failed to fetch source: $errorMsg")
             }
 
             val page = urlObj.getPage()
-            if (page !is io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage) {
+            if (page !is RssPage) {
                 return@withContext Pair(false, "URL does not point to a valid RSS or Atom feed")
             }
 
@@ -404,7 +408,7 @@ object SourceRepository : RepositoryInterface {
                     }
 
                     // TODO use EntryRepostiroy for that?
-                    val values = android.content.ContentValues().apply {
+                    val values = ContentValues().apply {
                         put("link", link)
                         put("title", entry.title ?: "")
                         put("description", entry.description ?: "")
@@ -479,7 +483,7 @@ object SourceRepository : RepositoryInterface {
     suspend fun updateSourceMetaAndEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        urlObj: io.github.rumcajs.offlinewebsearch.webtoolkit.Url,
+        urlObj: Url,
         source: Source? = null
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         updateSourceMetadata(context, activeDatabaseState, urlObj)
@@ -515,7 +519,12 @@ object SourceRepository : RepositoryInterface {
                 return@withContext Pair(false, "Source was fetched recently (less than 1 hour ago)")
             }
         }
-        val urlObj = io.github.rumcajs.offlinewebsearch.webtoolkit.Url(source.url)
+        val urlObj = Url(source.url)
+        val response = urlObj.getResponse();
+        if (!response.isValid)
+        {
+            AppLoggingRepository.error(context, activeDatabaseState, "Failed to fetch source: ${source.url}", "Status code:${response.statusCode} Error:${response.error}")
+        }
         updateSourceMetaAndEntries(context, activeDatabaseState, urlObj, source)
     }
 

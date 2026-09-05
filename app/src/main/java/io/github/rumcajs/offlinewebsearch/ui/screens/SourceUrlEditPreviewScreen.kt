@@ -16,8 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.Source
-import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceFormPane
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage

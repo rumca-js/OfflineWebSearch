@@ -2,7 +2,6 @@ package io.github.rumcajs.offlinewebsearch.ui.components
 
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
@@ -13,7 +12,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 
 /**
  * Top bar component for EntryDetailScreen with actions for bookmarking (Read Later), sharing, editing, and deleting.

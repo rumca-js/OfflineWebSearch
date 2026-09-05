@@ -1,6 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.webtoolkit
 
-import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 
 /**
  * Open class representing a URL endpoint, delegating core functionality to [BaseUrl].

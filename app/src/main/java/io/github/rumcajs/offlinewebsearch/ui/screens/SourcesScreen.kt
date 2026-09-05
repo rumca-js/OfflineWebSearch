@@ -36,8 +36,8 @@ import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
 import io.github.rumcajs.offlinewebsearch.ui.components.LinkText
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.Source
-import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
 

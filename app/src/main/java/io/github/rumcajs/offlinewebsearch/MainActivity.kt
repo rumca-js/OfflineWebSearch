@@ -25,6 +25,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -45,6 +47,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object SourceUrlEditPreview : Screen("source_url_edit_preview", "Add Source Preview", Icons.Filled.Edit)
     object Visited : Screen("visited", "Visited", Icons.AutoMirrored.Filled.List)
     object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)
+    object AppLogging : Screen("app_logging", "Logs", Icons.AutoMirrored.Filled.List)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
@@ -64,7 +67,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val cfg = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
                             val activeState = cfg.activeDatabaseState
                             if (activeState != null && !activeState.isReadOnly && activeState.extension == ".db" && !cfg.networkConfig.disabled) {
-                                val count = io.github.rumcajs.offlinewebsearch.data.SourceRepository.updateOutdatedSources(context, activeState)
+                                val count = SourceRepository.updateOutdatedSources(context, activeState)
                                 if (count > 0) {
                                     searchViewModel.refreshPage(context)
                                 }
@@ -179,7 +182,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     onDelete = {
                                         source.id?.let { sourceId ->
                                             scope.launch {
-                                                val (success, err) = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.SourceRepository.deleteSource(
+                                                val (success, err) = SourceRepository.deleteSource(
                                                     context,
                                                     config.activeDatabaseState,
                                                     sourceId
@@ -284,9 +287,17 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToAbout = {
                                     navController.navigate(Screen.About.route)
                                 },
+                                onNavigateToLogs = {
+                                    navController.navigate(Screen.AppLogging.route)
+                                },
                                 onSetActive = { url ->
                                     handleDatabaseChange(url, searchViewModel, navController)
                                 }
+                            )
+                        }
+                        composable(Screen.AppLogging.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.AppLoggingScreen(
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable(Screen.DatabasePreselectedList.route) {
@@ -371,7 +382,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         composable(Screen.EntryAdd.route) {
                             val context = androidx.compose.ui.platform.LocalContext.current
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryEditScreen(
-                                entry = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(),
+                                entry = Entry(),
                                 onEntryUpdated = { newEntry ->
                                     searchViewModel.refreshPage(context)
                                     navController.popBackStack()

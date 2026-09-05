@@ -1,6 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.util
 
-import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -8,15 +8,15 @@ class EntryUtilsTest {
 
     @Test
     fun testDisplayTitleObfuscation() {
-        val entryWithAge = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
+        val entryWithAge = Entry(
             title = "Adult Content",
             age = 18
         )
-        val entryWithoutAge = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
+        val entryWithoutAge = Entry(
             title = "General Content",
             age = 0
         )
-        val entryNullAge = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
+        val entryNullAge = Entry(
             title = "Unknown Age",
             age = null
         )
@@ -37,11 +37,11 @@ class EntryUtilsTest {
 
     @Test
     fun testDescriptionObfuscation() {
-        val restrictedEntry = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
+        val restrictedEntry = Entry(
             description = "Secret content",
             age = 18
         )
-        val normalEntry = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
+        val normalEntry = Entry(
             description = "Public content",
             age = 0
         )
@@ -55,12 +55,12 @@ class EntryUtilsTest {
         
         // Null handling
         assertEquals(null, EntryUtils.getDisplayDescription(
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(description = null), 10))
+            Entry(description = null), 10))
     }
 
     @Test
     fun testMetadataFormatting() {
-        val place = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.Entry(
+        val place = Entry(
             page_rating = 85,
             page_rating_votes = 120,
             date_created = "2023-01-01",

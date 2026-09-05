@@ -13,9 +13,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.data.Source
-import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 
 /**
  * Component that displays source information (thumbnail or text) matching entry.source_id or entry.source_url.

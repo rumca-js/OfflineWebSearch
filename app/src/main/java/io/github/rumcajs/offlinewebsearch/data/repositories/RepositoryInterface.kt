@@ -1,7 +1,8 @@
-package io.github.rumcajs.offlinewebsearch.data
+package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,7 +38,8 @@ interface RepositoryInterface {
         if (!file.exists()) return@withContext Pair(false, "Database file not found")
 
         try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val db =
+                SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
@@ -86,7 +88,3 @@ interface RepositoryInterface {
         }
     }
 }
-
-
-
-

@@ -1,8 +1,9 @@
-package io.github.rumcajs.offlinewebsearch.data
+package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable

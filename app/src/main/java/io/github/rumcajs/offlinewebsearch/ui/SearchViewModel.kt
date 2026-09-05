@@ -11,11 +11,12 @@ import androidx.lifecycle.viewModelScope
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.data.EntryRepository
-import io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.OrderBy
-import io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.SearchHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -72,7 +73,7 @@ class SearchViewModel : ViewModel() {
     var previewUrl by mutableStateOf<String?>(null)
     var selectedDatabaseUrl by mutableStateOf<String?>(null)
     var selectedDatabaseState by mutableStateOf<DatabaseState?>(null)
-    var selectedSource by mutableStateOf<io.github.rumcajs.offlinewebsearch.data.Source?>(null)
+    var selectedSource by mutableStateOf<Source?>(null)
 
     var currentPage by mutableIntStateOf(0)
     var pageSize by mutableIntStateOf(DatabaseConfiguration.MIN_LINKS_PER_PAGE)

@@ -24,6 +24,7 @@ fun OptionsScreen(
     onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> },
     onNavigateToPreselectedList: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
+    onNavigateToLogs: () -> Unit = {},
     onSetActive: (String?) -> Unit
 ) {
     val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
@@ -101,6 +102,15 @@ fun OptionsScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = onNavigateToLogs,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Logs")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedButton(
             onClick = onNavigateToAbout,

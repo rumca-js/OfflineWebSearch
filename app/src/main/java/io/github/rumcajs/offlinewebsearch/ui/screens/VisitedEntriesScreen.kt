@@ -12,11 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.data.EntryVisitHistory
-import io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistory
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryItem
 import kotlinx.coroutines.launch
 

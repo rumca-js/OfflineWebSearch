@@ -1,6 +1,7 @@
-package io.github.rumcajs.offlinewebsearch.data
+package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.ViewStyle
 import java.io.File
 
 data class ConfigurationEntry(

@@ -1,6 +1,8 @@
-package io.github.rumcajs.offlinewebsearch.data
+package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.content.Context
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.data.OrderBy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json

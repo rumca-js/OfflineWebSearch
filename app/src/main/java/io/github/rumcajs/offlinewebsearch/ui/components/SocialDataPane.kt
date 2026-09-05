@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.rumcajs.offlinewebsearch.data.SocialData
+import io.github.rumcajs.offlinewebsearch.data.repositories.SocialData
 
 /**
  * Returns true if all statistics fields are null, 0, or blank/empty string.

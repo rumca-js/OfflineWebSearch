@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.repositories.AppLoggingRepository
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,12 @@ object EntryEnrichmentWorker {
             val urlObj = Url(link)
             // A single getPage() call caches the response so subsequent reads are free.
             val page = urlObj.getPage()
+
+            val response = urlObj.getResponse()
+            if (!response.isValid)
+            {
+                AppLoggingRepository.error(context, activeDbState, "Failed to fetch link: ${link}", "Status code:${response.statusCode} Error:${response.error}")
+            }
 
             val fetchedTitle       = if (currentTitle.isBlank()) page.getTitle()?.trim() else null
             val fetchedDescription = if (currentDescription.isBlank()) page.getDescription()?.trim() else null

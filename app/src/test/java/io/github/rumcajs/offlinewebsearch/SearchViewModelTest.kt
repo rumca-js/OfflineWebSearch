@@ -1,5 +1,6 @@
 package io.github.rumcajs.offlinewebsearch
 
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
 import io.github.rumcajs.offlinewebsearch.ui.SearchViewModel
 import org.junit.Assert.*
 import org.junit.Test
@@ -116,7 +117,7 @@ class SearchViewModelTest {
 
     @Test
     fun testSourceFetchOutdated() {
-        val repo = io.github.rumcajs.offlinewebsearch.data.SourceOperationalDataRepository
+        val repo = SourceOperationalDataRepository
 
         // Null or blank timestamp is considered outdated
         assertTrue(repo.isFetchOutdated(null))

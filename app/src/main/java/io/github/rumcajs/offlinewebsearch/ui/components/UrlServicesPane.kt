@@ -2,7 +2,7 @@ package io.github.rumcajs.offlinewebsearch.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.UrlServices
 
 /**

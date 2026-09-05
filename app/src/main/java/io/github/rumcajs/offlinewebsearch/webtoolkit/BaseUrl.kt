@@ -1,5 +1,7 @@
 package io.github.rumcajs.offlinewebsearch.webtoolkit
 
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+
 /**
  * Class representing a base URL endpoint.
  * Fetches responses, retains PageResponseObject, and provides Page objects and PageHandlers.
@@ -59,7 +61,7 @@ class BaseUrl(val url: String) {
     /**
      * Returns the list of entries extracted from the page.
      */
-    suspend fun getEntries(): List<io.github.rumcajs.offlinewebsearch.data.Entry> {
+    suspend fun getEntries(): List<Entry> {
         return getPage().getEntries()
     }
 

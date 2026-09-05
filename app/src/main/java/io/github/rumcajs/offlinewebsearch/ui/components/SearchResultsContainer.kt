@@ -10,8 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.ui.components.EntryItem
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add

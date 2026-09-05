@@ -1,4 +1,4 @@
-package io.github.rumcajs.offlinewebsearch.data
+package io.github.rumcajs.offlinewebsearch.data.repositories
 
 /**
  * Provides a central list of all known repositories implementing [RepositoryInterface].
@@ -18,7 +18,8 @@ object RepositoryList {
             SearchHistoryRepository,
             SocialDataRepository,
             SourceOperationalDataRepository,
-            EntryCompactedTagsRepository
+            EntryCompactedTagsRepository,
+            AppLoggingRepository
         )
     }
 }

@@ -13,9 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.data.ReadLater
-import io.github.rumcajs.offlinewebsearch.data.ReadLaterRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLater
+import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryItem
 import kotlinx.coroutines.launch
 

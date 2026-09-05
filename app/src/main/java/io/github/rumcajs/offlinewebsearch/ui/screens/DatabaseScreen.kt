@@ -1,6 +1,5 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,11 +26,16 @@ import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.ui.components.DatabasePropertyRow
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryInterface
+import io.github.rumcajs.offlinewebsearch.data.repositories.SearchHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.SocialDataRepository
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.InputStream
-import java.text.DecimalFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -304,7 +308,7 @@ fun DatabaseScreen(
  */
 data class RepoClearItem(
     val label: String,
-    val repository: io.github.rumcajs.offlinewebsearch.data.RepositoryInterface
+    val repository: RepositoryInterface
 )
 
 /**
@@ -312,12 +316,12 @@ data class RepoClearItem(
  * together with their display labels.
  */
 fun getRepositoriesToClear(): List<RepoClearItem> = listOf(
-    RepoClearItem("Search History", io.github.rumcajs.offlinewebsearch.data.SearchHistoryRepository),
-    RepoClearItem("Entry Transition History", io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository),
-    RepoClearItem("Entry Visit History", io.github.rumcajs.offlinewebsearch.data.EntryVisitHistoryRepository),
-    RepoClearItem("Social Data", io.github.rumcajs.offlinewebsearch.data.SocialDataRepository),
-    RepoClearItem("Entry Compacted Tags", io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository),
-    RepoClearItem("Read later", io.github.rumcajs.offlinewebsearch.data.ReadLaterRepository)
+    RepoClearItem("Search History", SearchHistoryRepository),
+    RepoClearItem("Entry Transition History", EntryTransitionHistoryRepository),
+    RepoClearItem("Entry Visit History", EntryVisitHistoryRepository),
+    RepoClearItem("Social Data", SocialDataRepository),
+    RepoClearItem("Entry Compacted Tags", EntryCompactedTagsRepository),
+    RepoClearItem("Read later", ReadLaterRepository)
 )
 
 /**

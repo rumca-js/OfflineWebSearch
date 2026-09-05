@@ -1,7 +1,12 @@
-package io.github.rumcajs.offlinewebsearch.data
+package io.github.rumcajs.offlinewebsearch.data.repositories
 
+import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
+import android.database.SQLException
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.data.OrderBy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -19,7 +24,7 @@ object EntrySqliteRepository : EntryRepository() {
     const val SOCIAL_DATA_SELECT_COLUMNS = "s.id AS s_id, s.entry_id AS s_entry_id, s.thumbs_up, s.thumbs_down, s.view_count, s.rating AS s_rating, s.upvote_ratio, s.upvote_diff, s.upvote_view_ratio, s.stars, s.followers_count, s.date_updated"
 
     /** Maps a cursor row to an [Entry]. */
-    fun cursorToEntry(c: android.database.Cursor): Entry {
+    fun cursorToEntry(c: Cursor): Entry {
         val id = c.getLong(c.getColumnIndexOrThrow("id"))
         val title = c.getString(c.getColumnIndexOrThrow("title"))
         val description = c.getString(c.getColumnIndexOrThrow("description"))
@@ -50,16 +55,44 @@ object EntrySqliteRepository : EntryRepository() {
         val socialData = if (sIdIndex != -1 && !c.isNull(sIdIndex)) {
             SocialData(
                 id = c.getLong(sIdIndex),
-                entryId = if (c.isNull(c.getColumnIndexOrThrow("s_entry_id"))) null else c.getLong(c.getColumnIndexOrThrow("s_entry_id")),
-                thumbsUp = if (c.isNull(c.getColumnIndexOrThrow("thumbs_up"))) null else c.getInt(c.getColumnIndexOrThrow("thumbs_up")),
-                thumbsDown = if (c.isNull(c.getColumnIndexOrThrow("thumbs_down"))) null else c.getInt(c.getColumnIndexOrThrow("thumbs_down")),
-                viewCount = if (c.isNull(c.getColumnIndexOrThrow("view_count"))) null else c.getInt(c.getColumnIndexOrThrow("view_count")),
-                rating = if (c.isNull(c.getColumnIndexOrThrow("s_rating"))) null else c.getInt(c.getColumnIndexOrThrow("s_rating")),
-                upvoteRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_ratio")),
-                upvoteDiff = if (c.isNull(c.getColumnIndexOrThrow("upvote_diff"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_diff")),
-                upvoteViewRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_view_ratio"))) null else c.getInt(c.getColumnIndexOrThrow("upvote_view_ratio")),
-                stars = if (c.isNull(c.getColumnIndexOrThrow("stars"))) null else c.getInt(c.getColumnIndexOrThrow("stars")),
-                followersCount = if (c.isNull(c.getColumnIndexOrThrow("followers_count"))) null else c.getInt(c.getColumnIndexOrThrow("followers_count")),
+                entryId = if (c.isNull(c.getColumnIndexOrThrow("s_entry_id"))) null else c.getLong(
+                    c.getColumnIndexOrThrow(
+                        "s_entry_id"
+                    )
+                ),
+                thumbsUp = if (c.isNull(c.getColumnIndexOrThrow("thumbs_up"))) null else c.getInt(
+                    c.getColumnIndexOrThrow(
+                        "thumbs_up"
+                    )
+                ),
+                thumbsDown = if (c.isNull(c.getColumnIndexOrThrow("thumbs_down"))) null else c.getInt(
+                    c.getColumnIndexOrThrow("thumbs_down")
+                ),
+                viewCount = if (c.isNull(c.getColumnIndexOrThrow("view_count"))) null else c.getInt(
+                    c.getColumnIndexOrThrow("view_count")
+                ),
+                rating = if (c.isNull(c.getColumnIndexOrThrow("s_rating"))) null else c.getInt(
+                    c.getColumnIndexOrThrow(
+                        "s_rating"
+                    )
+                ),
+                upvoteRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_ratio"))) null else c.getInt(
+                    c.getColumnIndexOrThrow("upvote_ratio")
+                ),
+                upvoteDiff = if (c.isNull(c.getColumnIndexOrThrow("upvote_diff"))) null else c.getInt(
+                    c.getColumnIndexOrThrow("upvote_diff")
+                ),
+                upvoteViewRatio = if (c.isNull(c.getColumnIndexOrThrow("upvote_view_ratio"))) null else c.getInt(
+                    c.getColumnIndexOrThrow("upvote_view_ratio")
+                ),
+                stars = if (c.isNull(c.getColumnIndexOrThrow("stars"))) null else c.getInt(
+                    c.getColumnIndexOrThrow(
+                        "stars"
+                    )
+                ),
+                followersCount = if (c.isNull(c.getColumnIndexOrThrow("followers_count"))) null else c.getInt(
+                    c.getColumnIndexOrThrow("followers_count")
+                ),
                 dateUpdated = c.getString(c.getColumnIndexOrThrow("date_updated"))
             )
         } else null
@@ -141,7 +174,7 @@ object EntrySqliteRepository : EntryRepository() {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
 
-            val values = android.content.ContentValues().apply {
+            val values = ContentValues().apply {
                 put("link", entry.link ?: "")
                 put("title", entry.title)
                 put("description", entry.description)
@@ -170,12 +203,12 @@ object EntrySqliteRepository : EntryRepository() {
             try {
                 val rowId = db.insert(getTableName(), null, values)
                 if (rowId == -1L) {
-                    throw android.database.SQLException("Insert returned -1; check table schema")
+                    throw SQLException("Insert returned -1; check table schema")
                 }
 
                 if (!entry.tags.isNullOrEmpty()) {
                     entry.tags.forEach { tag ->
-                        val tagValues = android.content.ContentValues().apply {
+                        val tagValues = ContentValues().apply {
                             put("entry_id", rowId)
                             put("tag", tag)
                         }
@@ -217,7 +250,7 @@ object EntrySqliteRepository : EntryRepository() {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val values = android.content.ContentValues().apply {
+            val values = ContentValues().apply {
                 put("title", newTitle)
                 put("description", newDescription)
             }
@@ -256,7 +289,7 @@ object EntrySqliteRepository : EntryRepository() {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             val newVotes = vote.coerceIn(MIN_PAGE_RATING_VOTES, MAX_PAGE_RATING_VOTES)
-            val values = android.content.ContentValues().apply {
+            val values = ContentValues().apply {
                 put("page_rating_votes", newVotes)
             }
             val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))

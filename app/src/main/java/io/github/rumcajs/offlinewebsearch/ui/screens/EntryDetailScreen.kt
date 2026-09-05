@@ -21,7 +21,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import android.widget.Toast
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import io.github.rumcajs.offlinewebsearch.data.ReadLaterRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryDetailTopBar
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
@@ -32,14 +36,14 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeVideoHandler
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryDetailScreen(
-    entry: io.github.rumcajs.offlinewebsearch.data.Entry,
+    entry: Entry,
     onNavigateToLinkPreview: (String) -> Unit,
     onNavigateToEdit: () -> Unit,
     onDelete: (() -> Unit)? = null,
     onTagClick: ((String) -> Unit)? = null,
     onVisit: (() -> Unit)? = null,
-    onSelectEntry: ((io.github.rumcajs.offlinewebsearch.data.Entry) -> Unit)? = null,
-    onSelectSource: ((io.github.rumcajs.offlinewebsearch.data.Source) -> Unit)? = null,
+    onSelectEntry: ((Entry) -> Unit)? = null,
+    onSelectSource: ((Source) -> Unit)? = null,
     /** Called after a successful Read Later add (true) or remove (false). */
     onReadLaterChanged: ((Boolean) -> Unit)? = null,
     onBack: () -> Unit
@@ -313,13 +317,13 @@ fun EntryDetailScreen(
                                     scope.launch {
                                         isSavingTags = true
                                         try {
-                                            io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository.deleteTagsForEntry(
+                                            EntryCompactedTagsRepository.deleteTagsForEntry(
                                                 context,
                                                 dbState,
                                                 entryId
                                             )
                                             for (tag in newTags) {
-                                                io.github.rumcajs.offlinewebsearch.data.EntryCompactedTagsRepository.insertTag(
+                                                EntryCompactedTagsRepository.insertTag(
                                                     context,
                                                     dbState,
                                                     tag,
@@ -410,7 +414,7 @@ fun EntryDetailScreen(
                                     scope.launch {
                                         isSavingVote = true
                                         try {
-                                            val (success, newVotes) = io.github.rumcajs.offlinewebsearch.data.EntryRepository.setVote(
+                                            val (success, newVotes) = EntryRepository.setVote(
                                                 context,
                                                 dbState,
                                                 entryId,

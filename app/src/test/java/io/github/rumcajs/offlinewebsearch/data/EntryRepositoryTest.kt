@@ -3,6 +3,9 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -14,7 +17,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * Unit tests for [EntryRepository.add].
+ * Unit tests for [io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository.add].
  *
  * Uses Robolectric + [RepositoryTestHelper] to provide a writable copy of
  * `assets/table.db` for each test case.

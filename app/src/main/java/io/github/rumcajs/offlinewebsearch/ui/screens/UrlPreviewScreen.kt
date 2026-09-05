@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage

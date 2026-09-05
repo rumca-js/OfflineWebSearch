@@ -2,6 +2,9 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -13,7 +16,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * Unit tests for [SourceRepository.insertSource].
+ * Unit tests for [io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository.insertSource].
  *
  * Uses Robolectric to provide an Android [Context] and [RepositoryTestHelper] to supply a
  * writable copy of `assets/table.db` for each test.
@@ -150,7 +153,8 @@ class SourceRepositoryTest {
 
     @Test
     fun `updateSourceMetaAndEntries skips disabled source`() = runBlocking {
-        val disabledSource = Source(id = 1L, title = "Disabled", url = "https://example.com/rss", enabled = false)
+        val disabledSource =
+            Source(id = 1L, title = "Disabled", url = "https://example.com/rss", enabled = false)
         val (ok, reason) = SourceRepository.updateSourceMetaAndEntries(context, dbState, disabledSource)
         assertFalse(ok)
         assertEquals("Source is disabled", reason)

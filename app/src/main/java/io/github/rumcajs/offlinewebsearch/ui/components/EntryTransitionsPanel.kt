@@ -10,9 +10,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.Entry
-import io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistory
-import io.github.rumcajs.offlinewebsearch.data.EntryTransitionHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistory
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistoryRepository
 
 /**
  * Component that displays a list/panel of transition links to other entries

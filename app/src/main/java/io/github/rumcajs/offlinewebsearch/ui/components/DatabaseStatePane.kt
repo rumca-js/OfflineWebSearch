@@ -11,8 +11,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatsRepository
-import io.github.rumcajs.offlinewebsearch.data.RepositoryInterface
-import io.github.rumcajs.offlinewebsearch.data.RepositoryList
+import io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryInterface
+import io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryList
 import java.io.File
 import java.text.DecimalFormat
 

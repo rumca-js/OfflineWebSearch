@@ -2,7 +2,8 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import android.net.Uri
-import android.widget.Toast
+import io.github.rumcajs.offlinewebsearch.data.repositories.ConfigurationEntry
+import io.github.rumcajs.offlinewebsearch.data.repositories.SearchViewRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,8 +18,6 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 

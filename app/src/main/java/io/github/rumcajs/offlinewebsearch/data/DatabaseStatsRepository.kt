@@ -2,6 +2,13 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryInterface
+import io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryList
+import io.github.rumcajs.offlinewebsearch.data.repositories.SocialDataRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -67,7 +74,7 @@ object DatabaseStatsRepository {
     }
 
     /**
-     * Retrieves row counts for all known repositories from [RepositoryList].
+     * Retrieves row counts for all known repositories from [io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryList].
      *
      * @param context Application context.
      * @param state Target database state.

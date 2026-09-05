@@ -1,7 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -12,6 +11,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.ui.SearchFilter
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchResultsContainer
@@ -39,7 +39,7 @@ import io.github.rumcajs.offlinewebsearch.ui.components.SearchResultsContainer
 @Composable
 fun EntryListScreen(
     viewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel(),
-    onNavigateToDetail: (io.github.rumcajs.offlinewebsearch.data.Entry) -> Unit = {},
+    onNavigateToDetail: (Entry) -> Unit = {},
     onNavigateToAddEntry: (() -> Unit)? = null,
     onNavigateToVisited: (() -> Unit)? = null,
     onNavigateToReadLater: (() -> Unit)? = null

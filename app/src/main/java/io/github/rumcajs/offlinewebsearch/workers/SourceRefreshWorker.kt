@@ -2,8 +2,8 @@ package io.github.rumcajs.offlinewebsearch.workers
 
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.Source
-import io.github.rumcajs.offlinewebsearch.data.SourceRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -1,6 +1,6 @@
 package io.github.rumcajs.offlinewebsearch.webtoolkit
 
-import io.github.rumcajs.offlinewebsearch.data.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import java.util.Date
 
