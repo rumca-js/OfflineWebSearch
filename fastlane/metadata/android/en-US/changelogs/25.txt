@@ -1,0 +1,1 @@
+Read-Only databases limit amount of buttons. Entry detail page text is copyable, highlights links. Database change resets filters.
