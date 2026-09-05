@@ -19,9 +19,6 @@ import io.github.rumcajs.offlinewebsearch.data.EntryEnrichmentWorker
 import io.github.rumcajs.offlinewebsearch.data.EntryRepository
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Entry edit/add screen. When [entry] has a null id it operates in "add" mode
@@ -64,7 +61,7 @@ fun EntryEditScreen(
             false
         } else if (isAddMode) {
             val now = DateUtils.getCurrentTimestamp() // TODO - not ISO?
-            val (success, rowId, err) = EntryRepository.addEntrySql(
+            val (success, rowId, err) = EntryRepository.add(
                 context = context,
                 activeDatabaseState = activeDbState,
                 entry = entry.copy(
@@ -95,7 +92,7 @@ fun EntryEditScreen(
 
             success
         } else {
-            val success = EntryRepository.updateEntrySql(
+            val success = EntryRepository.update(
                 context = context,
                 activeDatabaseState = activeDbState,
                 id = entry.id,

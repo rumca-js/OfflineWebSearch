@@ -104,7 +104,7 @@ object EntrySqliteRepository : EntryRepository() {
         countEntriesSql(context, activeDatabaseState, searchQuery, filterByVisited, filterByReadLater)
     }
 
-    override suspend fun getEntriesPageSql(
+    override suspend fun getEntriesPage(
         context: Context,
         activeDatabaseState: DatabaseState?,
         searchQuery: String,

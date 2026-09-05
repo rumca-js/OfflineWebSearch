@@ -47,7 +47,7 @@ object EntryJsonRepository : EntryRepository() {
         filterInMemory(entries, searchQuery, filterByVisited, filterByReadLater).size
     }
 
-    override suspend fun getEntriesPageSql(
+    override suspend fun getEntriesPage(
         context: Context,
         activeDatabaseState: DatabaseState?,
         searchQuery: String,

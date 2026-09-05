@@ -221,7 +221,7 @@ class SearchViewModel : ViewModel() {
 
         viewModelScope.launch {
             val config = AppConfigManager.config.first()
-            EntryRepository.incrementVisitSql(
+            EntryRepository.incrementVisit(
                 context = context,
                 activeDatabaseState = config.activeDatabaseState,
                 id = entry.id,
@@ -309,7 +309,7 @@ class SearchViewModel : ViewModel() {
             filterByVisited = isFilterVisited,
             filterByReadLater = isFilterReadLater
         )
-        val page = EntryRepository.getEntriesPageSql(
+        val page = EntryRepository.getEntries(
             context = context,
             activeDatabaseState = activeDatabaseState,
             searchQuery = activeSearchQuery,
