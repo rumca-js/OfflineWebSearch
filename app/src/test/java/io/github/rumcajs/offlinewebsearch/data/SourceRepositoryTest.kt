@@ -207,22 +207,20 @@ class SourceRepositoryTest {
 
     @Test
     fun `fetchAndInsertSourceEntries removes entries not present in new RSS feed`() = runBlocking {
-        val sourceUrl = "https://example.com/feed.xml"
-        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Feed Source", sourceUrl, enabled = true)
-        assertTrue(okInsert)
-        val source = SourceRepository.getSourceByUrl(context, dbState, sourceUrl)!!
-        val sourceId = source.id!!
+        val sourceId = 77777L
+        val sourceUrl = "https://unique-feed.com/feed.xml"
+        val source = Source(id = sourceId, title = "Feed Source", url = sourceUrl, enabled = true)
 
         // Insert an existing entry for this source and one for a different source
         val db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
         val v1 = android.content.ContentValues().apply {
-            put("link", "https://example.com/outdated_item")
+            put("link", "https://unique-feed.com/outdated_item")
             put("title", "Outdated Item")
             put("source_id", sourceId)
             put("source_url", sourceUrl)
         }
         val v2 = android.content.ContentValues().apply {
-            put("link", "https://example.com/kept_item")
+            put("link", "https://unique-feed.com/kept_item")
             put("title", "Kept Item")
             put("source_id", sourceId)
             put("source_url", sourceUrl)
@@ -230,7 +228,7 @@ class SourceRepositoryTest {
         val vOther = android.content.ContentValues().apply {
             put("link", "https://other.com/different_source_item")
             put("title", "Other Source Item")
-            put("source_id", 999L)
+            put("source_id", 99999L)
             put("source_url", "https://other.com/feed.xml")
         }
         db.insert("linkdatamodel", null, v1)
@@ -243,14 +241,14 @@ class SourceRepositoryTest {
             <rss version="2.0">
               <channel>
                 <title>Feed Source</title>
-                <link>https://example.com</link>
+                <link>https://unique-feed.com</link>
                 <item>
                   <title>Kept Item</title>
-                  <link>https://example.com/kept_item</link>
+                  <link>https://unique-feed.com/kept_item</link>
                 </item>
                 <item>
                   <title>New Item</title>
-                  <link>https://example.com/new_item</link>
+                  <link>https://unique-feed.com/new_item</link>
                 </item>
               </channel>
             </rss>
@@ -285,32 +283,30 @@ class SourceRepositoryTest {
         dbRead.close()
 
         // Outdated item was removed
-        assertFalse("outdated_item should have been removed", sourceEntries.contains("https://example.com/outdated_item"))
+        assertFalse("outdated_item should have been removed", sourceEntries.contains("https://unique-feed.com/outdated_item"))
         // Kept item is still present
-        assertTrue("kept_item should be kept", sourceEntries.contains("https://example.com/kept_item"))
+        assertTrue("kept_item should be kept", sourceEntries.contains("https://unique-feed.com/kept_item"))
         // New item was added
-        assertTrue("new_item should be inserted", sourceEntries.contains("https://example.com/new_item"))
+        assertTrue("new_item should be inserted", sourceEntries.contains("https://unique-feed.com/new_item"))
         // Entry from another source was not deleted
         assertEquals(1, otherCount)
     }
 
     @Test
     fun `removeOutdatedSourceEntries removes only entries not in validLinks for matching source`() = runBlocking {
-        val sourceUrl = "https://example2.com/feed.xml"
-        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Source 2", sourceUrl, enabled = true)
-        assertTrue(okInsert)
-        val source = SourceRepository.getSourceByUrl(context, dbState, sourceUrl)!!
-        val sourceId = source.id!!
+        val sourceId = 88888L
+        val sourceUrl = "https://example-unique2.com/feed.xml"
+        val source = Source(id = sourceId, title = "Source 2", url = sourceUrl, enabled = true)
 
         val db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
         val v1 = android.content.ContentValues().apply {
-            put("link", "https://example2.com/item_a")
+            put("link", "https://example-unique2.com/item_a")
             put("title", "Item A")
             put("source_id", sourceId)
             put("source_url", sourceUrl)
         }
         val v2 = android.content.ContentValues().apply {
-            put("link", "https://example2.com/item_b")
+            put("link", "https://example-unique2.com/item_b")
             put("title", "Item B")
             put("source_id", sourceId)
             put("source_url", sourceUrl)
@@ -324,7 +320,7 @@ class SourceRepositoryTest {
             context,
             dbState,
             source,
-            setOf("https://example2.com/item_a")
+            setOf("https://example-unique2.com/item_a")
         )
         assertTrue(ok)
         assertEquals(1, deletedCount)
@@ -339,7 +335,7 @@ class SourceRepositoryTest {
         }
         dbRead.close()
 
-        assertEquals(listOf("https://example2.com/item_a"), remaining)
+        assertEquals(listOf("https://example-unique2.com/item_a"), remaining)
     }
 
     @Test
