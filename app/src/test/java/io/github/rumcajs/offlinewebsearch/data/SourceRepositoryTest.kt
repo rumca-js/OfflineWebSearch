@@ -204,4 +204,195 @@ class SourceRepositoryTest {
         assertArrayEquals(byteArrayOf(5, 6, 7, 8), data.body_hash)
         assertEquals(3, data.consecutive_errors)
     }
+
+    @Test
+    fun `fetchAndInsertSourceEntries removes entries not present in new RSS feed`() = runBlocking {
+        val sourceUrl = "https://example.com/feed.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Feed Source", sourceUrl, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, sourceUrl)!!
+        val sourceId = source.id!!
+
+        // Insert an existing entry for this source and one for a different source
+        val db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
+        val v1 = android.content.ContentValues().apply {
+            put("link", "https://example.com/outdated_item")
+            put("title", "Outdated Item")
+            put("source_id", sourceId)
+            put("source_url", sourceUrl)
+        }
+        val v2 = android.content.ContentValues().apply {
+            put("link", "https://example.com/kept_item")
+            put("title", "Kept Item")
+            put("source_id", sourceId)
+            put("source_url", sourceUrl)
+        }
+        val vOther = android.content.ContentValues().apply {
+            put("link", "https://other.com/different_source_item")
+            put("title", "Other Source Item")
+            put("source_id", 999L)
+            put("source_url", "https://other.com/feed.xml")
+        }
+        db.insert("linkdatamodel", null, v1)
+        db.insert("linkdatamodel", null, v2)
+        db.insert("linkdatamodel", null, vOther)
+        db.close()
+
+        // Create a fake Url returning RSS containing kept_item and new_item (but NOT outdated_item)
+        val rssXml = """
+            <rss version="2.0">
+              <channel>
+                <title>Feed Source</title>
+                <link>https://example.com</link>
+                <item>
+                  <title>Kept Item</title>
+                  <link>https://example.com/kept_item</link>
+                </item>
+                <item>
+                  <title>New Item</title>
+                  <link>https://example.com/new_item</link>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val fakeUrl = object : io.github.rumcajs.offlinewebsearch.webtoolkit.Url(sourceUrl) {
+            override suspend fun getResponse(acceptHeader: String?): io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject(
+                    statusCode = 200,
+                    headers = mapOf("Content-Type" to listOf("application/rss+xml"))
+                )
+            }
+            override suspend fun getPage(): io.github.rumcajs.offlinewebsearch.webtoolkit.Page {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage(sourceUrl, rssXml)
+            }
+        }
+
+        val (ok, _) = SourceRepository.fetchAndInsertSourceEntries(context, dbState, fakeUrl, source)
+        assertTrue(ok)
+
+        val dbRead = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)
+        val sourceEntries = mutableListOf<String>()
+        val cursor = dbRead.rawQuery("SELECT link FROM linkdatamodel WHERE source_id = ?", arrayOf(sourceId.toString()))
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                sourceEntries.add(c.getString(0))
+            }
+        }
+
+        val otherCursor = dbRead.rawQuery("SELECT COUNT(*) FROM linkdatamodel WHERE link = ?", arrayOf("https://other.com/different_source_item"))
+        val otherCount = otherCursor.use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
+        dbRead.close()
+
+        // Outdated item was removed
+        assertFalse("outdated_item should have been removed", sourceEntries.contains("https://example.com/outdated_item"))
+        // Kept item is still present
+        assertTrue("kept_item should be kept", sourceEntries.contains("https://example.com/kept_item"))
+        // New item was added
+        assertTrue("new_item should be inserted", sourceEntries.contains("https://example.com/new_item"))
+        // Entry from another source was not deleted
+        assertEquals(1, otherCount)
+    }
+
+    @Test
+    fun `removeOutdatedSourceEntries removes only entries not in validLinks for matching source`() = runBlocking {
+        val sourceUrl = "https://example2.com/feed.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Source 2", sourceUrl, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, sourceUrl)!!
+        val sourceId = source.id!!
+
+        val db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
+        val v1 = android.content.ContentValues().apply {
+            put("link", "https://example2.com/item_a")
+            put("title", "Item A")
+            put("source_id", sourceId)
+            put("source_url", sourceUrl)
+        }
+        val v2 = android.content.ContentValues().apply {
+            put("link", "https://example2.com/item_b")
+            put("title", "Item B")
+            put("source_id", sourceId)
+            put("source_url", sourceUrl)
+        }
+        db.insert("linkdatamodel", null, v1)
+        db.insert("linkdatamodel", null, v2)
+        db.close()
+
+        // Only keep item_a
+        val (ok, deletedCount) = SourceRepository.removeOutdatedSourceEntries(
+            context,
+            dbState,
+            source,
+            setOf("https://example2.com/item_a")
+        )
+        assertTrue(ok)
+        assertEquals(1, deletedCount)
+
+        val dbRead = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)
+        val remaining = mutableListOf<String>()
+        val cursor = dbRead.rawQuery("SELECT link FROM linkdatamodel WHERE source_id = ?", arrayOf(sourceId.toString()))
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                remaining.add(c.getString(0))
+            }
+        }
+        dbRead.close()
+
+        assertEquals(listOf("https://example2.com/item_a"), remaining)
+    }
+
+    @Test
+    fun `insertSourceEntries inserts new entries and skips existing duplicates`() = runBlocking {
+        val sourceUrl = "https://example3.com/feed.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Source 3", sourceUrl, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, sourceUrl)!!
+        val sourceId = source.id!!
+
+        val entries = listOf(
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://example3.com/entry1",
+                title = "Entry 1",
+                description = "Desc 1"
+            ),
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://example3.com/entry2",
+                title = "Entry 2",
+                description = "Desc 2"
+            )
+        )
+
+        // First insert: 2 entries inserted
+        val (ok1, count1) = SourceRepository.insertSourceEntries(context, dbState, entries, source)
+        assertTrue(ok1)
+        assertEquals(2, count1)
+
+        // Second insert with one duplicate and one new entry
+        val entriesWithDuplicate = listOf(
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://example3.com/entry1",
+                title = "Entry 1 Duplicate"
+            ),
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://example3.com/entry3",
+                title = "Entry 3"
+            )
+        )
+        val (ok2, count2) = SourceRepository.insertSourceEntries(context, dbState, entriesWithDuplicate, source)
+        assertTrue(ok2)
+        assertEquals(1, count2)
+
+        val dbRead = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)
+        val storedLinks = mutableListOf<String>()
+        val cursor = dbRead.rawQuery("SELECT link FROM linkdatamodel WHERE source_id = ? ORDER BY link", arrayOf(sourceId.toString()))
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                storedLinks.add(c.getString(0))
+            }
+        }
+        dbRead.close()
+
+        assertEquals(listOf("https://example3.com/entry1", "https://example3.com/entry2", "https://example3.com/entry3"), storedLinks)
+    }
 }

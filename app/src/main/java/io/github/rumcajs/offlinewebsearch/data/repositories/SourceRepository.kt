@@ -349,14 +349,14 @@ object SourceRepository : RepositoryInterface {
     /**
      * Fetches entries from [urlObj] (expected to be RSS/Atom feed) and inserts new entries into `linkdatamodel`.
      * Existing entries (matching by link) are not duplicated.
-     * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
+     * [Source.id] and [Source.url] are associated with every inserted entry.
      * @return Pair(success, resultMessage)
      */
     suspend fun fetchAndInsertSourceEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
         urlObj: Url,
-        source: Source? = null
+        source: Source
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         if (urlObj.url.isBlank()) {
             return@withContext Pair(false, "Source URL is empty")
@@ -392,62 +392,24 @@ object SourceRepository : RepositoryInterface {
             var insertedCount = 0
 
             db.beginTransaction()
-            val now = DateUtils.getCurrentTimestamp() // TODO: not ISO?
             try {
+                // 1. Collect all non-blank links from the newly fetched RSS feed
+                val rssLinks = entries.mapNotNull { it.link?.takeIf { l -> l.isNotBlank() } }.toSet()
 
-                for (entry in entries) {
-                    val link = entry.link ?: ""
-                    if (link.isNotBlank()) {
-                        val checkCursor = db.rawQuery("SELECT COUNT(*) FROM linkdatamodel WHERE link = ?", arrayOf(link))
-                        val exists = checkCursor.use { c ->
-                            if (c.moveToFirst()) c.getInt(0) > 0 else false
-                        }
-                        if (exists) {
-                            continue
-                        }
-                    }
+                // 2. Remove entries that are no longer present in the RSS feed
+                val sourceForOps = if (source.url.isNotBlank()) source else source.copy(url = urlObj.url)
+                removeOutdatedSourceEntries(db, sourceForOps, rssLinks)
 
-                    // TODO use EntryRepostiroy for that?
-                    val values = ContentValues().apply {
-                        put("link", link)
-                        put("title", entry.title ?: "")
-                        put("description", entry.description ?: "")
-                        put("author", entry.author ?: "")
-                        put("album", entry.album ?: "")
-                        put("language", entry.language ?: "")
-                        put("page_rating_votes", entry.page_rating_votes ?: 0)
-                        put("page_rating_visits", entry.page_rating_visits ?: 0)
-                        put("page_rating", entry.page_rating ?: 0)
-                        put("thumbnail", entry.thumbnail ?: "")
-                        put("date_created", entry.date_created?.takeIf { it.isNotBlank() } ?: now)
-                        put("date_published", entry.date_published ?: "")
-                        put("date_dead_since", entry.date_dead_since ?: "")
-                        put("age", entry.age ?: 0)
-                        put("status_code", entry.status_code ?: 0)
-                        put("manual_status_code", entry.manual_status_code ?: 0)
-                        put("bookmarked", if (entry.bookmarked == true) 1 else 0)
-                        put("source_url", urlObj.url)
-                        val sourceId = source?.id
-                        if (sourceId != null && sourceId != 0L) {
-                            put("source_id", sourceId)
-                        }
-                        put("permanent", 0)
-                        put("contents_type", 0)
-                        put("page_rating_contents", 0)
-                    }
+                // 3. Insert new entries from the feed
+                insertedCount = insertSourceEntries(db, entries, sourceForOps)
 
-                    val rowId = db.insert("linkdatamodel", null, values)
-                    if (rowId != -1L) {
-                        insertedCount++
-                    }
-                }
                 db.setTransactionSuccessful()
             } finally {
                 db.endTransaction()
                 db.close()
             }
 
-            val sourceId = source?.id?.takeIf { it != 0L }
+            val sourceId = source.id?.takeIf { it != 0L }
             if (sourceId != null) {
                 SourceOperationalDataRepository.setSourceFetch(
                     context = context,
@@ -476,15 +438,203 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Removes all entries in `linkdatamodel` (and their related records in auxiliary tables)
+     * belonging to the specified [source] whose links are NOT present in [validLinks].
+     *
+     * @param db Open writable [SQLiteDatabase] instance.
+     * @param source The [Source] whose outdated entries should be removed.
+     * @param validLinks Set of valid URLs to keep.
+     * @return Number of deleted entries.
+     */
+    fun removeOutdatedSourceEntries(
+        db: SQLiteDatabase,
+        source: Source,
+        validLinks: Set<String>
+    ): Int {
+        val validSourceId = source.id?.takeIf { it != 0L }
+        val sourceWhereClause: String
+        val sourceWhereArgs: Array<String>
+        if (validSourceId != null && source.url.isNotBlank()) {
+            sourceWhereClause = "(source_id = ? OR source_url = ?)"
+            sourceWhereArgs = arrayOf(validSourceId.toString(), source.url)
+        } else if (validSourceId != null) {
+            sourceWhereClause = "source_id = ?"
+            sourceWhereArgs = arrayOf(validSourceId.toString())
+        } else {
+            sourceWhereClause = "source_url = ?"
+            sourceWhereArgs = arrayOf(source.url)
+        }
+
+        val existingCursor = db.rawQuery(
+            "SELECT id, link FROM linkdatamodel WHERE $sourceWhereClause",
+            sourceWhereArgs
+        )
+        val entriesToDelete = mutableListOf<Long>()
+        existingCursor.use { c ->
+            while (c.moveToNext()) {
+                val id = c.getLong(0)
+                val link = c.getString(1) ?: ""
+                if (link.isNotBlank() && link !in validLinks) {
+                    entriesToDelete.add(id)
+                }
+            }
+        }
+
+        for (id in entriesToDelete) {
+            val idArg = arrayOf(id.toString())
+            db.delete("entrycompactedtags", "entry_id = ?", idArg)
+            db.delete("socialdata", "entry_id = ?", idArg)
+            db.delete("entryvisithistory", "entry_id = ?", idArg)
+            db.delete("entrytransitionhistory", "entry_id = ? OR to_entry_id = ?", arrayOf(id.toString(), id.toString()))
+            db.delete("readlater", "entry_id = ?", idArg)
+            db.delete("linkdatamodel", "id = ?", idArg)
+        }
+
+        return entriesToDelete.size
+    }
+
+    /**
+     * Removes all entries in `linkdatamodel` (and their related records in auxiliary tables)
+     * belonging to the specified [source] whose links are NOT present in [validLinks].
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param source The [Source] whose outdated entries should be removed.
+     * @param validLinks Set of valid URLs to keep.
+     * @return Pair(success, number of deleted entries).
+     */
+    suspend fun removeOutdatedSourceEntries(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        source: Source,
+        validLinks: Set<String>
+    ): Pair<Boolean, Int> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, 0)
+        }
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, 0)
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val deletedCount = removeOutdatedSourceEntries(db, source, validLinks)
+            db.close()
+            Pair(true, deletedCount)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, 0)
+        }
+    }
+
+    /**
+     * Inserts new [entries] belonging to a [source] into `linkdatamodel`.
+     * Existing entries (matching by link) are skipped to avoid duplicates.
+     *
+     * @param db Open writable [SQLiteDatabase] instance.
+     * @param entries List of [Entry] objects from the feed to insert.
+     * @param source The [Source] to associate with the inserted entries.
+     * @param defaultDateCreated Fallback timestamp for date_created if not set on the entry.
+     * @return Number of successfully inserted entries.
+     */
+    fun insertSourceEntries(
+        db: SQLiteDatabase,
+        entries: List<Entry>,
+        source: Source,
+        defaultDateCreated: String = DateUtils.getCurrentTimestamp()
+    ): Int {
+        var insertedCount = 0
+        val validSourceId = source.id?.takeIf { it != 0L }
+
+        for (entry in entries) {
+            val link = entry.link ?: ""
+            if (link.isNotBlank()) {
+                val checkCursor = db.rawQuery("SELECT COUNT(*) FROM linkdatamodel WHERE link = ?", arrayOf(link))
+                val exists = checkCursor.use { c ->
+                    if (c.moveToFirst()) c.getInt(0) > 0 else false
+                }
+                if (exists) {
+                    continue
+                }
+            }
+
+            val values = ContentValues().apply {
+                put("link", link)
+                put("title", entry.title ?: "")
+                put("description", entry.description ?: "")
+                put("author", entry.author ?: "")
+                put("album", entry.album ?: "")
+                put("language", entry.language ?: "")
+                put("page_rating_votes", entry.page_rating_votes ?: 0)
+                put("page_rating_visits", entry.page_rating_visits ?: 0)
+                put("page_rating", entry.page_rating ?: 0)
+                put("thumbnail", entry.thumbnail ?: "")
+                put("date_created", entry.date_created?.takeIf { it.isNotBlank() } ?: defaultDateCreated)
+                put("date_published", entry.date_published ?: "")
+                put("date_dead_since", entry.date_dead_since ?: "")
+                put("age", entry.age ?: 0)
+                put("status_code", entry.status_code ?: 0)
+                put("manual_status_code", entry.manual_status_code ?: 0)
+                put("bookmarked", if (entry.bookmarked == true) 1 else 0)
+                put("source_url", source.url)
+                if (validSourceId != null) {
+                    put("source_id", validSourceId)
+                }
+                put("permanent", 0)
+                put("contents_type", 0)
+                put("page_rating_contents", 0)
+            }
+
+            val rowId = db.insert("linkdatamodel", null, values)
+            if (rowId != -1L) {
+                insertedCount++
+            }
+        }
+        return insertedCount
+    }
+
+    /**
+     * Inserts new [entries] belonging to a [source] into `linkdatamodel`.
+     * Existing entries (matching by link) are skipped to avoid duplicates.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param entries List of [Entry] objects from the feed to insert.
+     * @param source The [Source] to associate with the inserted entries.
+     * @return Pair(success, number of inserted entries).
+     */
+    suspend fun insertSourceEntries(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        entries: List<Entry>,
+        source: Source
+    ): Pair<Boolean, Int> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, 0)
+        }
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, 0)
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val insertedCount = insertSourceEntries(db, entries, source)
+            db.close()
+            Pair(true, insertedCount)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, 0)
+        }
+    }
+
+    /**
      * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [urlObj].
-     * [source] is optional; when provided, [Source.id] is stored as `source_id` on every inserted entry.
+     * [source] is associated with inserted entries.
      * @return Pair(success, resultMessage)
      */
     suspend fun updateSourceMetaAndEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
         urlObj: Url,
-        source: Source? = null
+        source: Source
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         updateSourceMetadata(context, activeDatabaseState, urlObj)
         fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj, source)
