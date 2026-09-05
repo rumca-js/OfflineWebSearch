@@ -70,7 +70,12 @@ Possible database states include:
  - FAILED
 
 # Views
+App should contain on bottom selection of main views:
+ - Search
+ - Sources
+ - Options
 
+Screens:
  - EntryListScreen - Provides the search interface. Shows search results.
  - EntryDetailScreen - Shows details of a selected entry.
  - EntryEditScreen - Adds or edits an entry.
@@ -112,7 +117,7 @@ Possible database states include:
  - swipe left performs "next" pagination on results
  - swipe right performs "previous" pagination on results
 
-### EntryItem - result
+### EntryItem - row in EntryListScreen
 There are several list styles:
  - Gallery (emphasis on thumbnail, should look like YouTube or TikTok)
  - Standard (similar to gallery, but thumbnail is smaller, and on the left, should remind Feed readers
@@ -165,7 +170,7 @@ The screen displays, where available:
  - Source information
  - Buttons for some operations like: "Check status", "Add vote"
    -- vote allows user to input digit between -100 and 100
- - Description.
+ - Description. User should be able to select text in it. Should make https:// links a real links
  - Other entry metadata.
  - Entry transition pane. The pane shows entries that the user previously visited from the current entry. Entry transitions are stored in UserEntryTransitionHistory.
  - back button returning to EntryListScreen should not refresh list, nor should scroll to the top, as it does not modify Entries, or results. It should if read later were changed and EntryList is with read later filter, or if EntryList is with sort by Visits

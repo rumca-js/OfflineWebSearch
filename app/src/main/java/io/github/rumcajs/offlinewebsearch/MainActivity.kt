@@ -30,7 +30,7 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Home : Screen("home", "Browse", Icons.Filled.Home)
+    object Home : Screen("home", "Browse", Icons.Filled.Search)
     object Databases : Screen("databases", "Databases", Icons.Filled.Storage)
     object Sources : Screen("sources", "Sources", Icons.AutoMirrored.Filled.List)
     object About : Screen("about", "About", Icons.Filled.Info)

@@ -480,16 +480,14 @@ fun EntryDetailScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.takeIf { it.isNotBlank() }?.let {
-                Text(
-                    text = it,
+            io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayDescription(entry, config.userAge)?.takeIf { it.isNotBlank() }?.let { descriptionText ->
+                io.github.rumcajs.offlinewebsearch.ui.components.LinkableText(
+                    text = descriptionText,
                     fontSize = 16.sp,
                     lineHeight = 24.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
-
-
 
             // Entry detail properties and metadata pane
             io.github.rumcajs.offlinewebsearch.ui.components.EntryMetadataPane(
