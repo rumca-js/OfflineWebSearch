@@ -6,6 +6,9 @@ import androidx.test.core.app.ApplicationProvider
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -290,5 +293,74 @@ class EntryRepositoryTest {
 
         val loadedTags = EntryCompactedTagsRepository.getTagsForEntry(context, dbState, rowId).map { it.tag }
         assertEquals(listOf("news", "tech"), loadedTags)
+    }
+
+    // ── EntrySqliteRepository: removeOutdatedSourceEntries & deleteEntriesForSource ──
+
+    @Test
+    fun `removeOutdatedSourceEntries removes outdated entries and associated records`() = runBlocking {
+        val source = Source(id = 12345L, url = "https://source1.example.com", title = "Source 1")
+        val (ok1, _) = SourceRepository.insertSourceEntries(
+            context,
+            dbState,
+            listOf(
+                Entry(link = "https://source1.example.com/keep", title = "Keep"),
+                Entry(link = "https://source1.example.com/remove", title = "Remove")
+            ),
+            source
+        )
+        assertTrue(ok1)
+
+        val (okRemove, count) = io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository.removeOutdatedSourceEntries(
+            context,
+            dbState,
+            source,
+            setOf("https://source1.example.com/keep")
+        )
+        assertTrue(okRemove)
+        assertEquals(1, count)
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+        val remainingLinks = mutableListOf<String>()
+        val cursor = db.rawQuery("SELECT link FROM linkdatamodel WHERE source_id = ?", arrayOf("12345"))
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                remainingLinks.add(c.getString(0))
+            }
+        }
+        db.close()
+
+        assertEquals(listOf("https://source1.example.com/keep"), remainingLinks)
+    }
+
+    @Test
+    fun `deleteEntriesForSource deletes all entries matching sourceId and sourceUrl`() = runBlocking {
+        val source = Source(id = 23456L, url = "https://source2.example.com", title = "Source 2")
+        val (okInsert, _) = SourceRepository.insertSourceEntries(
+            context,
+            dbState,
+            listOf(
+                Entry(link = "https://source2.example.com/item1", title = "Item 1"),
+                Entry(link = "https://source2.example.com/item2", title = "Item 2")
+            ),
+            source
+        )
+        assertTrue(okInsert)
+
+        val (okDelete, count) = io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository.deleteEntriesForSource(
+            context,
+            dbState,
+            source.id,
+            source.url
+        )
+        assertTrue(okDelete)
+        assertEquals(2, count)
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM linkdatamodel WHERE source_id = ?", arrayOf("23456"))
+        val remaining = cursor.use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
+        db.close()
+
+        assertEquals(0, remaining)
     }
 }

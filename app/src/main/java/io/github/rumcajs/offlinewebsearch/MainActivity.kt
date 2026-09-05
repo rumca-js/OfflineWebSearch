@@ -178,13 +178,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     onNavigateToEdit = {
                                         navController.navigate(Screen.SourceEdit.route)
                                     },
-                                    onDelete = {
+                                    onDelete = { deleteEntries ->
                                         source.id?.let { sourceId ->
                                             scope.launch {
                                                 val (success, err) = SourceRepository.deleteSource(
                                                     context,
                                                     config.activeDatabaseState,
-                                                    sourceId
+                                                    sourceId,
+                                                    deleteEntries = deleteEntries
                                                 )
                                                 if (success) {
                                                     android.widget.Toast.makeText(context, "Source deleted", android.widget.Toast.LENGTH_SHORT).show()

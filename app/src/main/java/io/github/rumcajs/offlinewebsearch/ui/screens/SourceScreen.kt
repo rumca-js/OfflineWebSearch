@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -44,7 +46,7 @@ import kotlinx.coroutines.launch
 fun SourceScreen(
     source: Source,
     onNavigateToEdit: (() -> Unit)? = null,
-    onDelete: (() -> Unit)? = null,
+    onDelete: ((deleteEntries: Boolean) -> Unit)? = null,
     onBrowseEntries: ((Source) -> Unit)? = null,
     onRefreshSuccess: (() -> Unit)? = null,
     onBack: () -> Unit
@@ -60,6 +62,7 @@ fun SourceScreen(
     var operationalData by remember { mutableStateOf<SourceOperationalData?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteEntriesWithSource by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentSource.id, activeDbState) {
         val sourceId = currentSource.id
@@ -105,14 +108,41 @@ fun SourceScreen(
 
     if (showDeleteDialog && onDelete != null) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = {
+                showDeleteDialog = false
+                deleteEntriesWithSource = false
+            },
             title = { Text("Delete Source") },
-            text = { Text("Are you sure you want to delete source '${source.title.ifBlank { "Untitled" }}'?") },
+            text = {
+                Column {
+                    Text("Are you sure you want to delete source '${source.title.ifBlank { "Untitled" }}'?")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { deleteEntriesWithSource = !deleteEntriesWithSource }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = deleteEntriesWithSource,
+                            onCheckedChange = { deleteEntriesWithSource = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Also delete all entries from this source",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
+                        val shouldDeleteEntries = deleteEntriesWithSource
                         showDeleteDialog = false
-                        onDelete()
+                        deleteEntriesWithSource = false
+                        onDelete(shouldDeleteEntries)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -120,7 +150,10 @@ fun SourceScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    deleteEntriesWithSource = false
+                }) {
                     Text("Cancel")
                 }
             }

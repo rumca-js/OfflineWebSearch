@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -200,20 +201,54 @@ fun SourcesScreen(
         }
     }
 
+    var deleteEntriesWithSource by remember { mutableStateOf(false) }
+
     if (sourceToDelete != null) {
         val source = sourceToDelete!!
         AlertDialog(
-            onDismissRequest = { sourceToDelete = null },
+            onDismissRequest = {
+                sourceToDelete = null
+                deleteEntriesWithSource = false
+            },
             title = { Text("Delete Source") },
-            text = { Text("Are you sure you want to delete source '${source.title.ifBlank { "Untitled" }}'?") },
+            text = {
+                Column {
+                    Text("Are you sure you want to delete source '${source.title.ifBlank { "Untitled" }}'?")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { deleteEntriesWithSource = !deleteEntriesWithSource }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = deleteEntriesWithSource,
+                            onCheckedChange = { deleteEntriesWithSource = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Also delete all entries from this source",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
                         val target = sourceToDelete
+                        val shouldDeleteEntries = deleteEntriesWithSource
                         sourceToDelete = null
+                        deleteEntriesWithSource = false
                         if (target?.id != null) {
                             scope.launch {
-                                val (success, err) = SourceRepository.deleteSource(context, activeDbState, target.id)
+                                val (success, err) = SourceRepository.deleteSource(
+                                    context,
+                                    activeDbState,
+                                    target.id,
+                                    deleteEntries = shouldDeleteEntries
+                                )
                                 if (success) {
                                     Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
                                     sources = SourceRepository.getAllSources(context, activeDbState)
@@ -230,7 +265,10 @@ fun SourcesScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { sourceToDelete = null }) {
+                TextButton(onClick = {
+                    sourceToDelete = null
+                    deleteEntriesWithSource = false
+                }) {
                     Text("Cancel")
                 }
             }

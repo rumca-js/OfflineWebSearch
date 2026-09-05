@@ -352,16 +352,7 @@ object EntrySqliteRepository : EntryRepository() {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             db.beginTransaction()
             try {
-                db.delete(EntryCompactedTagsRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
-                db.delete(SocialDataRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
-                db.delete(EntryVisitHistoryRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
-                db.delete(
-                    EntryTransitionHistoryRepository.getTableName(),
-                    "entry_from_id = ? OR entry_to_id = ?",
-                    arrayOf(id.toString(), id.toString())
-                )
-                db.delete(ReadLaterRepository.getTableName(), "entry_id = ?", arrayOf(id.toString()))
-                val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
+                val rows = deleteEntryRecords(db, id)
                 db.setTransactionSuccessful()
                 if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted; entry may not exist")
             } finally {
@@ -371,6 +362,191 @@ object EntrySqliteRepository : EntryRepository() {
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Deletes a single entry from `linkdatamodel` and all its associated records in auxiliary
+     * tables (tags, social data, visit history, transition history, read later).
+     *
+     * @param db Open writable [SQLiteDatabase] instance.
+     * @param entryId Primary key of the entry to delete.
+     * @return Number of rows deleted from `linkdatamodel`.
+     */
+    fun deleteEntryRecords(db: SQLiteDatabase, entryId: Long): Int {
+        val idArg = arrayOf(entryId.toString())
+        db.delete(EntryCompactedTagsRepository.getTableName(), "entry_id = ?", idArg)
+        db.delete(SocialDataRepository.getTableName(), "entry_id = ?", idArg)
+        db.delete(EntryVisitHistoryRepository.getTableName(), "entry_id = ?", idArg)
+        db.delete(
+            EntryTransitionHistoryRepository.getTableName(),
+            "entry_from_id = ? OR entry_to_id = ?",
+            arrayOf(entryId.toString(), entryId.toString())
+        )
+        db.delete(ReadLaterRepository.getTableName(), "entry_id = ?", idArg)
+        return db.delete(getTableName(), "id = ?", idArg)
+    }
+
+    /**
+     * Removes all entries in `linkdatamodel` (and their related records in auxiliary tables)
+     * belonging to the specified [source] whose links are NOT present in [validLinks].
+     *
+     * @param db Open writable [SQLiteDatabase] instance.
+     * @param source The [Source] whose outdated entries should be removed.
+     * @param validLinks Set of valid URLs to keep.
+     * @return Number of deleted entries.
+     */
+    fun removeOutdatedSourceEntries(
+        db: SQLiteDatabase,
+        source: Source,
+        validLinks: Set<String>
+    ): Int {
+        val validSourceId = source.id?.takeIf { it != 0L }
+        val sourceWhereClause: String
+        val sourceWhereArgs: Array<String>
+        if (validSourceId != null && source.url.isNotBlank()) {
+            sourceWhereClause = "(source_id = ? OR source_url = ?)"
+            sourceWhereArgs = arrayOf(validSourceId.toString(), source.url)
+        } else if (validSourceId != null) {
+            sourceWhereClause = "source_id = ?"
+            sourceWhereArgs = arrayOf(validSourceId.toString())
+        } else {
+            sourceWhereClause = "source_url = ?"
+            sourceWhereArgs = arrayOf(source.url)
+        }
+
+        val existingCursor = db.rawQuery(
+            "SELECT id, link FROM ${getTableName()} WHERE $sourceWhereClause",
+            sourceWhereArgs
+        )
+        val entriesToDelete = mutableListOf<Long>()
+        existingCursor.use { c ->
+            while (c.moveToNext()) {
+                val id = c.getLong(0)
+                val link = c.getString(1) ?: ""
+                if (link.isNotBlank() && link !in validLinks) {
+                    entriesToDelete.add(id)
+                }
+            }
+        }
+
+        for (id in entriesToDelete) {
+            deleteEntryRecords(db, id)
+        }
+
+        return entriesToDelete.size
+    }
+
+    /**
+     * Removes all entries in `linkdatamodel` (and their related records in auxiliary tables)
+     * belonging to the specified [source] whose links are NOT present in [validLinks].
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param source The [Source] whose outdated entries should be removed.
+     * @param validLinks Set of valid URLs to keep.
+     * @return Pair(success, number of deleted entries).
+     */
+    suspend fun removeOutdatedSourceEntries(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        source: Source,
+        validLinks: Set<String>
+    ): Pair<Boolean, Int> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, 0)
+        }
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, 0)
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val deletedCount = removeOutdatedSourceEntries(db, source, validLinks)
+            db.close()
+            Pair(true, deletedCount)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, 0)
+        }
+    }
+
+    /**
+     * Deletes all entries belonging to a given source (by `source_id` or `source_url`),
+     * including associated auxiliary table records.
+     *
+     * @param db Open writable [SQLiteDatabase] instance.
+     * @param sourceId Source ID to match, or null.
+     * @param sourceUrl Source URL to match, or null.
+     * @return Number of deleted entries.
+     */
+    fun deleteEntriesForSource(
+        db: SQLiteDatabase,
+        sourceId: Long?,
+        sourceUrl: String?
+    ): Int {
+        val validSourceId = sourceId?.takeIf { it != 0L }
+        val hasUrl = !sourceUrl.isNullOrBlank()
+
+        if (validSourceId == null && !hasUrl) return 0
+
+        val whereClause: String
+        val whereArgs: Array<String>
+        if (validSourceId != null && hasUrl) {
+            whereClause = "source_id = ? OR source_url = ?"
+            whereArgs = arrayOf(validSourceId.toString(), sourceUrl!!)
+        } else if (validSourceId != null) {
+            whereClause = "source_id = ?"
+            whereArgs = arrayOf(validSourceId.toString())
+        } else {
+            whereClause = "source_url = ?"
+            whereArgs = arrayOf(sourceUrl!!)
+        }
+
+        val cursor = db.rawQuery("SELECT id FROM ${getTableName()} WHERE $whereClause", whereArgs)
+        val entryIdsToDelete = mutableListOf<Long>()
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                entryIdsToDelete.add(c.getLong(0))
+            }
+        }
+
+        for (entryId in entryIdsToDelete) {
+            deleteEntryRecords(db, entryId)
+        }
+
+        return entryIdsToDelete.size
+    }
+
+    /**
+     * Deletes all entries belonging to a given source (by `source_id` or `source_url`),
+     * including associated auxiliary table records.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param sourceId Source ID to match, or null.
+     * @param sourceUrl Source URL to match, or null.
+     * @return Pair(success, number of deleted entries).
+     */
+    suspend fun deleteEntriesForSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceId: Long?,
+        sourceUrl: String?
+    ): Pair<Boolean, Int> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, 0)
+        }
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, 0)
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val count = deleteEntriesForSource(db, sourceId, sourceUrl)
+            db.close()
+            Pair(true, count)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, 0)
         }
     }
 

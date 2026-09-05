@@ -398,7 +398,7 @@ object SourceRepository : RepositoryInterface {
 
                 // 2. Remove entries that are no longer present in the RSS feed
                 val sourceForOps = if (source.url.isNotBlank()) source else source.copy(url = urlObj.url)
-                removeOutdatedSourceEntries(db, sourceForOps, rssLinks)
+                EntrySqliteRepository.removeOutdatedSourceEntries(db, sourceForOps, rssLinks)
 
                 // 3. Insert new entries from the feed
                 insertedCount = insertSourceEntries(db, entries, sourceForOps)
@@ -440,6 +440,7 @@ object SourceRepository : RepositoryInterface {
     /**
      * Removes all entries in `linkdatamodel` (and their related records in auxiliary tables)
      * belonging to the specified [source] whose links are NOT present in [validLinks].
+     * Delegated to [EntrySqliteRepository.removeOutdatedSourceEntries].
      *
      * @param db Open writable [SQLiteDatabase] instance.
      * @param source The [Source] whose outdated entries should be removed.
@@ -450,52 +451,12 @@ object SourceRepository : RepositoryInterface {
         db: SQLiteDatabase,
         source: Source,
         validLinks: Set<String>
-    ): Int {
-        val validSourceId = source.id?.takeIf { it != 0L }
-        val sourceWhereClause: String
-        val sourceWhereArgs: Array<String>
-        if (validSourceId != null && source.url.isNotBlank()) {
-            sourceWhereClause = "(source_id = ? OR source_url = ?)"
-            sourceWhereArgs = arrayOf(validSourceId.toString(), source.url)
-        } else if (validSourceId != null) {
-            sourceWhereClause = "source_id = ?"
-            sourceWhereArgs = arrayOf(validSourceId.toString())
-        } else {
-            sourceWhereClause = "source_url = ?"
-            sourceWhereArgs = arrayOf(source.url)
-        }
-
-        val existingCursor = db.rawQuery(
-            "SELECT id, link FROM linkdatamodel WHERE $sourceWhereClause",
-            sourceWhereArgs
-        )
-        val entriesToDelete = mutableListOf<Long>()
-        existingCursor.use { c ->
-            while (c.moveToNext()) {
-                val id = c.getLong(0)
-                val link = c.getString(1) ?: ""
-                if (link.isNotBlank() && link !in validLinks) {
-                    entriesToDelete.add(id)
-                }
-            }
-        }
-
-        for (id in entriesToDelete) {
-            val idArg = arrayOf(id.toString())
-            db.delete("entrycompactedtags", "entry_id = ?", idArg)
-            db.delete("socialdata", "entry_id = ?", idArg)
-            db.delete("entryvisithistory", "entry_id = ?", idArg)
-            db.delete("entrytransitionhistory", "entry_id = ? OR to_entry_id = ?", arrayOf(id.toString(), id.toString()))
-            db.delete("readlater", "entry_id = ?", idArg)
-            db.delete("linkdatamodel", "id = ?", idArg)
-        }
-
-        return entriesToDelete.size
-    }
+    ): Int = EntrySqliteRepository.removeOutdatedSourceEntries(db, source, validLinks)
 
     /**
      * Removes all entries in `linkdatamodel` (and their related records in auxiliary tables)
      * belonging to the specified [source] whose links are NOT present in [validLinks].
+     * Delegated to [EntrySqliteRepository.removeOutdatedSourceEntries].
      *
      * @param context Application context.
      * @param activeDatabaseState Current database state.
@@ -508,23 +469,7 @@ object SourceRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         source: Source,
         validLinks: Set<String>
-    ): Pair<Boolean, Int> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, 0)
-        }
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, 0)
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val deletedCount = removeOutdatedSourceEntries(db, source, validLinks)
-            db.close()
-            Pair(true, deletedCount)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Pair(false, 0)
-        }
-    }
+    ): Pair<Boolean, Int> = EntrySqliteRepository.removeOutdatedSourceEntries(context, activeDatabaseState, source, validLinks)
 
     /**
      * Inserts new [entries] belonging to a [source] into `linkdatamodel`.
@@ -716,6 +661,20 @@ object SourceRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState?,
         id: Long
+    ): Pair<Boolean, String?> = deleteSource(context, activeDatabaseState, id, deleteEntries = false)
+
+    /**
+     * Deletes a source by ID and cleans up associated operational data.
+     * When [deleteEntries] is true, also removes all entries in `linkdatamodel` whose
+     * `source_id` or `source_url` matches this source (and cleans up their auxiliary records).
+     *
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    suspend fun deleteSource(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long,
+        deleteEntries: Boolean = false
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -726,6 +685,18 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+
+            val sourceUrl: String? = db.rawQuery(
+                "SELECT url FROM ${getTableName()} WHERE id = ?",
+                arrayOf(id.toString())
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+
+            if (deleteEntries) {
+                EntrySqliteRepository.deleteEntriesForSource(db, id, sourceUrl)
+            }
+
             val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
             db.close()
 
@@ -740,15 +711,6 @@ object SourceRepository : RepositoryInterface {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
-
-    /**
-     * Deletes a source by ID (alias for [deleteById]).
-     */
-    suspend fun deleteSource(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
 
 
     /**
