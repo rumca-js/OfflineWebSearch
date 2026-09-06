@@ -49,6 +49,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Visited : Screen("visited", "Visited", Icons.AutoMirrored.Filled.List)
     object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)
     object AppLogging : Screen("app_logging", "Logs", Icons.AutoMirrored.Filled.List)
+    object OptionsAdvanced : Screen("options_advanced", "Advanced", Icons.Filled.Settings)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
@@ -297,6 +298,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToLogs = {
                                     navController.navigate(Screen.AppLogging.route)
                                 },
+                                onNavigateToAdvanced = {
+                                    navController.navigate(Screen.OptionsAdvanced.route)
+                                },
                                 onSetActive = { url ->
                                     handleDatabaseChange(url, searchViewModel, navController)
                                 }
@@ -304,6 +308,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.AppLogging.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.AppLoggingScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(Screen.OptionsAdvanced.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.OptionsAdvancedScreen(
                                 onBack = { navController.popBackStack() }
                             )
                         }

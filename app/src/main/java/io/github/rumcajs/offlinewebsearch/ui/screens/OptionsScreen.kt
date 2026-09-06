@@ -25,6 +25,7 @@ fun OptionsScreen(
     onNavigateToPreselectedList: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
+    onNavigateToAdvanced: () -> Unit = {},
     onSetActive: (String?) -> Unit
 ) {
     val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
@@ -108,6 +109,15 @@ fun OptionsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Logs")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = onNavigateToAdvanced,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Advanced")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
