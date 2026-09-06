@@ -1,8 +1,10 @@
 package io.github.rumcajs.offlinewebsearch.data
 
-import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.serialization.Serializable
+
+const val DATABASES_LIST: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt"
+const val DATABASES_LIST_INIT: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases_init.txt"
 
 @Serializable
 enum class OrderBy(val displayName: String) {
@@ -144,11 +146,11 @@ data class AppConfiguration(
     // main things
     val databases: Map<String, DatabaseState> = emptyMap(),
     val activeDatabase: String? = null,
-    val presetDatabasesUrl: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt",
     val supportedDatabasesExtensions: List<String> = listOf(".db",
         ".json",
         ".zip",      // contains json files
         ".db.zip"),  // contains db archived
+    val isInitialized: Boolean = false
 ) {
     fun isSupportedFileName(fileName: String): Boolean {
         return supportedDatabasesExtensions.any { ext -> fileName.endsWith(ext, ignoreCase = true) }

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DATABASES_LIST
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,7 @@ fun DatabasePreselectedListScreen(
         errorMessage = null
         try {
             val lines = withContext(Dispatchers.IO) {
-                val response = NetworkUtils.executeRequest(config.presetDatabasesUrl)
+                val response = NetworkUtils.executeRequest(DATABASES_LIST)
                 val text = if (response.isValid) response.text else null
                 if (!text.isNullOrBlank()) {
                     text.lines()

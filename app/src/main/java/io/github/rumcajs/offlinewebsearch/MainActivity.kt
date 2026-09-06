@@ -24,8 +24,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
+import io.github.rumcajs.offlinewebsearch.ui.components.StartupWizardDialog
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -81,6 +83,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
             }
 
             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.theme.OfflineWebSearchTheme {
+                val config by AppConfigManager.config.collectAsState()
+                if (!config.isInitialized) {
+                    StartupWizardDialog()
+                }
+
                 val navController = rememberNavController()
                 val items = listOf(
                     Screen.Home,

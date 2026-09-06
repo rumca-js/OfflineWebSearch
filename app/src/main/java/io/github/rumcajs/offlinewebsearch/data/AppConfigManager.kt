@@ -20,6 +20,7 @@ import java.io.IOException
 import java.util.zip.ZipFile
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import io.github.rumcajs.offlinewebsearch.workers.DatabaseUpdateWorker
 
 
 /**
@@ -47,10 +48,60 @@ object AppConfigManager {
         val applicationContext = context.applicationContext
         appContext = applicationContext
 
-        // Load configurations sequentially on the background thread to avoid state races
-        configScope.launch {
-            loadPersistedConfigSync(applicationContext)
-            loadNetworkConfigSync(applicationContext)
+        // Load configurations synchronously so state is populated before first UI frame
+        loadPersistedConfigSync(applicationContext)
+        loadNetworkConfigSync(applicationContext)
+    }
+
+    /**
+     * Updates the initialization state of the application.
+     *
+     * @param initialized True if initial setup/wizard has been completed, false otherwise.
+     */
+    fun setInitialized(initialized: Boolean = true) {
+        updateConfig { it.copy(isInitialized = initialized) }
+    }
+
+    /**
+     * Fetches startup databases from [DATABASES_LIST_INIT], registers and enqueues them
+     * with [DatabaseUpdateWorker] for background downloading, sets the active database if unset,
+     * and marks the application as initialized.
+     *
+     * @param context Application context for worker queuing and resource access.
+     * @return Result containing the list of configured database URLs, or failure exception.
+     */
+    suspend fun initializeStartupDatabases(context: Context): Result<List<String>> = withContext(Dispatchers.IO) {
+        try {
+            if (config.value.networkConfig.disabled) {
+                return@withContext Result.failure(IOException("Network communication is disabled in settings."))
+            }
+
+            val response = NetworkUtils.executeRequest(DATABASES_LIST_INIT)
+            val text = if (response.isValid) response.text else null
+            if (text.isNullOrBlank()) {
+                return@withContext Result.failure(IOException("Failed to download startup databases list."))
+            }
+
+            val urls = text.lines()
+                .map { it.trim() }
+                .filter { it.startsWith("http://") || it.startsWith("https://") }
+
+            if (urls.isEmpty()) {
+                return@withContext Result.failure(IOException("No valid database URLs found in startup list."))
+            }
+
+            withContext(Dispatchers.Main) {
+                urls.forEach { url ->
+                    DatabaseUpdateWorker.enqueueDatabase(context, url)
+                }
+                if (config.value.activeDatabase == null) {
+                    setActiveDatabase(urls.first())
+                }
+                setInitialized(true)
+            }
+            Result.success(urls)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

@@ -175,4 +175,28 @@ class AppConfigManagerTest {
         assertEquals(250, largeConfig.linksPerPage)
         assertEquals(250, largeConfig.effectiveLinksPerPage)
     }
+
+    @Test
+    fun testInitializationState() = runBlocking {
+        AppConfigManager.setInitialized(false)
+        var config = AppConfigManager.config.first()
+        assertFalse(config.isInitialized)
+
+        AppConfigManager.setInitialized(true)
+        config = AppConfigManager.config.first()
+        assertTrue(config.isInitialized)
+    }
+
+    @Test
+    fun testSerializationWithInitializationState() {
+        val uninitializedConfig = AppConfiguration(isInitialized = false)
+        val jsonUninit = Json.encodeToString(uninitializedConfig)
+        val decodedUninit = Json.decodeFromString<AppConfiguration>(jsonUninit)
+        assertFalse(decodedUninit.isInitialized)
+
+        val initializedConfig = AppConfiguration(isInitialized = true)
+        val jsonInit = Json.encodeToString(initializedConfig)
+        val decodedInit = Json.decodeFromString<AppConfiguration>(jsonInit)
+        assertTrue(decodedInit.isInitialized)
+    }
 }
