@@ -24,10 +24,12 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
-import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import androidx.compose.runtime.*
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalData
@@ -49,6 +51,7 @@ fun SourceScreen(
     onDelete: ((deleteEntries: Boolean) -> Unit)? = null,
     onBrowseEntries: ((Source) -> Unit)? = null,
     onRefreshSuccess: (() -> Unit)? = null,
+    onSourceUpdated: ((Source) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -63,6 +66,9 @@ fun SourceScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deleteEntriesWithSource by remember { mutableStateOf(false) }
+    var showAgeDialog by remember { mutableStateOf(false) }
+    var ageInput by remember(currentSource.age) { mutableStateOf((currentSource.age ?: 0).toString()) }
+    var isSavingAge by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentSource.id, activeDbState) {
         val sourceId = currentSource.id
@@ -154,6 +160,81 @@ fun SourceScreen(
                     showDeleteDialog = false
                     deleteEntriesWithSource = false
                 }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showAgeDialog && currentSource.id != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isSavingAge) {
+                    showAgeDialog = false
+                }
+            },
+            title = { Text("Define Age") },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter age designation (default is 0 if not set):",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = ageInput,
+                        onValueChange = { input ->
+                            if (input.isEmpty() || input.all { it.isDigit() }) {
+                                ageInput = input
+                            }
+                        },
+                        label = { Text("Age") },
+                        placeholder = { Text("0") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val parsedAge = ageInput.toIntOrNull() ?: 0
+                        val finalAge = if (parsedAge >= 0) parsedAge else 0
+                        val sourceId = currentSource.id
+                        val dbState = activeDbState
+                        if (sourceId != null && dbState != null) {
+                            scope.launch {
+                                isSavingAge = true
+                                val (success, err) = SourceRepository.updateSourceAge(
+                                    context = context,
+                                    activeDatabaseState = dbState,
+                                    id = sourceId,
+                                    age = finalAge
+                                )
+                                isSavingAge = false
+                                if (success) {
+                                    val updated = currentSource.copy(age = finalAge)
+                                    currentSource = updated
+                                    onSourceUpdated?.invoke(updated)
+                                    showAgeDialog = false
+                                    Toast.makeText(context, "Age updated", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, err ?: "Failed to update age", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isSavingAge
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showAgeDialog = false },
+                    enabled = !isSavingAge
+                ) {
                     Text("Cancel")
                 }
             }
@@ -253,6 +334,7 @@ fun SourceScreen(
                     add(PropertyItem(label = "ID", value = currentSource.id?.toString() ?: "N/A"))
                     add(PropertyItem(label = "Status", value = if (currentSource.enabled) "Enabled" else "Disabled"))
                     add(PropertyItem(label = "Type", value = currentSource.source_type?.takeIf { it.isNotBlank() } ?: SourceRepository.SOURCE_TYPE_RSS))
+                    add(PropertyItem(label = "Age", value = (currentSource.age ?: 0).toString()))
                     add(PropertyItem(label = "Favicon", value = currentSource.favicon.takeIf { it.isNotBlank() } ?: "", type= PropertyType.LINK))
                     add(PropertyItem(label = "Last Fetched", value = operationalData?.date_fetched ?: "Never"))
                     add(PropertyItem(label = "Import Duration", value = operationalData?.import_seconds?.let { "${it}s" } ?: "N/A"))
@@ -263,6 +345,18 @@ fun SourceScreen(
                 }
             )
 
+            if (isEditable && currentSource.id != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = {
+                        ageInput = (currentSource.age ?: 0).toString()
+                        showAgeDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Define Age")
+                }
+            }
 
             if (onBrowseEntries != null) {
                 Spacer(modifier = Modifier.height(16.dp))

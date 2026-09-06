@@ -41,6 +41,7 @@ fun SourceEditScreen(
     var title by remember { mutableStateOf(source.title) }
     var url by remember { mutableStateOf(source.url) }
     var enabled by remember { mutableStateOf(source.enabled) }
+    var ageText by remember { mutableStateOf((source.age ?: 0).toString()) }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var urlError by remember { mutableStateOf<String?>(null) }
@@ -53,13 +54,16 @@ fun SourceEditScreen(
             return false
         }
         urlError = null
+        val parsedAge = ageText.toIntOrNull() ?: 0
+        val finalAge = if (parsedAge >= 0) parsedAge else 0
         return if (isAddMode) {
             val (success, err) = SourceRepository.insertSource(
                 context = context,
                 activeDatabaseState = activeDbState,
                 title = title,
                 url = url,
-                enabled = enabled
+                enabled = enabled,
+                age = finalAge
             )
             errorMessage = if (!success) err else null
             success
@@ -70,7 +74,8 @@ fun SourceEditScreen(
                 id = source.id!!,
                 title = title,
                 url = url,
-                enabled = enabled
+                enabled = enabled,
+                age = finalAge
             )
             errorMessage = if (!success) err else null
             success
@@ -96,12 +101,15 @@ fun SourceEditScreen(
                                     val success = saveSource()
                                     isSaving = false
                                     if (success) {
+                                        val parsedAge = ageText.toIntOrNull() ?: 0
+                                        val finalAge = if (parsedAge >= 0) parsedAge else 0
                                         Toast.makeText(context, if (isAddMode) "Source added" else "Source updated successfully", Toast.LENGTH_SHORT).show()
                                         onSourceUpdated(
                                             source.copy(
                                                 title = title,
                                                 url = url,
-                                                enabled = enabled
+                                                enabled = enabled,
+                                                age = finalAge
                                             )
                                         )
                                     } else {
@@ -137,6 +145,8 @@ fun SourceEditScreen(
                 },
                 enabled = enabled,
                 onEnabledChange = { enabled = it },
+                age = ageText,
+                onAgeChange = { ageText = it },
                 isEditable = isEditable,
                 urlError = urlError
             )
@@ -169,12 +179,15 @@ fun SourceEditScreen(
                             val success = saveSource()
                             isSaving = false
                             if (success) {
+                                val parsedAge = ageText.toIntOrNull() ?: 0
+                                val finalAge = if (parsedAge >= 0) parsedAge else 0
                                 Toast.makeText(context, if (isAddMode) "Source added" else "Source updated successfully", Toast.LENGTH_SHORT).show()
                                 onSourceUpdated(
                                     source.copy(
                                         title = title,
                                         url = url,
-                                        enabled = enabled
+                                        enabled = enabled,
+                                        age = finalAge
                                     )
                                 )
                             } else {

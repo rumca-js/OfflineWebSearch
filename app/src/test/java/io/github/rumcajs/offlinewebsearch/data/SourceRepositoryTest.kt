@@ -500,4 +500,125 @@ class SourceRepositoryTest {
 
         assertEquals(1, entryCount)
     }
+
+    @Test
+    fun `insertSourceEntries sets ageDesignation from entry age or falls back to source age`() = runBlocking {
+        val sourceWithAge = Source(
+            id = 100L,
+            url = "https://age-test.com/rss",
+            title = "Age Test Source",
+            age = 12
+        )
+        val sourceWithoutAge = Source(
+            id = 200L,
+            url = "https://no-age-test.com/rss",
+            title = "No Age Source",
+            age = null
+        )
+
+        val entries = listOf(
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://age-test.com/entry-override",
+                title = "Entry Override",
+                age = 18
+            ),
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://age-test.com/entry-fallback",
+                title = "Entry Fallback",
+                age = 0
+            ),
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://no-age-test.com/entry-specific",
+                title = "Entry Specific",
+                age = 16
+            ),
+            io.github.rumcajs.offlinewebsearch.data.repositories.Entry(
+                link = "https://no-age-test.com/entry-default",
+                title = "Entry Default",
+                age = null
+            )
+        )
+
+        val dbWrite = android.database.sqlite.SQLiteDatabase.openDatabase(
+            dbFile.absolutePath,
+            null,
+            android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
+        )
+        SourceRepository.insertSourceEntries(dbWrite, listOf(entries[0], entries[1]), sourceWithAge)
+        SourceRepository.insertSourceEntries(dbWrite, listOf(entries[2], entries[3]), sourceWithoutAge)
+        dbWrite.close()
+
+        val dbRead = android.database.sqlite.SQLiteDatabase.openDatabase(
+            dbFile.absolutePath,
+            null,
+            android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+        )
+
+        fun getAgeForLink(link: String): Int {
+            val cursor = dbRead.rawQuery("SELECT age FROM linkdatamodel WHERE link = ?", arrayOf(link))
+            return cursor.use { c -> if (c.moveToFirst()) c.getInt(0) else -1 }
+        }
+
+        assertEquals(18, getAgeForLink("https://age-test.com/entry-override"))
+        assertEquals(12, getAgeForLink("https://age-test.com/entry-fallback"))
+        assertEquals(16, getAgeForLink("https://no-age-test.com/entry-specific"))
+        assertEquals(0, getAgeForLink("https://no-age-test.com/entry-default"))
+
+        dbRead.close()
+    }
+
+    @Test
+    fun `insertSource with age sets age column and defaults to 0 when not provided`() = runBlocking {
+        val (okDefault, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Default Age Source",
+            url = "https://default-age.com/feed.xml",
+            enabled = true
+        )
+        assertTrue(okDefault)
+        val defaultSource = SourceRepository.getSourceByUrl(context, dbState, "https://default-age.com/feed.xml")
+        assertNotNull(defaultSource)
+        assertEquals(0, defaultSource!!.age)
+
+        val (okCustom, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Custom Age Source",
+            url = "https://custom-age.com/feed.xml",
+            enabled = true,
+            age = 18
+        )
+        assertTrue(okCustom)
+        val customSource = SourceRepository.getSourceByUrl(context, dbState, "https://custom-age.com/feed.xml")
+        assertNotNull(customSource)
+        assertEquals(18, customSource!!.age)
+    }
+
+    @Test
+    fun `updateSourceAge updates age column in database`() = runBlocking {
+        val (okInsert, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Update Age Source",
+            url = "https://update-age.com/feed.xml",
+            enabled = true
+        )
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, "https://update-age.com/feed.xml")!!
+        assertEquals(0, source.age)
+
+        val (okUpdate, err) = SourceRepository.updateSourceAge(
+            context = context,
+            activeDatabaseState = dbState,
+            id = source.id!!,
+            age = 21
+        )
+        assertTrue(err ?: "", okUpdate)
+
+        val updated = SourceRepository.getSourceById(context, dbState, source.id!!)
+        assertNotNull(updated)
+        assertEquals(21, updated!!.age)
+    }
 }
+
