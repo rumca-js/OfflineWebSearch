@@ -22,7 +22,8 @@ data class Source(
     val url: String = "",
     val title: String = "",
     val favicon: String = "",
-    val source_type: String? = null
+    val source_type: String? = null,
+    val age: Int? = 0
 )
 
 object SourceRepository : RepositoryInterface {
@@ -46,7 +47,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, favicon, source_type FROM ${getTableName()} ORDER BY url, title"
+            val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age FROM ${getTableName()} ORDER BY url, title"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -56,6 +57,8 @@ object SourceRepository : RepositoryInterface {
                     val title = it.getString(it.getColumnIndexOrThrow("title")) ?: ""
                     val favicon = it.getString(it.getColumnIndexOrThrow("favicon")) ?: ""
                     val sourceType = it.getString(it.getColumnIndexOrThrow("source_type"))
+                    val ageIdx = it.getColumnIndex("age")
+                    val age = if (ageIdx != -1 && !it.isNull(ageIdx)) it.getInt(ageIdx) else 0
 
                     sources.add(
                         Source(
@@ -64,7 +67,8 @@ object SourceRepository : RepositoryInterface {
                             url = url,
                             title = title,
                             favicon = favicon,
-                            source_type = sourceType
+                            source_type = sourceType,
+                            age = age
                         )
                     )
                 }
@@ -94,7 +98,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon, s.source_type FROM ${getTableName()} AS s " +
+            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon, s.source_type, s.age FROM ${getTableName()} AS s " +
                     "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_obj_id ORDER BY sod.date_fetched ASC";
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
@@ -105,6 +109,8 @@ object SourceRepository : RepositoryInterface {
                     val title = it.getString(it.getColumnIndexOrThrow("s.title")) ?: ""
                     val favicon = it.getString(it.getColumnIndexOrThrow("s.favicon")) ?: ""
                     val sourceType = it.getString(it.getColumnIndexOrThrow("s.source_type"))
+                    val ageIdx = it.getColumnIndex("age")
+                    val age = if (ageIdx != -1 && !it.isNull(ageIdx)) it.getInt(ageIdx) else 0
 
                     if (enabledVal == 1) {
                         sources.add(
@@ -114,7 +120,8 @@ object SourceRepository : RepositoryInterface {
                                 url = url,
                                 title = title,
                                 favicon = favicon,
-                                source_type = sourceType
+                                source_type = sourceType,
+                                age = age
                             )
                         )
                     }
@@ -176,7 +183,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type FROM ${getTableName()} WHERE id = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age FROM ${getTableName()} WHERE id = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -186,7 +193,9 @@ object SourceRepository : RepositoryInterface {
                         val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
                         val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
                         val sourceType = c.getString(c.getColumnIndexOrThrow("source_type"))
-                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType)
+                        val ageIdx = c.getColumnIndex("age")
+                        val age = if (ageIdx != -1 && !c.isNull(ageIdx)) c.getInt(ageIdx) else 0
+                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType, age = age)
                     } else null
                 }
             }
@@ -211,7 +220,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type FROM ${getTableName()} WHERE url = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age FROM ${getTableName()} WHERE url = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -221,7 +230,9 @@ object SourceRepository : RepositoryInterface {
                         val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
                         val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
                         val sourceType = c.getString(c.getColumnIndexOrThrow("source_type"))
-                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType)
+                        val ageIdx = c.getColumnIndex("age")
+                        val age = if (ageIdx != -1 && !c.isNull(ageIdx)) c.getInt(ageIdx) else 0
+                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType, age = age)
                     } else null
                 }
             }
@@ -243,7 +254,8 @@ object SourceRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         title: String,
         url: String,
-        enabled: Boolean
+        enabled: Boolean,
+        age: Int = 0
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -264,7 +276,7 @@ object SourceRepository : RepositoryInterface {
                 put("export_to_cms", false)
                 put("remove_after_days", 0)
                 put("language", "")
-                put("age", 0)
+                put("age", if (age >= 0) age else 0)
                 put("favicon", "")
                 put("fetch_period", 3600)
                 put("auto_tag", "")
@@ -299,7 +311,8 @@ object SourceRepository : RepositoryInterface {
         id: Long,
         title: String,
         url: String,
-        enabled: Boolean
+        enabled: Boolean,
+        age: Int? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -314,6 +327,9 @@ object SourceRepository : RepositoryInterface {
                 put("title", title)
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
+                if (age != null) {
+                    put("age", if (age >= 0) age else 0)
+                }
             }
             val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
             db.close()
@@ -321,6 +337,44 @@ object SourceRepository : RepositoryInterface {
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
             AppLoggingRepository.error(context, activeDatabaseState, "Url: $url Exception when updating source properties in $functionName")
+
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Updates the age designation for a source in `sourcedatamodel`.
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param id ID of the source.
+     * @param age New age designation (defaults to 0 if <= 0).
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    suspend fun updateSourceAge(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long,
+        age: Int
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val values = ContentValues().apply {
+                put("age", if (age >= 0) age else 0)
+            }
+            val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
+            db.close()
+            if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $id Exception when updating source age in $functionName")
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
@@ -526,6 +580,12 @@ object SourceRepository : RepositoryInterface {
                 }
             }
 
+            val ageDesignation = when {
+                (entry.age ?: 0) > 0 -> entry.age ?: 0
+                (source.age ?: 0) > 0 -> source.age ?: 0
+                else -> 0
+            }
+
             val values = ContentValues().apply {
                 put("link", link)
                 put("title", entry.title ?: "")
@@ -540,7 +600,7 @@ object SourceRepository : RepositoryInterface {
                 put("date_created", entry.date_created?.takeIf { it.isNotBlank() } ?: defaultDateCreated)
                 put("date_published", entry.date_published ?: "")
                 put("date_dead_since", entry.date_dead_since ?: "")
-                put("age", entry.age ?: 0)
+                put("age", ageDesignation)
                 put("status_code", entry.status_code ?: 0)
                 put("manual_status_code", entry.manual_status_code ?: 0)
                 put("bookmarked", if (entry.bookmarked == true) 1 else 0)

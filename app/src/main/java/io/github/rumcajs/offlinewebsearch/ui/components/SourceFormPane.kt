@@ -7,6 +7,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+
 /**
  * Reusable form pane for editing/adding a Source.
  * Shared between SourceEditScreen and SourceUrlEditPreviewScreen.
@@ -19,6 +22,8 @@ fun SourceFormPane(
     onUrlChange: (String) -> Unit,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
+    age: String = "0",
+    onAgeChange: (String) -> Unit = {},
     isEditable: Boolean,
     urlError: String? = null,
     modifier: Modifier = Modifier
@@ -60,6 +65,23 @@ fun SourceFormPane(
             singleLine = true,
             isError = urlError != null,
             supportingText = urlError?.let { { Text(it) } }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = age,
+            onValueChange = { input ->
+                if (isEditable && (input.isEmpty() || input.all { it.isDigit() })) {
+                    onAgeChange(input)
+                }
+            },
+            label = { Text("Age") },
+            placeholder = { Text("0") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            enabled = isEditable,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
