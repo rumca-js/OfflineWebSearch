@@ -49,7 +49,6 @@ fun SourceUrlEditPreviewScreen(
     var title by remember { mutableStateOf("") }
     var url by remember { mutableStateOf(initialUrl) }
     var enabled by remember { mutableStateOf(true) }
-    var ageText by remember { mutableStateOf("0") }
     var favicon by remember { mutableStateOf("") }
 
     var isSaving by remember { mutableStateOf(false) }
@@ -119,16 +118,12 @@ fun SourceUrlEditPreviewScreen(
         }
         urlError = null
 
-        val parsedAge = ageText.toIntOrNull() ?: 0
-        val finalAge = if (parsedAge >= 0) parsedAge else 0
-
         val (success, err) = SourceRepository.insertSource(
             context = context,
             activeDatabaseState = activeDbState,
             title = title,
             url = url,
-            enabled = enabled,
-            age = finalAge
+            enabled = enabled
         )
         errorMessage = if (!success) err else null
         return success
@@ -170,7 +165,7 @@ fun SourceUrlEditPreviewScreen(
                                     if (success) {
                                         Toast.makeText(context, "Source added", Toast.LENGTH_SHORT).show()
                                         val createdSource = SourceRepository.getSourceByUrl(context, activeDbState, url)
-                                            ?: Source(title = title, url = url, enabled = enabled, favicon = favicon, age = ageText.toIntOrNull() ?: 0)
+                                            ?: Source(title = title, url = url, enabled = enabled, favicon = favicon)
                                         onSourceAdded(createdSource)
                                     } else {
                                         val msg = errorMessage ?: "Failed to save source"
@@ -205,8 +200,6 @@ fun SourceUrlEditPreviewScreen(
                 },
                 enabled = enabled,
                 onEnabledChange = { enabled = it },
-                age = ageText,
-                onAgeChange = { ageText = it },
                 isEditable = isEditable,
                 urlError = urlError
             )

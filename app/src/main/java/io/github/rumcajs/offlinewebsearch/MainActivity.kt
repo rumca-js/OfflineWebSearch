@@ -214,9 +214,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     onRefreshSuccess = {
                                         searchViewModel.refreshPage(context)
                                     },
-                                    onSourceUpdated = { updated ->
-                                        searchViewModel.selectedSource = updated
-                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }
