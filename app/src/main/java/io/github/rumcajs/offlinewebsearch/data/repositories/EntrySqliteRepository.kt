@@ -223,6 +223,9 @@ object EntrySqliteRepository : EntryRepository() {
                 db.close()
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${entry.id} Clearing source entries $functionName")
+
             e.printStackTrace()
             Triple(false, -1L, e.message ?: "Unknown SQL error")
         }
@@ -264,6 +267,9 @@ object EntrySqliteRepository : EntryRepository() {
             db.close()
             rows > 0
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} Clearing source entries $functionName")
+
             e.printStackTrace()
             false
         }
@@ -296,6 +302,9 @@ object EntrySqliteRepository : EntryRepository() {
             db.close()
             if (rows > 0) Pair(true, newVotes) else Pair(false, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} Setting vote $functionName")
+
             e.printStackTrace()
             Pair(false, null)
         }
@@ -327,6 +336,9 @@ object EntrySqliteRepository : EntryRepository() {
             db.close()
             true
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} incrementing visits in $functionName")
+
             e.printStackTrace()
             false
         }
@@ -360,6 +372,9 @@ object EntrySqliteRepository : EntryRepository() {
                 db.close()
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} deleting entry $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -465,6 +480,9 @@ object EntrySqliteRepository : EntryRepository() {
             db.close()
             Pair(true, deletedCount)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Removing outdated $functionName")
+
             e.printStackTrace()
             Pair(false, 0)
         }
@@ -545,6 +563,9 @@ object EntrySqliteRepository : EntryRepository() {
             db.close()
             Pair(true, count)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source:${sourceId}. Removing source entries $functionName")
+
             e.printStackTrace()
             Pair(false, 0)
         }
@@ -585,6 +606,9 @@ object EntrySqliteRepository : EntryRepository() {
                 false
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source:${id}. Removing entry $functionName")
+
             e.printStackTrace()
             false
         }
@@ -611,6 +635,9 @@ object EntrySqliteRepository : EntryRepository() {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -646,6 +673,9 @@ object EntrySqliteRepository : EntryRepository() {
                 cursor.use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
             }
         } catch (e: Exception) {
+            //val functionName = object {}.javaClass.enclosingMethod?.name
+            //AppLoggingRepository.error(context, state, "counting entries $functionName")
+
             e.printStackTrace()
             0
         }
@@ -711,6 +741,9 @@ object EntrySqliteRepository : EntryRepository() {
                 }
             }
         } catch (e: Exception) {
+            //val functionName = object {}.javaClass.enclosingMethod?.name
+            //AppLoggingRepository.error(context, state, "counting entries $functionName")
+
             e.printStackTrace()
         }
         return result

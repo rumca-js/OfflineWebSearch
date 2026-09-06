@@ -71,6 +71,9 @@ object SourceRepository : RepositoryInterface {
             }
             db.close()
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting all sources in $functionName")
+
             e.printStackTrace()
         }
 
@@ -119,6 +122,9 @@ object SourceRepository : RepositoryInterface {
             }
             db.close()
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting sources in $functionName")
+
             e.printStackTrace()
         }
 
@@ -185,6 +191,9 @@ object SourceRepository : RepositoryInterface {
                 }
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $sourceId Exception when getting source properties in $functionName")
+
             e.printStackTrace()
             null
         }
@@ -217,6 +226,9 @@ object SourceRepository : RepositoryInterface {
                 }
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Url: $sourceUrl Exception when getting source properties in $functionName")
+
             e.printStackTrace()
             null
         }
@@ -269,6 +281,9 @@ object SourceRepository : RepositoryInterface {
             db.close()
             if (newId != -1L) Pair(true, null) else Pair(false, "Insert returned -1; check table schema")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Url: $url Exception when inserting source properties in $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -304,6 +319,9 @@ object SourceRepository : RepositoryInterface {
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Url: $url Exception when updating source properties in $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -341,6 +359,9 @@ object SourceRepository : RepositoryInterface {
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source URL may not exist")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Url: ${urlObj.url} Exception when updating metadata in $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -432,6 +453,9 @@ object SourceRepository : RepositoryInterface {
 
             Pair(true, "Successfully inserted $insertedCount new entries")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Url: ${urlObj.url} Exception when adding in $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Failed to fetch or insert entries")
         }
@@ -565,6 +589,9 @@ object SourceRepository : RepositoryInterface {
             db.close()
             Pair(true, insertedCount)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source:$source.id}. Error on Inserting source entries $functionName")
+
             e.printStackTrace()
             Pair(false, 0)
         }
@@ -707,6 +734,9 @@ object SourceRepository : RepositoryInterface {
                 Pair(false, "No rows deleted; source may not exist")
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source:$id}. Error on Inserting source entries $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -734,6 +764,9 @@ object SourceRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing source entries $functionName")
+
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
