@@ -69,6 +69,9 @@ fun SourceScreen(
     var showAgeDialog by remember { mutableStateOf(false) }
     var ageInput by remember(currentSource.age) { mutableStateOf((currentSource.age ?: 0).toString()) }
     var isSavingAge by remember { mutableStateOf(false) }
+    var showAutoTagDialog by remember { mutableStateOf(false) }
+    var autoTagInput by remember(currentSource.auto_tag) { mutableStateOf(currentSource.auto_tag) }
+    var isSavingAutoTag by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentSource.id, activeDbState) {
         val sourceId = currentSource.id
@@ -173,11 +176,11 @@ fun SourceScreen(
                     showAgeDialog = false
                 }
             },
-            title = { Text("Define Age") },
+            title = { Text("Default Entry Age") },
             text = {
                 Column {
                     Text(
-                        text = "Enter age designation (default is 0 if not set):",
+                        text = "Enter the age that will be applied to entries fetched from this source (default is 0):",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -188,7 +191,7 @@ fun SourceScreen(
                                 ageInput = input
                             }
                         },
-                        label = { Text("Age") },
+                        label = { Text("Default Entry Age") },
                         placeholder = { Text("0") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
@@ -218,9 +221,9 @@ fun SourceScreen(
                                     currentSource = updated
                                     onSourceUpdated?.invoke(updated)
                                     showAgeDialog = false
-                                    Toast.makeText(context, "Age updated", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Default entry age updated", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    Toast.makeText(context, err ?: "Failed to update age", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, err ?: "Failed to update default entry age", Toast.LENGTH_LONG).show()
                                 }
                             }
                         }
@@ -234,6 +237,74 @@ fun SourceScreen(
                 TextButton(
                     onClick = { showAgeDialog = false },
                     enabled = !isSavingAge
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showAutoTagDialog && currentSource.id != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isSavingAutoTag) {
+                    showAutoTagDialog = false
+                }
+            },
+            title = { Text("Define Auto Tag") },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter tags separated by comma (e.g. news, tech, android):",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = autoTagInput,
+                        onValueChange = { autoTagInput = it },
+                        label = { Text("Auto Tag") },
+                        placeholder = { Text("news, tech, android") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = false
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val sourceId = currentSource.id
+                        val dbState = activeDbState
+                        if (sourceId != null && dbState != null) {
+                            scope.launch {
+                                isSavingAutoTag = true
+                                val (success, err) = SourceRepository.updateSourceAutoTag(
+                                    context = context,
+                                    activeDatabaseState = dbState,
+                                    id = sourceId,
+                                    autoTag = autoTagInput.trim()
+                                )
+                                isSavingAutoTag = false
+                                if (success) {
+                                    val updated = currentSource.copy(auto_tag = autoTagInput.trim())
+                                    currentSource = updated
+                                    onSourceUpdated?.invoke(updated)
+                                    showAutoTagDialog = false
+                                    Toast.makeText(context, "Auto tags updated", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, err ?: "Failed to update auto tags", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isSavingAutoTag
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showAutoTagDialog = false },
+                    enabled = !isSavingAutoTag
                 ) {
                     Text("Cancel")
                 }
@@ -334,7 +405,7 @@ fun SourceScreen(
                     add(PropertyItem(label = "ID", value = currentSource.id?.toString() ?: "N/A"))
                     add(PropertyItem(label = "Status", value = if (currentSource.enabled) "Enabled" else "Disabled"))
                     add(PropertyItem(label = "Type", value = currentSource.source_type?.takeIf { it.isNotBlank() } ?: SourceRepository.SOURCE_TYPE_RSS))
-                    add(PropertyItem(label = "Age", value = (currentSource.age ?: 0).toString()))
+                    add(PropertyItem(label = "Default Entry Age", value = (currentSource.age ?: 0).toString()))
                     add(PropertyItem(label = "Favicon", value = currentSource.favicon.takeIf { it.isNotBlank() } ?: "", type= PropertyType.LINK))
                     add(PropertyItem(label = "Last Fetched", value = operationalData?.date_fetched ?: "Never"))
                     add(PropertyItem(label = "Import Duration", value = operationalData?.import_seconds?.let { "${it}s" } ?: "N/A"))
@@ -354,7 +425,17 @@ fun SourceScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Define Age")
+                    Text("Define Default Entry Age")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        autoTagInput = currentSource.auto_tag
+                        showAutoTagDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Define Auto Tag")
                 }
             }
 
