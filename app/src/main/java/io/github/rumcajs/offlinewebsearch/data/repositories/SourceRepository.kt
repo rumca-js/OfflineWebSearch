@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
@@ -36,6 +37,36 @@ object SourceRepository : RepositoryInterface {
     override fun getTableName(): String = "sourcedatamodel"
 
     /**
+     * Reads the current cursor row and constructs a [Source] from it.
+     * Assumes columns: id, enabled, url, title, favicon, source_type, age, auto_tag, language.
+     */
+    private fun cursorToSource(cursor: Cursor): Source {
+        val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
+        val enabledVal = cursor.getInt(cursor.getColumnIndexOrThrow("enabled"))
+        val url = cursor.getString(cursor.getColumnIndexOrThrow("url")) ?: ""
+        val title = cursor.getString(cursor.getColumnIndexOrThrow("title")) ?: ""
+        val favicon = cursor.getString(cursor.getColumnIndexOrThrow("favicon")) ?: ""
+        val sourceType = cursor.getString(cursor.getColumnIndexOrThrow("source_type"))
+        val ageIdx = cursor.getColumnIndex("age")
+        val age = if (ageIdx != -1 && !cursor.isNull(ageIdx)) cursor.getInt(ageIdx) else 0
+        val autoTagIdx = cursor.getColumnIndex("auto_tag")
+        val autoTag = if (autoTagIdx != -1 && !cursor.isNull(autoTagIdx)) cursor.getString(autoTagIdx) else ""
+        val languageIdx = cursor.getColumnIndex("language")
+        val language = if (languageIdx != -1 && !cursor.isNull(languageIdx)) cursor.getString(languageIdx) else ""
+        return Source(
+            id = id,
+            enabled = enabledVal == 1,
+            url = url,
+            title = title,
+            favicon = favicon,
+            source_type = sourceType,
+            age = age,
+            auto_tag = autoTag,
+            language = language
+        )
+    }
+
+    /**
      * This function return all sources
      */
     suspend fun getAllSources(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
@@ -53,32 +84,7 @@ object SourceRepository : RepositoryInterface {
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
-                    val id = it.getLong(it.getColumnIndexOrThrow("id"))
-                    val enabledVal = it.getInt(it.getColumnIndexOrThrow("enabled"))
-                    val url = it.getString(it.getColumnIndexOrThrow("url")) ?: ""
-                    val title = it.getString(it.getColumnIndexOrThrow("title")) ?: ""
-                    val favicon = it.getString(it.getColumnIndexOrThrow("favicon")) ?: ""
-                    val sourceType = it.getString(it.getColumnIndexOrThrow("source_type"))
-                    val ageIdx = it.getColumnIndex("age")
-                    val age = if (ageIdx != -1 && !it.isNull(ageIdx)) it.getInt(ageIdx) else 0
-                    val autoTagIdx = it.getColumnIndex("auto_tag")
-                    val autoTag = if (autoTagIdx != -1 && !it.isNull(autoTagIdx)) it.getString(autoTagIdx) else ""
-                    val languageIdx = it.getColumnIndex("language")
-                    val language = if (languageIdx != -1 && !it.isNull(languageIdx)) it.getString(languageIdx) else ""
-
-                    sources.add(
-                        Source(
-                            id = id,
-                            enabled = enabledVal == 1,
-                            url = url,
-                            title = title,
-                            favicon = favicon,
-                            source_type = sourceType,
-                            age = age,
-                            auto_tag = autoTag,
-                            language = language
-                        )
-                    )
+                    sources.add(cursorToSource(it))
                 }
             }
             db.close()
@@ -106,38 +112,17 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon, s.source_type, s.age, s.auto_tag, s.language FROM ${getTableName()} AS s " +
-                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_obj_id ORDER BY sod.date_fetched ASC";
+            val sqlText = "SELECT s.id AS id, s.enabled AS enabled, s.url AS url, s.title AS title, " +
+                    "s.favicon AS favicon, s.source_type AS source_type, s.age AS age, " +
+                    "s.auto_tag AS auto_tag, s.language AS language " +
+                    "FROM ${getTableName()} AS s " +
+                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_obj_id ORDER BY sod.date_fetched ASC"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
-                    val id = it.getLong(it.getColumnIndexOrThrow("s.id"))
-                    val enabledVal = it.getInt(it.getColumnIndexOrThrow("s.enabled"))
-                    val url = it.getString(it.getColumnIndexOrThrow("s.url")) ?: ""
-                    val title = it.getString(it.getColumnIndexOrThrow("s.title")) ?: ""
-                    val favicon = it.getString(it.getColumnIndexOrThrow("s.favicon")) ?: ""
-                    val sourceType = it.getString(it.getColumnIndexOrThrow("s.source_type"))
-                    val ageIdx = it.getColumnIndex("age")
-                    val age = if (ageIdx != -1 && !it.isNull(ageIdx)) it.getInt(ageIdx) else 0
-                    val autoTagIdx = it.getColumnIndex("auto_tag")
-                    val autoTag = if (autoTagIdx != -1 && !it.isNull(autoTagIdx)) it.getString(autoTagIdx) else ""
-                    val languageIdx = it.getColumnIndex("language")
-                    val language = if (languageIdx != -1 && !it.isNull(languageIdx)) it.getString(languageIdx) else ""
-
-                    if (enabledVal == 1) {
-                        sources.add(
-                            Source(
-                                id = id,
-                                enabled = true,
-                                url = url,
-                                title = title,
-                                favicon = favicon,
-                                source_type = sourceType,
-                                age = age,
-                                auto_tag = autoTag,
-                                language = language
-                            )
-                        )
+                    val source = cursorToSource(it)
+                    if (source.enabled) {
+                        sources.add(source)
                     }
                 }
             }
@@ -200,29 +185,7 @@ object SourceRepository : RepositoryInterface {
                 val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} WHERE id = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
                 cursor.use { c ->
-                    if (c.moveToFirst()) {
-                        val id = c.getLong(c.getColumnIndexOrThrow("id"))
-                        val enabledVal = c.getInt(c.getColumnIndexOrThrow("enabled"))
-                        val url = c.getString(c.getColumnIndexOrThrow("url")) ?: ""
-                        val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
-                        val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
-                        val sourceType = c.getString(c.getColumnIndexOrThrow("source_type"))
-                        val ageIdx = c.getColumnIndex("age")
-                        val age = if (ageIdx != -1 && !c.isNull(ageIdx)) c.getInt(ageIdx) else 0
-                        val autoTagIdx = c.getColumnIndex("auto_tag")
-                        val autoTag = if (autoTagIdx != -1 && !c.isNull(autoTagIdx)) c.getString(autoTagIdx) else ""
-                        val languageIdx = c.getColumnIndex("language")
-                        val language = if (languageIdx != -1 && !c.isNull(languageIdx)) c.getString(languageIdx) else ""
-                        Source(id = id,
-                            enabled =enabledVal == 1,
-                            url = url,
-                            title = title,
-                            favicon = favicon,
-                            source_type = sourceType,
-                            age = age,
-                            auto_tag = autoTag,
-                            language = language)
-                    } else null
+                    if (c.moveToFirst()) cursorToSource(c) else null
                 }
             }
         } catch (e: Exception) {
@@ -249,30 +212,7 @@ object SourceRepository : RepositoryInterface {
                 val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} WHERE url = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
                 cursor.use { c ->
-                    if (c.moveToFirst()) {
-                        val id = c.getLong(c.getColumnIndexOrThrow("id"))
-                        val enabledVal = c.getInt(c.getColumnIndexOrThrow("enabled"))
-                        val url = c.getString(c.getColumnIndexOrThrow("url")) ?: ""
-                        val title = c.getString(c.getColumnIndexOrThrow("title")) ?: ""
-                        val favicon = c.getString(c.getColumnIndexOrThrow("favicon")) ?: ""
-                        val sourceType = c.getString(c.getColumnIndexOrThrow("source_type"))
-                        val ageIdx = c.getColumnIndex("age")
-                        val age = if (ageIdx != -1 && !c.isNull(ageIdx)) c.getInt(ageIdx) else 0
-                        val autoTagIdx = c.getColumnIndex("auto_tag")
-                        val autoTag = if (autoTagIdx != -1 && !c.isNull(autoTagIdx)) c.getString(autoTagIdx) else ""
-                        val languageIdx = c.getColumnIndex("language")
-                        val language = if (languageIdx != -1 && !c.isNull(languageIdx)) c.getString(languageIdx) else ""
-
-                        Source(id = id,
-                            enabled = enabledVal == 1,
-                            url = url,
-                            title = title,
-                            favicon = favicon,
-                            source_type = sourceType,
-                            age = age,
-                            auto_tag = autoTag,
-                            language = language)
-                    } else null
+                    if (c.moveToFirst()) cursorToSource(c) else null
                 }
             }
         } catch (e: Exception) {
