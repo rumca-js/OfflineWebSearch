@@ -244,6 +244,10 @@ fun SourceScreen(
         )
     }
 
+    fun getTagInput(tag: String): String {
+        return tag.trim().lowercase()
+    }
+
     if (showAutoTagDialog && currentSource.id != null) {
         AlertDialog(
             onDismissRequest = {
@@ -281,11 +285,11 @@ fun SourceScreen(
                                     context = context,
                                     activeDatabaseState = dbState,
                                     id = sourceId,
-                                    autoTag = autoTagInput.trim()
+                                    autoTag = getTagInput(autoTagInput)
                                 )
                                 isSavingAutoTag = false
                                 if (success) {
-                                    val updated = currentSource.copy(auto_tag = autoTagInput.trim())
+                                    val updated = currentSource.copy(auto_tag = getTagInput(autoTagInput))
                                     currentSource = updated
                                     onSourceUpdated?.invoke(updated)
                                     showAutoTagDialog = false
