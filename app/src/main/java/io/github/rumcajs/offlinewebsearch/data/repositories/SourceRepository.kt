@@ -24,7 +24,8 @@ data class Source(
     val favicon: String = "",
     val source_type: String? = null,
     val age: Int? = 0,
-    val auto_tag: String = ""
+    val auto_tag: String = "",
+    val language: String = ""
 )
 
 object SourceRepository : RepositoryInterface {
@@ -48,7 +49,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag FROM ${getTableName()} ORDER BY url, title"
+            val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} ORDER BY url, title"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
@@ -62,6 +63,8 @@ object SourceRepository : RepositoryInterface {
                     val age = if (ageIdx != -1 && !it.isNull(ageIdx)) it.getInt(ageIdx) else 0
                     val autoTagIdx = it.getColumnIndex("auto_tag")
                     val autoTag = if (autoTagIdx != -1 && !it.isNull(autoTagIdx)) it.getString(autoTagIdx) else ""
+                    val languageIdx = it.getColumnIndex("language")
+                    val language = if (languageIdx != -1 && !it.isNull(languageIdx)) it.getString(languageIdx) else ""
 
                     sources.add(
                         Source(
@@ -72,7 +75,8 @@ object SourceRepository : RepositoryInterface {
                             favicon = favicon,
                             source_type = sourceType,
                             age = age,
-                            auto_tag = autoTag
+                            auto_tag = autoTag,
+                            language = language
                         )
                     )
                 }
@@ -102,7 +106,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon, s.source_type, s.age, s.auto_tag FROM ${getTableName()} AS s " +
+            val sqlText = "SELECT s.id, s.enabled, s.url, s.title, s.favicon, s.source_type, s.age, s.auto_tag, s.language FROM ${getTableName()} AS s " +
                     "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_obj_id ORDER BY sod.date_fetched ASC";
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
@@ -117,6 +121,8 @@ object SourceRepository : RepositoryInterface {
                     val age = if (ageIdx != -1 && !it.isNull(ageIdx)) it.getInt(ageIdx) else 0
                     val autoTagIdx = it.getColumnIndex("auto_tag")
                     val autoTag = if (autoTagIdx != -1 && !it.isNull(autoTagIdx)) it.getString(autoTagIdx) else ""
+                    val languageIdx = it.getColumnIndex("language")
+                    val language = if (languageIdx != -1 && !it.isNull(languageIdx)) it.getString(languageIdx) else ""
 
                     if (enabledVal == 1) {
                         sources.add(
@@ -128,7 +134,8 @@ object SourceRepository : RepositoryInterface {
                                 favicon = favicon,
                                 source_type = sourceType,
                                 age = age,
-                                auto_tag = autoTag
+                                auto_tag = autoTag,
+                                language = language
                             )
                         )
                     }
@@ -190,7 +197,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag FROM ${getTableName()} WHERE id = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} WHERE id = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -204,7 +211,17 @@ object SourceRepository : RepositoryInterface {
                         val age = if (ageIdx != -1 && !c.isNull(ageIdx)) c.getInt(ageIdx) else 0
                         val autoTagIdx = c.getColumnIndex("auto_tag")
                         val autoTag = if (autoTagIdx != -1 && !c.isNull(autoTagIdx)) c.getString(autoTagIdx) else ""
-                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType, age = age, auto_tag = autoTag)
+                        val languageIdx = c.getColumnIndex("language")
+                        val language = if (languageIdx != -1 && !c.isNull(languageIdx)) c.getString(languageIdx) else ""
+                        Source(id = id,
+                            enabled =enabledVal == 1,
+                            url = url,
+                            title = title,
+                            favicon = favicon,
+                            source_type = sourceType,
+                            age = age,
+                            auto_tag = autoTag,
+                            language = language)
                     } else null
                 }
             }
@@ -229,7 +246,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag FROM ${getTableName()} WHERE url = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} WHERE url = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
                 cursor.use { c ->
                     if (c.moveToFirst()) {
@@ -243,7 +260,18 @@ object SourceRepository : RepositoryInterface {
                         val age = if (ageIdx != -1 && !c.isNull(ageIdx)) c.getInt(ageIdx) else 0
                         val autoTagIdx = c.getColumnIndex("auto_tag")
                         val autoTag = if (autoTagIdx != -1 && !c.isNull(autoTagIdx)) c.getString(autoTagIdx) else ""
-                        Source(id = id, enabled = enabledVal == 1, url = url, title = title, favicon = favicon, source_type = sourceType, age = age, auto_tag = autoTag)
+                        val languageIdx = c.getColumnIndex("language")
+                        val language = if (languageIdx != -1 && !c.isNull(languageIdx)) c.getString(languageIdx) else ""
+
+                        Source(id = id,
+                            enabled = enabledVal == 1,
+                            url = url,
+                            title = title,
+                            favicon = favicon,
+                            source_type = sourceType,
+                            age = age,
+                            auto_tag = autoTag,
+                            language = language)
                     } else null
                 }
             }
@@ -267,7 +295,8 @@ object SourceRepository : RepositoryInterface {
         url: String,
         enabled: Boolean,
         age: Int = 0,
-        auto_tag: String = ""
+        auto_tag: String = "",
+        language: String = ""
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -287,7 +316,7 @@ object SourceRepository : RepositoryInterface {
                 put("subcategory_name", "")
                 put("export_to_cms", false)
                 put("remove_after_days", 0)
-                put("language", "")
+                put("language", language)
                 put("age", if (age >= 0) age else 0)
                 put("favicon", "")
                 put("fetch_period", 3600)
@@ -325,7 +354,8 @@ object SourceRepository : RepositoryInterface {
         url: String,
         enabled: Boolean,
         age: Int? = null,
-        auto_tag: String? = null
+        auto_tag: String? = null,
+        language: String? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -345,6 +375,9 @@ object SourceRepository : RepositoryInterface {
                 }
                 if (auto_tag != null) {
                     put("auto_tag", auto_tag.take(1000))
+                }
+                if (language != null) {
+                    put("language", language.take(1000))
                 }
             }
             val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
@@ -574,22 +607,6 @@ object SourceRepository : RepositoryInterface {
      * belonging to the specified [source] whose links are NOT present in [validLinks].
      * Delegated to [EntrySqliteRepository.removeOutdatedSourceEntries].
      *
-     * @param db Open writable [SQLiteDatabase] instance.
-     * @param source The [Source] whose outdated entries should be removed.
-     * @param validLinks Set of valid URLs to keep.
-     * @return Number of deleted entries.
-     */
-    fun removeOutdatedSourceEntries(
-        db: SQLiteDatabase,
-        source: Source,
-        validLinks: Set<String>
-    ): Int = EntrySqliteRepository.removeOutdatedSourceEntries(db, source, validLinks)
-
-    /**
-     * Removes all entries in `linkdatamodel` (and their related records in auxiliary tables)
-     * belonging to the specified [source] whose links are NOT present in [validLinks].
-     * Delegated to [EntrySqliteRepository.removeOutdatedSourceEntries].
-     *
      * @param context Application context.
      * @param activeDatabaseState Current database state.
      * @param source The [Source] whose outdated entries should be removed.
@@ -640,13 +657,18 @@ object SourceRepository : RepositoryInterface {
                 else -> 0
             }
 
+            var languageDesignation = source.language
+            if (!entry.language.isNullOrBlank()) {
+                languageDesignation = entry.language
+            }
+
             val values = ContentValues().apply {
                 put("link", link)
                 put("title", entry.title ?: "")
                 put("description", entry.description ?: "")
                 put("author", entry.author ?: "")
                 put("album", entry.album ?: "")
-                put("language", entry.language ?: "")
+                put("language", languageDesignation)
                 put("page_rating_votes", entry.page_rating_votes ?: 0)
                 put("page_rating_visits", entry.page_rating_visits ?: 0)
                 put("page_rating", entry.page_rating ?: 0)
@@ -671,13 +693,7 @@ object SourceRepository : RepositoryInterface {
             if (rowId != -1L) {
                 insertedCount++
 
-                val tagsToInsert = mutableSetOf<String>()
-                if (!entry.tags.isNullOrEmpty()) {
-                    tagsToInsert.addAll(entry.tags.map { it.trim() }.filter { it.isNotEmpty() })
-                }
-                if (source.auto_tag.isNotBlank()) {
-                    tagsToInsert.addAll(source.auto_tag.split(",").map { it.trim() }.filter { it.isNotEmpty() })
-                }
+                val tagsToInsert = getSourceTags(entry, source)
                 if (tagsToInsert.isNotEmpty()) {
                     EntryCompactedTagsRepository.ensureTableExists(db)
                     for (tag in tagsToInsert) {
@@ -691,6 +707,25 @@ object SourceRepository : RepositoryInterface {
             }
         }
         return insertedCount
+    }
+
+    /**
+     * Builds the set of tags to associate with an entry when it is inserted.
+     * Combines tags declared on the entry itself with any auto-tags defined on the source.
+     *
+     * @param entry The entry being inserted.
+     * @param source The source the entry belongs to.
+     * @return Set of non-blank, trimmed tag strings to insert.
+     */
+    fun getSourceTags(entry: Entry, source: Source): Set<String> {
+        val tagsToInsert = mutableSetOf<String>()
+        if (!entry.tags.isNullOrEmpty()) {
+            tagsToInsert.addAll(entry.tags.map { it.trim() }.filter { it.isNotEmpty() })
+        }
+        if (source.auto_tag.isNotBlank()) {
+            tagsToInsert.addAll(source.auto_tag.split(",").map { it.trim() }.filter { it.isNotEmpty() })
+        }
+        return tagsToInsert
     }
 
     /**

@@ -7,6 +7,7 @@ import java.util.Date
 class HtmlPage(val url: String, val contents: String) : Page {
     private var title: String? = null
     private var description: String? = null
+    private var language: String? = null
     private val thumbnails = mutableListOf<String>()
     private var datePublished: Date? = null
 
@@ -25,6 +26,9 @@ class HtmlPage(val url: String, val contents: String) : Page {
                         }
                         "og:description" -> {
                             if (description == null) description = unescapedContent
+                        }
+                        "og:locale" -> {
+                            if (language == null) language = unescapedContent
                         }
                         "og:image", "og:image:url", "og:image:secure_url" -> {
                             thumbnails.add(unescapedContent)
@@ -93,6 +97,7 @@ class HtmlPage(val url: String, val contents: String) : Page {
 
     override fun getTitle(): String? = title
     override fun getDescription(): String? = description
+    override fun getLanguage(): String? = language
     override fun getThumbnails(): List<String> = thumbnails
     override fun getDatePublished(): Date? = datePublished
     override fun getEntries(): List<Entry> = emptyList()

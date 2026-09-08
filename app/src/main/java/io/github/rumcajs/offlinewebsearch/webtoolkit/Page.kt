@@ -6,6 +6,7 @@ import java.util.Date
 interface Page {
     fun getTitle(): String?
     fun getDescription(): String?
+    fun getLanguage(): String?
     /**
      * Should be in format Year-Month-Day Hour:Minutes
      */

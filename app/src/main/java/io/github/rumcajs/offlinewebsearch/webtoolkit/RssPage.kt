@@ -10,6 +10,7 @@ import io.github.rumcajs.offlinewebsearch.util.DateUtils
 class RssPage(val link: String, val contents: String) : Page {
     private var feedTitle: String? = null
     private var feedDescription: String? = null
+    private var feedLanguage: String? = null
     private val entries = mutableListOf<RssEntry>()
     private val thumbnails = mutableListOf<String>()
 
@@ -153,6 +154,11 @@ class RssPage(val link: String, val contents: String) : Page {
                                             feedDescription = text.ifEmpty { null }
                                         }
                                     }
+                                    "language" -> {
+                                        if (feedLanguage == null) {
+                                            feedLanguage = text.ifEmpty { null }
+                                        }
+                                    }
                                     // RSS 2.0: <image><url>...</url></image>
                                     "url" -> {
                                         if (inChannelImage && text.isNotEmpty()) {
@@ -185,6 +191,7 @@ class RssPage(val link: String, val contents: String) : Page {
 
     override fun getTitle(): String? = feedTitle
     override fun getDescription(): String? = feedDescription
+    override fun getLanguage(): String? = feedLanguage
     override fun getDatePublished(): java.util.Date? = null
     override fun getThumbnails(): List<String> = thumbnails
     override fun getEntries(): List<Entry> {

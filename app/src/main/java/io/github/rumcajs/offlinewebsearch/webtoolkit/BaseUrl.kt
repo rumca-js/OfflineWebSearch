@@ -51,6 +51,13 @@ class BaseUrl(val url: String) {
     }
 
     /**
+     * Returns the language of the page parsed from the fetched contents.
+     */
+    suspend fun getLanguage(): String? {
+        return getPage().getLanguage()
+    }
+
+    /**
      * Returns the publication date of the page parsed from the fetched contents.
      * Should be in format Year-Month-Day Hour:Minutes
      */
