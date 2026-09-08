@@ -72,3 +72,13 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
 # Open Source
 
 This project is open source and welcomes contributions, bug reports, and suggestions.
+
+# Alternatives
+
+[LinkHub](https://f-droid.org/packages/com.amrdeveloper.linkhub/)
+
+[Linkora](https://f-droid.org/en/packages/com.sakethh.linkora/)
+
+[Savr](https://play.google.com/store/apps/details?id=com.zarnth.savr&pcampaignid=web_share)
+
+[Raindrop.io](https://play.google.com/store/apps/details?id=io.raindrop.raindropio&pcampaignid=web_share)
