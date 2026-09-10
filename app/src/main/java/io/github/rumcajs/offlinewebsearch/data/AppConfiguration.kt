@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 
 const val DATABASES_LIST: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt"
 const val DATABASES_LIST_INIT: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases_init.txt"
+const val DEFAULT_DATABASE_NAME: String = "Default (Assets)"
 
 @Serializable
 enum class OrderBy(val displayName: String) {
@@ -28,12 +29,12 @@ enum class DatabaseStatus {
     FAILED
 }
 
-@Serializable
-data class DatabaseState(
+@Serializable data class DatabaseState(
     /** Network URL or local:// source path */
     val url: String = "",
     /** File name used in app internal storage (e.g. "db_12345.db") */
     val localFileName: String = "",
+    val displayNameField: String = "",
     val status: DatabaseStatus = DatabaseStatus.INIT,
     val progress: Float = 0f,
     val errorMessage: String? = null,
@@ -56,13 +57,12 @@ data class DatabaseState(
 
     val displayName: String
         get() = when {
+            displayNameField.isNotBlank() -> displayNameField
             isLocal -> url.removePrefix(LOCAL_PREFIX)
-
-            url.isBlank() -> "Default (Assets)"
-
+            url.isBlank() -> DEFAULT_DATABASE_NAME
             else -> {
                 val fileName = UrlLocation(url).getFileName()
-                fileName.ifEmpty { "Default (Assets)" }
+                fileName.ifEmpty { DEFAULT_DATABASE_NAME }
             }
         }
 
