@@ -112,6 +112,12 @@ object EntryJsonRepository : EntryRepository() {
 
     /**
      * Filters a list of entries in-memory by search query and visited/read later filters.
+     *
+     * Operator semantics (per project spec):
+     *  - `field=value`   → contains / LIKE match
+     *  - `field==value`  → exact match
+     *  - `field LIKE …`  → contains / LIKE match
+     *  - plain text      → full-text contains across title, description, link, tag
      */
     fun filterInMemory(
         entries: List<Entry>,
@@ -128,30 +134,40 @@ object EntryJsonRepository : EntryRepository() {
         }
 
         if (searchQuery.isBlank()) return baseList
-        val query = searchQuery.trim()
-        val likeRegex = Regex(
-            """^(title|link|description|tag|tags)\s+LIKE\s+['"]?%?([^%'"]+)%?['"]?$""",
-            RegexOption.IGNORE_CASE
-        )
-        val match = likeRegex.find(query)
-        return if (match != null) {
-            val field = match.groupValues[1].lowercase()
-            val term = match.groupValues[2].trim()
-            baseList.filter { entry ->
-                when (field) {
-                    "title" -> entry.title?.contains(term, ignoreCase = true) == true
-                    "link" -> entry.link?.contains(term, ignoreCase = true) == true
-                    "description" -> entry.description?.contains(term, ignoreCase = true) == true
-                    "tag", "tags" -> entry.tags?.any { it.contains(term, ignoreCase = true) } == true
-                    else -> false
+
+        return when (val parsed = EntrySearchQueryTranslator.parse(searchQuery)) {
+            is ParsedQuery.FieldContains -> {
+                val term = parsed.term
+                baseList.filter { entry ->
+                    when (parsed.field) {
+                        "title" -> entry.title?.contains(term, ignoreCase = true) == true
+                        "link" -> entry.link?.contains(term, ignoreCase = true) == true
+                        "description" -> entry.description?.contains(term, ignoreCase = true) == true
+                        "tag", "tags" -> entry.tags?.any { it.contains(term, ignoreCase = true) } == true
+                        else -> false
+                    }
                 }
             }
-        } else {
-            baseList.filter { entry ->
-                entry.title?.contains(query, ignoreCase = true) == true ||
-                    entry.description?.contains(query, ignoreCase = true) == true ||
-                    entry.link?.contains(query, ignoreCase = true) == true ||
-                    entry.tags?.any { it.contains(query, ignoreCase = true) } == true
+            is ParsedQuery.FieldExact -> {
+                val term = parsed.term
+                baseList.filter { entry ->
+                    when (parsed.field) {
+                        "title" -> entry.title.equals(term, ignoreCase = true)
+                        "link" -> entry.link.equals(term, ignoreCase = true)
+                        "description" -> entry.description.equals(term, ignoreCase = true)
+                        "tag", "tags" -> entry.tags?.any { it.equals(term, ignoreCase = true) } == true
+                        else -> false
+                    }
+                }
+            }
+            is ParsedQuery.FullText -> {
+                val term = parsed.term
+                baseList.filter { entry ->
+                    entry.title?.contains(term, ignoreCase = true) == true ||
+                        entry.description?.contains(term, ignoreCase = true) == true ||
+                        entry.link?.contains(term, ignoreCase = true) == true ||
+                        entry.tags?.any { it.contains(term, ignoreCase = true) } == true
+                }
             }
         }
     }

@@ -60,6 +60,7 @@ object AppConfigManager {
      */
     fun setInitialized(initialized: Boolean = true) {
         updateConfig { it.copy(isInitialized = initialized) }
+        setActiveDatabase(null);
     }
 
     /**

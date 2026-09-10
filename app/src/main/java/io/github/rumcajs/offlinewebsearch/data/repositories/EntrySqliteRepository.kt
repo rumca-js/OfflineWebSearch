@@ -750,59 +750,47 @@ object EntrySqliteRepository : EntryRepository() {
     }
 
     /**
-     * Builds a parameterised WHERE clause from [searchQuery].
-     * Returns a pair of (clause string, list of bind args).
-     * Supports two expression forms:
-     *   - `field LIKE '%value%'`  → translated to a parameterised LIKE
-     *   - `field = 'value'`       → translated to a parameterised equality
-     * Unrecognised expressions fall back to a full-text LIKE across title/description/link/tag.
+     * Builds a parameterised WHERE clause from [searchQuery] by delegating to
+     * [EntrySearchQueryTranslator]. Returns a pair of (clause string, list of bind args).
+     *
+     * Operator semantics (per project spec):
+     *  - `field=value`   → LIKE / contains (e.g. `title=youtube` finds entries with "youtube" in title)
+     *  - `field==value`  → exact equality  (e.g. `title==youtube` matches only the exact title)
+     *  - `field LIKE …`  → SQLite-style LIKE (contains)
+     *  - plain text      → full-text LIKE across title / description / link / tag
      */
     private fun buildWhereClause(searchQuery: String): Pair<String, List<String>> {
         if (searchQuery.isBlank()) return "" to emptyList()
-        val query = searchQuery.trim()
 
-        // Match: field = 'value' or field = "value" or field = value
-        val eqRegex = Regex(
-            """^(title|link|description|tag|tags|source_id|source_url|source)\s*=\s*['""]?([^'""\s]+)['""]?$""",
-            RegexOption.IGNORE_CASE
-        )
-        val eqMatch = eqRegex.find(query)
-        if (eqMatch != null) {
-            val field = eqMatch.groupValues[1].lowercase()
-            val term = eqMatch.groupValues[2].trim()
-            return when (field) {
-                "title" -> "l.title = ?" to listOf(term)
-                "link" -> "l.link = ?" to listOf(term)
-                "description" -> "l.description = ?" to listOf(term)
-                "tag", "tags" -> "t.tag = ?" to listOf(term)
-                "source_id" -> "l.source_id = ?" to listOf(term)
-                "source_url", "source" -> "l.source_url = ?" to listOf(term)
-                else -> "" to emptyList()
+        return when (val parsed = EntrySearchQueryTranslator.parse(searchQuery)) {
+            is ParsedQuery.FieldContains -> {
+                val term = "%${parsed.term}%"
+                when (parsed.field) {
+                    "title" -> "l.title LIKE ?" to listOf(term)
+                    "link" -> "l.link LIKE ?" to listOf(term)
+                    "description" -> "l.description LIKE ?" to listOf(term)
+                    "tag", "tags" -> "t.tag LIKE ?" to listOf(term)
+                    "source_id" -> "l.source_id LIKE ?" to listOf(term)
+                    "source_url", "source" -> "l.source_url LIKE ?" to listOf(term)
+                    else -> "" to emptyList()
+                }
             }
-        }
-
-        // Match: field LIKE '%value%'
-        val likeRegex = Regex(
-            """^(title|link|description|tag|tags|source_id|source_url|source)\s+LIKE\s+['"]?%?([^%'"]+)%?['"]?$""",
-            RegexOption.IGNORE_CASE
-        )
-        val likeMatch = likeRegex.find(query)
-        return if (likeMatch != null) {
-            val field = likeMatch.groupValues[1].lowercase()
-            val term = "%${likeMatch.groupValues[2].trim()}%"
-            when (field) {
-                "title" -> "l.title LIKE ?" to listOf(term)
-                "link" -> "l.link LIKE ?" to listOf(term)
-                "description" -> "l.description LIKE ?" to listOf(term)
-                "tag", "tags" -> "t.tag LIKE ?" to listOf(term)
-                "source_id" -> "l.source_id LIKE ?" to listOf(term)
-                "source_url", "source" -> "l.source_url LIKE ?" to listOf(term)
-                else -> "" to emptyList()
+            is ParsedQuery.FieldExact -> {
+                when (parsed.field) {
+                    "title" -> "l.title = ?" to listOf(parsed.term)
+                    "link" -> "l.link = ?" to listOf(parsed.term)
+                    "description" -> "l.description = ?" to listOf(parsed.term)
+                    "tag", "tags" -> "t.tag = ?" to listOf(parsed.term)
+                    "source_id" -> "l.source_id = ?" to listOf(parsed.term)
+                    "source_url", "source" -> "l.source_url = ?" to listOf(parsed.term)
+                    else -> "" to emptyList()
+                }
             }
-        } else {
-            val term = "%$query%"
-            "(l.title LIKE ? OR l.description LIKE ? OR l.link LIKE ? OR t.tag LIKE ?)" to
-                listOf(term, term, term, term)
+            is ParsedQuery.FullText -> {
+                val term = "%${parsed.term}%"
+                "(l.title LIKE ? OR l.description LIKE ? OR l.link LIKE ? OR t.tag LIKE ?)" to
+                    listOf(term, term, term, term)
+            }
         }
     }
 }

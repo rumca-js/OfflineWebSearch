@@ -133,6 +133,9 @@ There are several list styles:
 
 ## Search
  - Search is performed against the selected database.
+ - Implement search input translation layer. Search should also support following operators:
+    -- "=" acts like LIKE Sql operator. E.g. title=youtube shall find all entries with youtube in title
+    -- "==" expects right argument to match. E.g. title==youtube shall find all entries with title exactly as youtube
  - Search expressions are translated to the underlying database format.
     -- SQLite databases use SQLite search capabilities.
     -- JSON databases provide equivalent search behavior where possible.
@@ -209,6 +212,7 @@ The screen displays, where available:
  - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
  - If possible fetch/refresh button should spin if sources are being refreshed
  - just as EntryListScreen, pull to refresh sources
+ - search widget should, just as EntryListScreen support LIKE syntax
 
 ## SourceScreen
  - Displays information about a source.
