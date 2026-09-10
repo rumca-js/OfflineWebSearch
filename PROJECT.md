@@ -258,10 +258,10 @@ The screen displays, where available:
 ## DatabaseScreen
 - Displays information if it is currently active
 - Provides a top bar with the following actions:
-  -- Edit.
-  -- Share.
-  -- Fetch database again
-  -- Remove.
+  -- Edit - edits display name of the database
+  -- Share - shares database file
+  -- Fetch database again (refresh)
+  -- Remove - removes database, and its configuration
 - Displays the current database state (read only?).
 - Displays the database name.
 - Displays the database type.
