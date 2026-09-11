@@ -421,17 +421,6 @@ fun SourceScreen(
             )
 
             if (isEditable && currentSource.id != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = {
-                        ageInput = (currentSource.age ?: 0).toString()
-                        showAgeDialog = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Define Default Entry Age")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = {
                         autoTagInput = currentSource.auto_tag
