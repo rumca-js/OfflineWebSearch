@@ -197,7 +197,7 @@ class SourceRepositoryTest {
         val data = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceObjId)
         assertNotNull(data)
         assertEquals("2026-09-03T18:00:00Z", data!!.date_fetched)
-        assertEquals(sourceObjId, data.source_obj_id)
+        assertEquals(sourceObjId, data.source_id)
         assertEquals(42, data.import_seconds)
         assertEquals(150, data.number_of_entries)
         assertArrayEquals(byteArrayOf(1, 2, 3, 4), data.page_hash)
