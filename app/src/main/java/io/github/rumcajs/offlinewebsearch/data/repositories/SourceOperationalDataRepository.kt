@@ -144,14 +144,14 @@ object SourceOperationalDataRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, date_fetched, source_id, import_seconds, number_of_entries, page_hash, body_hash, consecutive_errors FROM ${getTableName()} WHERE source_obj_id = ? LIMIT 1"
+            val sqlText = "SELECT id, date_fetched, source_id, import_seconds, number_of_entries, page_hash, body_hash, consecutive_errors FROM ${getTableName()} WHERE source_id = ? LIMIT 1"
             var result: SourceOperationalData? = null
             val cursor = db.rawQuery(sqlText, arrayOf(sourceObjId.toString()))
             cursor.use { c ->
                 if (c.moveToFirst()) {
                     val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))
                     val dateFetched = c.getString(c.getColumnIndexOrThrow("date_fetched"))
-                    val sourceId = if (c.isNull(c.getColumnIndexOrThrow("source_id"))) null else c.getLong(c.getColumnIndexOrThrow("source_obj_id"))
+                    val sourceId = if (c.isNull(c.getColumnIndexOrThrow("source_id"))) null else c.getLong(c.getColumnIndexOrThrow("source_id"))
                     val importSeconds = if (c.isNull(c.getColumnIndexOrThrow("import_seconds"))) null else c.getInt(c.getColumnIndexOrThrow("import_seconds"))
                     val numberOfEntries = if (c.isNull(c.getColumnIndexOrThrow("number_of_entries"))) null else c.getInt(c.getColumnIndexOrThrow("number_of_entries"))
                     val pageHash = if (c.isNull(c.getColumnIndexOrThrow("page_hash"))) null else c.getBlob(c.getColumnIndexOrThrow("page_hash"))

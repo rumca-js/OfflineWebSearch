@@ -116,7 +116,7 @@ object SourceRepository : RepositoryInterface {
                     "s.favicon AS favicon, s.source_type AS source_type, s.age AS age, " +
                     "s.auto_tag AS auto_tag, s.language AS language " +
                     "FROM ${getTableName()} AS s " +
-                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_obj_id ORDER BY sod.date_fetched ASC"
+                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id ORDER BY sod.date_fetched ASC"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use {
                 while (it.moveToNext()) {
