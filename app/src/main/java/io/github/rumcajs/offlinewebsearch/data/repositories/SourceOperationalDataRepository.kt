@@ -18,7 +18,7 @@ import kotlin.Int
  *     __tablename__ = "sourceoperationaldata"
  *     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
  *     date_fetched = mapped_column(DateTime, nullable=True)
- *     source_obj_id: Mapped[int]
+ *     source_id: Mapped[int]
  *     import_seconds: Mapped[Optional[int]]
  *     number_of_entries: Mapped[Optional[int]]
  *     page_hash: Mapped[bytes | None] = mapped_column(LargeBinary)
@@ -27,7 +27,7 @@ import kotlin.Int
  *
  * @property id Primary key (autoincrement).
  * @property date_fetched ISO 8601 timestamp string when the source was last fetched.
- * @property source_obj_id Foreign key reference to `sourcedatamodel.id`.
+ * @property source_id Foreign key reference to `sourcedatamodel.id`.
  * @property import_seconds Duration of import in seconds.
  * @property number_of_entries Number of entries in the source.
  * @property page_hash Binary hash of page content.
@@ -38,7 +38,7 @@ import kotlin.Int
 data class SourceOperationalData(
     val id: Long? = null,
     val date_fetched: String? = null,
-    val source_obj_id: Long? = null,
+    val source_id: Long? = null,
     val import_seconds: Int? = null,
     val number_of_entries: Int? = null,
     val page_hash: ByteArray? = null,
@@ -53,7 +53,7 @@ data class SourceOperationalData(
 
         if (id != other.id) return false
         if (date_fetched != other.date_fetched) return false
-        if (source_obj_id != other.source_obj_id) return false
+        if (source_id != other.source_id) return false
         if (import_seconds != other.import_seconds) return false
         if (number_of_entries != other.number_of_entries) return false
         if (page_hash != null) {
@@ -72,7 +72,7 @@ data class SourceOperationalData(
     override fun hashCode(): Int {
         var result = id?.hashCode() ?: 0
         result = 31 * result + (date_fetched?.hashCode() ?: 0)
-        result = 31 * result + (source_obj_id?.hashCode() ?: 0)
+        result = 31 * result + (source_id?.hashCode() ?: 0)
         result = 31 * result + (import_seconds?.hashCode() ?: 0)
         result = 31 * result + (number_of_entries?.hashCode() ?: 0)
         result = 31 * result + (page_hash?.contentHashCode() ?: 0)
@@ -115,7 +115,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
             CREATE TABLE IF NOT EXISTS ${getTableName()} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date_fetched TEXT,
-                source_obj_id INTEGER,
+                source_id INTEGER,
                 import_seconds INTEGER,
                 number_of_entries INTEGER,
                 page_hash BLOB,
@@ -144,14 +144,14 @@ object SourceOperationalDataRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, date_fetched, source_obj_id, import_seconds, number_of_entries, page_hash, body_hash, consecutive_errors FROM ${getTableName()} WHERE source_obj_id = ? LIMIT 1"
+            val sqlText = "SELECT id, date_fetched, source_id, import_seconds, number_of_entries, page_hash, body_hash, consecutive_errors FROM ${getTableName()} WHERE source_obj_id = ? LIMIT 1"
             var result: SourceOperationalData? = null
             val cursor = db.rawQuery(sqlText, arrayOf(sourceObjId.toString()))
             cursor.use { c ->
                 if (c.moveToFirst()) {
                     val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))
                     val dateFetched = c.getString(c.getColumnIndexOrThrow("date_fetched"))
-                    val sourceId = if (c.isNull(c.getColumnIndexOrThrow("source_obj_id"))) null else c.getLong(c.getColumnIndexOrThrow("source_obj_id"))
+                    val sourceId = if (c.isNull(c.getColumnIndexOrThrow("source_id"))) null else c.getLong(c.getColumnIndexOrThrow("source_obj_id"))
                     val importSeconds = if (c.isNull(c.getColumnIndexOrThrow("import_seconds"))) null else c.getInt(c.getColumnIndexOrThrow("import_seconds"))
                     val numberOfEntries = if (c.isNull(c.getColumnIndexOrThrow("number_of_entries"))) null else c.getInt(c.getColumnIndexOrThrow("number_of_entries"))
                     val pageHash = if (c.isNull(c.getColumnIndexOrThrow("page_hash"))) null else c.getBlob(c.getColumnIndexOrThrow("page_hash"))
@@ -160,7 +160,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
                     result = SourceOperationalData(
                         id = id,
                         date_fetched = dateFetched,
-                        source_obj_id = sourceId,
+                        source_id = sourceId,
                         import_seconds = importSeconds,
                         number_of_entries = numberOfEntries,
                         page_hash = pageHash,
@@ -201,7 +201,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
 
-            val query = "SELECT id FROM ${getTableName()} WHERE source_obj_id = ?"
+            val query = "SELECT id FROM ${getTableName()} WHERE source_id = ?"
             val cursor = db.rawQuery(query, arrayOf(sourceObjId.toString()))
             val existingId = cursor.use { c ->
                 if (c.moveToFirst()) c.getLong(c.getColumnIndexOrThrow("id")) else null
@@ -218,7 +218,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
             } else {
                 val values = ContentValues().apply {
                     put("date_fetched", fetchTime)
-                    put("source_obj_id", sourceObjId)
+                    put("source_id", sourceObjId)
                     numberOfEntries?.let { put("number_of_entries", it) }
                     pageHash?.let { put("page_hash", it) }
                     bodyHash?.let { put("body_hash", it) }
@@ -294,7 +294,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            db.delete(getTableName(), "source_obj_id = ?", arrayOf(sourceObjId.toString()))
+            db.delete(getTableName(), "source_id = ?", arrayOf(sourceObjId.toString()))
             db.close()
             true
         } catch (e: Exception) {
