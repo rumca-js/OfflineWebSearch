@@ -1,0 +1,1 @@
+Changed table model. Renamed column name. Browsing entries from source view works.
