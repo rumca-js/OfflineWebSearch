@@ -128,6 +128,8 @@ There are several list styles:
  - title
  - date of publish
  - source.title
+ - bookmark icon if bookmarked
+ - skull indicator if dead
 
  If thumbnail is not available, then it should be skipped.
  - Visited entries apply configurable visit alpha.
