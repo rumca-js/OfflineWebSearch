@@ -5,6 +5,17 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 
 object EntryUtils {
     /**
+     * Returns true if the entry is considered dead.
+     * An entry is not marked dead if manual_status_code is 200 (STATUS_CODE_OK).
+     */
+    fun isDead(entry: Entry): Boolean {
+        if (entry.manual_status_code == Entry.STATUS_CODE_OK) {
+            return false
+        }
+        return !entry.date_dead_since.isNullOrBlank()
+    }
+
+    /**
      * Returns true if the content should be restricted based on age.
      */
     fun isRestricted(entry: Entry, userAge: Int): Boolean {

@@ -27,7 +27,7 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val config by AppConfigManager.config.collectAsState()
-    val isDead = !entry.date_dead_since.isNullOrBlank()
+    val isDead = EntryUtils.isDead(entry)
     val isVisited = (entry.page_rating_visits ?: 0) > 0
 
     val itemAlpha = when {

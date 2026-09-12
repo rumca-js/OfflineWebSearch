@@ -29,7 +29,11 @@ data class Entry(
     val source_id: Long? = null,
     val source_url: String? = null,
     val socialData: SocialData? = null
-)
+) {
+    companion object {
+        const val STATUS_CODE_OK = 200
+    }
+}
 
 /**
  * Base abstract repository for entry operations.

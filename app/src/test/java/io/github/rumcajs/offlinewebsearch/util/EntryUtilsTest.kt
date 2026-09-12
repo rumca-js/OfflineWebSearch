@@ -72,4 +72,22 @@ class EntryUtilsTest {
         assertEquals("2023-01-01", EntryUtils.getFormattedDate(place.date_created))
         assertEquals("N/A", EntryUtils.getFormattedDate(place.date_published))
     }
+
+    @Test
+    fun testIsDead() {
+        // Not dead by default
+        val aliveEntry = Entry(title = "Alive", date_dead_since = null, manual_status_code = 0)
+        assertEquals(false, EntryUtils.isDead(aliveEntry))
+
+        // Dead when date_dead_since is set and manual_status_code is not 200
+        val deadEntry = Entry(title = "Dead", date_dead_since = "2024-01-01", manual_status_code = 404)
+        assertEquals(true, EntryUtils.isDead(deadEntry))
+
+        // NOT dead when manual_status_code is 200 (STATUS_CODE_OK) even if date_dead_since is set
+        val revivedEntry = Entry(title = "Revived", date_dead_since = "2024-01-01", manual_status_code = Entry.STATUS_CODE_OK)
+        assertEquals(false, EntryUtils.isDead(revivedEntry))
+
+        val manual200Entry = Entry(title = "Manual 200", date_dead_since = null, manual_status_code = 200)
+        assertEquals(false, EntryUtils.isDead(manual200Entry))
+    }
 }
