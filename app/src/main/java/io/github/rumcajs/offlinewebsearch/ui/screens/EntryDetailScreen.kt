@@ -276,6 +276,7 @@ fun EntryDetailScreen(
 
             if (isEditable && entry.id != null) {
                 Spacer(modifier = Modifier.height(6.dp))
+
                 OutlinedButton(
                     onClick = {
                         tagsInput = entry.tags?.joinToString(", ") ?: ""
@@ -456,17 +457,6 @@ fun EntryDetailScreen(
                 )
             }
 
-            if (!config.networkConfig.disabled) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
-                    enabled = !isRestricted,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Check status")
-                }
-            }
-
             if (isEditable && entry.id != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -479,6 +469,17 @@ fun EntryDetailScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Add vote")
+                }
+            }
+
+            if (!config.networkConfig.disabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { entry.link?.let { onNavigateToLinkPreview(it) } },
+                    enabled = !isRestricted,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Check status")
                 }
             }
 

@@ -205,6 +205,25 @@ class SearchViewModel : ViewModel() {
     }
 
     /**
+     * Updates the [bookmarked] flag for [entry] in [filteredData] in memory.
+     *
+     * Called when the user adds or removes an entry from Read Later on
+     * [EntryDetailScreen] so that [EntryListScreen] immediately reflects the
+     * correct bookmark icon and alpha without requiring a full page refresh.
+     */
+    fun updateEntryBookmarked(entry: Entry, bookmarked: Boolean) {
+        filteredData = filteredData.map {
+            if ((entry.id != null && it.id == entry.id) ||
+                (!entry.link.isNullOrEmpty() && it.link == entry.link)
+            ) {
+                it.copy(bookmarked = bookmarked)
+            } else {
+                it
+            }
+        }
+    }
+
+    /**
      * Increments the visit count for [entry] in memory and in SQLite DB (if editable).
      */
     fun recordVisit(context: Context, entry: Entry) {

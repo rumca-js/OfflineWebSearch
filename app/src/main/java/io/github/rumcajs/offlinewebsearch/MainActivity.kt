@@ -364,7 +364,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                         searchViewModel.selectedSource = source
                                         navController.navigate(Screen.SourceDetail.route)
                                     },
-                                    onReadLaterChanged = {
+                                    onReadLaterChanged = { isNowBookmarked ->
+                                         // Keep the in-memory list in sync so the bookmark icon
+                                         // and alpha are correct immediately on back navigation.
+                                         searchViewModel.selectedEntry?.let { entry ->
+                                             searchViewModel.updateEntryBookmarked(entry, isNowBookmarked)
+                                         }
                                          // Refresh list so that removing/adding a Read Later
                                          // entry is reflected immediately when the filter is active.
                                          if (searchViewModel.isFilterReadLater) {
