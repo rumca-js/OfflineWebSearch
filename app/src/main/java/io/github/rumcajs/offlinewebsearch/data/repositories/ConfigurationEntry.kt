@@ -9,7 +9,23 @@ data class ConfigurationEntry(
     val displayType: String? = null,
     val linksPerPage: Int? = null,
     val trackUserSearches: Boolean? = null,
-    val trackUserNavigation: Boolean? = null
+    val trackUserNavigation: Boolean? = null,
+    // Capability flags
+    val enableKeywordSupport: Boolean? = null,
+    val enableDomainSupport: Boolean? = null,
+    val enableFileSupport: Boolean? = null,
+    val enableLinkArchiving: Boolean? = null,
+    val enableSourceArchiving: Boolean? = null,
+    val enableCrawling: Boolean? = null,
+    val enableSocialData: Boolean? = null,
+    // Link acceptance policy
+    val acceptDeadLinks: Boolean? = null,
+    val acceptIpLinks: Boolean? = null,
+    val acceptDomainLinks: Boolean? = null,
+    val acceptNonDomainLinks: Boolean? = null,
+    val acceptUnknownLinks: Boolean? = null,
+    val acceptOnionLinks: Boolean? = null,
+    val acceptSameHashes: Boolean? = null
 ) {
     val isShowIcons: Boolean
         get() = showIcons == true
@@ -23,6 +39,24 @@ data class ConfigurationEntry(
         }
 
     companion object {
+        /** Reads a single boolean column by name, returning null if the column is absent or NULL. */
+        private fun readBool(c: android.database.Cursor, col: String): Boolean? {
+            val idx = c.getColumnIndex(col)
+            return if (idx != -1 && !c.isNull(idx)) c.getInt(idx) == 1 else null
+        }
+
+        /** Reads a single int column by name, returning null if the column is absent or NULL. */
+        private fun readInt(c: android.database.Cursor, col: String): Int? {
+            val idx = c.getColumnIndex(col)
+            return if (idx != -1 && !c.isNull(idx)) c.getInt(idx) else null
+        }
+
+        /** Reads a single string column by name, returning null if the column is absent or NULL. */
+        private fun readString(c: android.database.Cursor, col: String): String? {
+            val idx = c.getColumnIndex(col)
+            return if (idx != -1 && !c.isNull(idx)) c.getString(idx) else null
+        }
+
         fun readFromDatabase(file: File): ConfigurationEntry? {
             if (!file.exists()) return null
             try {
@@ -41,37 +75,26 @@ data class ConfigurationEntry(
                         val cursor = sqliteDb.rawQuery("SELECT * FROM configurationentry LIMIT 1", null)
                         cursor.use { c ->
                             if (c.moveToFirst()) {
-                                val showIconsIndex = c.getColumnIndex("show_icons")
-                                val showIcons = if (showIconsIndex != -1 && !c.isNull(showIconsIndex)) {
-                                    c.getInt(showIconsIndex) == 1
-                                } else null
-
-                                val displayTypeIndex = c.getColumnIndex("display_type")
-                                val displayType = if (displayTypeIndex != -1 && !c.isNull(displayTypeIndex)) {
-                                    c.getString(displayTypeIndex)
-                                } else null
-
-                                val linksPerPageIndex = c.getColumnIndex("links_per_page")
-                                val linksPerPage = if (linksPerPageIndex != -1 && !c.isNull(linksPerPageIndex)) {
-                                    c.getInt(linksPerPageIndex)
-                                } else null
-
-                                val trackUserSearchesIndex = c.getColumnIndex("track_user_searches")
-                                val trackUserSearches = if (trackUserSearchesIndex != -1 && !c.isNull(trackUserSearchesIndex)) {
-                                    c.getInt(trackUserSearchesIndex) == 1
-                                } else null
-
-                                val trackUserNavigationIndex = c.getColumnIndex("track_user_navigation")
-                                val trackUserNavigation = if (trackUserNavigationIndex != -1 && !c.isNull(trackUserNavigationIndex)) {
-                                    c.getInt(trackUserNavigationIndex) == 1
-                                } else null
-
                                 ConfigurationEntry(
-                                    showIcons = showIcons,
-                                    displayType = displayType,
-                                    linksPerPage = linksPerPage,
-                                    trackUserSearches = trackUserSearches,
-                                    trackUserNavigation = trackUserNavigation
+                                    showIcons = readBool(c, "show_icons"),
+                                    displayType = readString(c, "display_type"),
+                                    linksPerPage = readInt(c, "links_per_page"),
+                                    trackUserSearches = readBool(c, "track_user_searches"),
+                                    trackUserNavigation = readBool(c, "track_user_navigation"),
+                                    enableKeywordSupport = readBool(c, "enable_keyword_support"),
+                                    enableDomainSupport = readBool(c, "enable_domain_support"),
+                                    enableFileSupport = readBool(c, "enable_file_support"),
+                                    enableLinkArchiving = readBool(c, "enable_link_archiving"),
+                                    enableSourceArchiving = readBool(c, "enable_source_archiving"),
+                                    enableCrawling = readBool(c, "enable_crawling"),
+                                    enableSocialData = readBool(c, "enable_social_data"),
+                                    acceptDeadLinks = readBool(c, "accept_dead_links"),
+                                    acceptIpLinks = readBool(c, "accept_ip_links"),
+                                    acceptDomainLinks = readBool(c, "accept_domain_links"),
+                                    acceptNonDomainLinks = readBool(c, "accept_non_domain_links"),
+                                    acceptUnknownLinks = readBool(c, "accept_unknown_links"),
+                                    acceptOnionLinks = readBool(c, "accept_onion_links"),
+                                    acceptSameHashes = readBool(c, "accept_same_hashes")
                                 )
                             } else {
                                 ConfigurationEntry()

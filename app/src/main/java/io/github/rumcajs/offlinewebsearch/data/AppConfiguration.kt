@@ -115,7 +115,23 @@ data class DatabaseConfiguration(
     val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
     val linksPerPage: Int = MIN_LINKS_PER_PAGE,
     val trackUserSearches: Boolean = true,
-    val trackUserNavigation: Boolean = true
+    val trackUserNavigation: Boolean = true,
+    // Capability flags read from configurationentry table
+    val enableKeywordSupport: Boolean = false,
+    val enableDomainSupport: Boolean = false,
+    val enableFileSupport: Boolean = false,
+    val enableLinkArchiving: Boolean = false,
+    val enableSourceArchiving: Boolean = false,
+    val enableCrawling: Boolean = false,
+    val enableSocialData: Boolean = false,
+    // Link acceptance policy read from configurationentry table
+    val acceptDeadLinks: Boolean = false,
+    val acceptIpLinks: Boolean = false,
+    val acceptDomainLinks: Boolean = false,
+    val acceptNonDomainLinks: Boolean = false,
+    val acceptUnknownLinks: Boolean = false,
+    val acceptOnionLinks: Boolean = false,
+    val acceptSameHashes: Boolean = false
 ) {
     val effectiveLinksPerPage: Int
         get() = kotlin.math.max(MIN_LINKS_PER_PAGE, linksPerPage)
