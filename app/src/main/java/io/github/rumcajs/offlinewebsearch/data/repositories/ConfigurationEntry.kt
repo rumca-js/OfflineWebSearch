@@ -5,6 +5,9 @@ import io.github.rumcajs.offlinewebsearch.data.ViewStyle
 import java.io.File
 
 data class ConfigurationEntry(
+    val instanceTitle: String? = null,
+    val instanceDescription: String? = null,
+
     val showIcons: Boolean? = null,
     val displayType: String? = null,
     val linksPerPage: Int? = null,
@@ -25,7 +28,11 @@ data class ConfigurationEntry(
     val acceptNonDomainLinks: Boolean? = null,
     val acceptUnknownLinks: Boolean? = null,
     val acceptOnionLinks: Boolean? = null,
-    val acceptSameHashes: Boolean? = null
+    val acceptSameHashes: Boolean? = null,
+    // Visual / display settings
+    val highlightBookmarks: Boolean? = null,
+    val entriesVisitAlpha: Float? = null,
+    val entriesDeadAlpha: Float? = null
 ) {
     val isShowIcons: Boolean
         get() = showIcons == true
@@ -57,6 +64,12 @@ data class ConfigurationEntry(
             return if (idx != -1 && !c.isNull(idx)) c.getString(idx) else null
         }
 
+        /** Reads a single float column by name, returning null if the column is absent or NULL. */
+        private fun readFloat(c: android.database.Cursor, col: String): Float? {
+            val idx = c.getColumnIndex(col)
+            return if (idx != -1 && !c.isNull(idx)) c.getFloat(idx) else null
+        }
+
         fun readFromDatabase(file: File): ConfigurationEntry? {
             if (!file.exists()) return null
             try {
@@ -76,6 +89,8 @@ data class ConfigurationEntry(
                         cursor.use { c ->
                             if (c.moveToFirst()) {
                                 ConfigurationEntry(
+                                    instanceTitle = readString(c, "instance_title"),
+                                    instanceDescription = readString(c, "instance_description"),
                                     showIcons = readBool(c, "show_icons"),
                                     displayType = readString(c, "display_type"),
                                     linksPerPage = readInt(c, "links_per_page"),
@@ -94,7 +109,10 @@ data class ConfigurationEntry(
                                     acceptNonDomainLinks = readBool(c, "accept_non_domain_links"),
                                     acceptUnknownLinks = readBool(c, "accept_unknown_links"),
                                     acceptOnionLinks = readBool(c, "accept_onion_links"),
-                                    acceptSameHashes = readBool(c, "accept_same_hashes")
+                                    acceptSameHashes = readBool(c, "accept_same_hashes"),
+                                    highlightBookmarks = readBool(c, "highlight_bookmarks"),
+                                    entriesVisitAlpha = readFloat(c, "entries_visit_alpha"),
+                                    entriesDeadAlpha = readFloat(c, "entries_dead_alpha")
                                 )
                             } else {
                                 ConfigurationEntry()
