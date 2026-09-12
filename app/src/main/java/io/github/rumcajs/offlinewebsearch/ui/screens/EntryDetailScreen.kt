@@ -20,6 +20,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import android.widget.Toast
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.text.input.KeyboardType
 import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
@@ -252,39 +253,45 @@ fun EntryDetailScreen(
             var tagsInput by remember(entry.tags) { mutableStateOf(entry.tags?.joinToString(", ") ?: "") }
             var isSavingTags by remember { mutableStateOf(false) }
 
-            entry.tags?.let { tags ->
-                if (tags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        tags.forEach { tag ->
-                            Text(
-                                text = if (isRestricted) "#xXx" else "#$tag",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.clickable(enabled = !isRestricted && onTagClick != null) {
+            val hasTags = !entry.tags.isNullOrEmpty()
+            if (hasTags || (isEditable && entry.id != null)) {
+                Spacer(modifier = Modifier.height(4.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    entry.tags?.forEach { tag ->
+                        Text(
+                            text = if (isRestricted) "#xXx" else "#$tag",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .clickable(enabled = !isRestricted && onTagClick != null) {
                                     onTagClick?.invoke(tag)
                                 }
+                        )
+                    }
+                    if (isEditable && entry.id != null) {
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                tagsInput = entry.tags?.joinToString(", ") ?: ""
+                                showTagsDialog = true
+                            },
+                            modifier = Modifier
+                                .size(20.dp)
+                                .align(Alignment.CenterVertically)
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Edit,
+                                contentDescription = "Edit tags",
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                }
-            }
-
-            if (isEditable && entry.id != null) {
-                Spacer(modifier = Modifier.height(6.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        tagsInput = entry.tags?.joinToString(", ") ?: ""
-                        showTagsDialog = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Edit Tags")
                 }
             }
 
@@ -313,12 +320,10 @@ fun EntryDetailScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                val newTags = tagsInput.split(",")
-                                    .map { it.trim() }
-                                    .filter { it.isNotEmpty() }
+                                val newTags = io.github.rumcajs.offlinewebsearch.util.TagUtils.parseTagsInput(tagsInput)
                                 val entryId = entry.id
                                 val dbState = activeDbState
-                                if (entryId != null && dbState != null) {
+                                if (dbState != null) {
                                     scope.launch {
                                         isSavingTags = true
                                         try {

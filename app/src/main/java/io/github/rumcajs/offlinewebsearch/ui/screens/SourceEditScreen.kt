@@ -16,6 +16,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceFormPane
+import io.github.rumcajs.offlinewebsearch.util.TagUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.coroutines.launch
 
@@ -66,7 +67,7 @@ fun SourceEditScreen(
                 url = url,
                 enabled = enabled,
                 age = finalAge,
-                auto_tag = autoTag.trim().lowercase(),
+                auto_tag = TagUtils.normalizeAutoTag(autoTag),
                 language = language.trim()
             )
             errorMessage = if (!success) err else null
@@ -80,7 +81,7 @@ fun SourceEditScreen(
                 url = url,
                 enabled = enabled,
                 age = finalAge,
-                auto_tag = autoTag.trim().lowercase(),
+                auto_tag = TagUtils.normalizeAutoTag(autoTag),
                 language = language.trim()
             )
             errorMessage = if (!success) err else null
@@ -116,7 +117,7 @@ fun SourceEditScreen(
                                                 url = url,
                                                 enabled = enabled,
                                                 age = finalAge,
-                                                auto_tag = autoTag.trim().lowercase(),
+                                                auto_tag = TagUtils.normalizeAutoTag(autoTag),
                                                 language = language.trim()
                                             )
                                         )
