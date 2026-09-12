@@ -33,6 +33,7 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryInterface
 import io.github.rumcajs.offlinewebsearch.data.repositories.SearchHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SocialDataRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.InputStream
@@ -302,6 +303,7 @@ fun getRepositoriesToClear(): List<RepoClearItem> = listOf(
     RepoClearItem("Entry Transition History", EntryTransitionHistoryRepository),
     RepoClearItem("Entry Visit History", EntryVisitHistoryRepository),
     RepoClearItem("Social Data", SocialDataRepository),
+    RepoClearItem("Source Operational Data", SourceOperationalDataRepository),
     RepoClearItem("Entry Compacted Tags", EntryCompactedTagsRepository),
     RepoClearItem("Read later", ReadLaterRepository)
 )
