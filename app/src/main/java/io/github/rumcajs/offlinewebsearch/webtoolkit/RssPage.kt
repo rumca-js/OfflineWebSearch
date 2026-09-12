@@ -4,6 +4,7 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
 import java.lang.StringBuilder
+import java.security.MessageDigest
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 
@@ -69,6 +70,14 @@ class RssPage(val link: String, val contents: String) : Page {
                                     val url = parser.getAttributeValue(null, "url")
                                     if (url != null && entryThumbnail == null) {
                                         entryThumbnail = url
+                                    }
+                                }
+
+                                // itunes:image href attribute (local name is "image" when namespace-aware)
+                                if ((tag == "image" || tag == "itunes:image") && entryThumbnail == null) {
+                                    val href = parser.getAttributeValue(null, "href")
+                                    if (href != null) {
+                                        entryThumbnail = href
                                     }
                                 }
                             } else {
@@ -205,6 +214,43 @@ class RssPage(val link: String, val contents: String) : Page {
             )
         }
     }
+
+    /**
+     * Returns a SHA-256 hash of the entire RSS/Atom response text, or null if content is blank.
+     */
+    override fun getHash(): ByteArray? {
+        if (contents.isBlank()) return null
+        return sha256(contents)
+    }
+
+    /**
+     * Returns a SHA-256 hash of the channel-level metadata (title, description, language),
+     * or null if content is blank.
+     */
+    override fun getMetaHash(): ByteArray? {
+        if (contents.isBlank()) return null
+        val meta = listOfNotNull(feedTitle, feedDescription, feedLanguage).joinToString(separator = "\n")
+        if (meta.isBlank()) return null
+        return sha256(meta)
+    }
+
+    /**
+     * Returns a SHA-256 hash of all entry data (link, title, description per entry),
+     * or null if there are no entries or content is blank.
+     */
+    override fun getBodyHash(): ByteArray? {
+        if (contents.isBlank() || entries.isEmpty()) return null
+        val body = entries.joinToString(separator = "\n") { entry ->
+            listOfNotNull(entry.link, entry.title, entry.description).joinToString(separator = "\t")
+        }
+        return sha256(body)
+    }
+
+    /**
+     * Computes and returns a SHA-256 digest of the given [text].
+     */
+    private fun sha256(text: String): ByteArray =
+        MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
 }
 
 class RssEntry(

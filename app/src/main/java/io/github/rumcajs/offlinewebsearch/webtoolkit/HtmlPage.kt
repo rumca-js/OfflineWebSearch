@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import java.security.MessageDigest
 import java.util.Date
 
 class HtmlPage(val url: String, val contents: String) : Page {
@@ -101,4 +102,58 @@ class HtmlPage(val url: String, val contents: String) : Page {
     override fun getThumbnails(): List<String> = thumbnails
     override fun getDatePublished(): Date? = datePublished
     override fun getEntries(): List<Entry> = emptyList()
+
+    /**
+     * Returns a SHA-256 hash of the entire response text (full [contents]).
+     */
+    override fun getHash(): ByteArray? {
+        if (contents.isBlank()) return null
+        return sha256(contents)
+    }
+
+    /**
+     * Returns a SHA-256 hash of the `<body>` section of the page,
+     * or null if no body section is found or content is blank.
+     */
+    override fun getBodyHash(): ByteArray? {
+        val body = extractBody() ?: return null
+        return sha256(body)
+    }
+
+    /**
+     * Returns a SHA-256 hash of all concatenated `<meta>` tags in the page,
+     * or null if no meta tags are found or content is blank.
+     */
+    override fun getMetaHash(): ByteArray? {
+        val meta = extractMeta() ?: return null
+        return sha256(meta)
+    }
+
+    /**
+     * Extracts the raw text between `<body>` and `</body>` tags (inclusive),
+     * returning null if no body section is present.
+     */
+    private fun extractBody(): String? {
+        if (contents.isBlank()) return null
+        val bodyRegex = """(?is)<body[\s>].*?</body>""".toRegex()
+        return bodyRegex.find(contents)?.value
+    }
+
+    /**
+     * Concatenates all `<meta ...>` tag strings found in the document,
+     * returning null if there are none.
+     */
+    private fun extractMeta(): String? {
+        if (contents.isBlank()) return null
+        val metaTagRegex = """<meta\s+[^>]+>""".toRegex(RegexOption.IGNORE_CASE)
+        val tags = metaTagRegex.findAll(contents).map { it.value }.toList()
+        return if (tags.isEmpty()) null else tags.joinToString(separator = "")
+    }
+
+    /**
+     * Computes and returns a SHA-256 digest of the given [text].
+     */
+    private fun sha256(text: String): ByteArray =
+        MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
 }
+
