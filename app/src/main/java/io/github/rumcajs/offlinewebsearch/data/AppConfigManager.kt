@@ -228,6 +228,20 @@ object AppConfigManager {
         updateConfig { it.copy(userAge = age) }
     }
 
+    fun setEntriesVisitAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0f, 1f)
+        updateConfig { currentConfig ->
+            currentConfig.updateActiveDbConfig { it.copy(entriesVisitAlpha = clamped) }
+        }
+    }
+
+    fun setEntriesDeadAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0f, 1f)
+        updateConfig { currentConfig ->
+            currentConfig.updateActiveDbConfig { it.copy(entriesDeadAlpha = clamped) }
+        }
+    }
+
     fun setNetworkDisabled(disabled: Boolean) {
         updateConfig { currentConfig ->
             currentConfig.copy(

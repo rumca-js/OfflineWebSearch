@@ -28,6 +28,14 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
     val uriHandler = LocalUriHandler.current
     val config by AppConfigManager.config.collectAsState()
     val isDead = !entry.date_dead_since.isNullOrBlank()
+    val isVisited = (entry.page_rating_visits ?: 0) > 0
+
+    val itemAlpha = when {
+        isDead && isVisited -> config.dbconfig.entriesDeadAlpha * config.dbconfig.entriesVisitAlpha
+        isDead -> config.dbconfig.entriesDeadAlpha
+        isVisited -> config.dbconfig.entriesVisitAlpha
+        else -> 1f
+    }
 
     val displayAuthor by produceState<String?>(initialValue = entry.author?.takeIf { it.isNotBlank() }, key1 = entry, key2 = config.activeDatabaseState) {
         value = EntryUtils.getDisplayAuthor(entry, context, config.activeDatabaseState)
@@ -37,7 +45,7 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .alpha(if (isDead) 0.5f else 1f)
+            .alpha(itemAlpha)
             .clickable(enabled = entry.link != null || !config.dbconfig.directLinks) {
                 if (config.dbconfig.directLinks) {
                     entry.link?.let { uriHandler.openUri(it) }

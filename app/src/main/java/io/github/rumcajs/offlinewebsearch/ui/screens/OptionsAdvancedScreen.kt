@@ -107,6 +107,47 @@ fun OptionsAdvancedScreen(onBack: () -> Unit = {}) {
             ) {
                 Text("Reset Initialization")
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+            Text(
+                text = "Visual Alpha Settings",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Visited Entries Alpha
+            val visitPercent = (config.dbconfig.entriesVisitAlpha * 100).toInt()
+            Text(
+                text = "Visited Entries Alpha: $visitPercent% (${String.format(java.util.Locale.US, "%.2f", config.dbconfig.entriesVisitAlpha)})",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Slider(
+                value = config.dbconfig.entriesVisitAlpha,
+                onValueChange = { newAlpha ->
+                    AppConfigManager.setEntriesVisitAlpha(newAlpha)
+                },
+                valueRange = 0f..1f,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Dead Entries Alpha
+            val deadPercent = (config.dbconfig.entriesDeadAlpha * 100).toInt()
+            Text(
+                text = "Dead Entries Alpha: $deadPercent% (${String.format(java.util.Locale.US, "%.2f", config.dbconfig.entriesDeadAlpha)})",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Slider(
+                value = config.dbconfig.entriesDeadAlpha,
+                onValueChange = { newAlpha ->
+                    AppConfigManager.setEntriesDeadAlpha(newAlpha)
+                },
+                valueRange = 0f..1f,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
