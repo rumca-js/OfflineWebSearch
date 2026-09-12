@@ -394,6 +394,12 @@ object AppConfigManager {
                     if (configEntry?.trackUserNavigation != null) {
                         updatedConfig = updatedConfig.copy(trackUserNavigation = configEntry.trackUserNavigation)
                     }
+                    if (configEntry?.entriesVisitAlpha != null) {
+                        updatedConfig = updatedConfig.copy(entriesVisitAlpha = configEntry.entriesVisitAlpha)
+                    }
+                    if (configEntry?.entriesDeadAlpha != null) {
+                        updatedConfig = updatedConfig.copy(entriesDeadAlpha = configEntry.entriesDeadAlpha)
+                    }
                     if (searchViewEntry?.orderBy != null) {
                         updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
                     }
@@ -661,6 +667,12 @@ object AppConfigManager {
                     }
                     if (configEntry?.trackUserNavigation != null) {
                         updatedConfig = updatedConfig.copy(trackUserNavigation = configEntry.trackUserNavigation)
+                    }
+                    if (configEntry?.entriesVisitAlpha != null) {
+                        updatedConfig = updatedConfig.copy(entriesVisitAlpha = configEntry.entriesVisitAlpha)
+                    }
+                    if (configEntry?.entriesDeadAlpha != null) {
+                        updatedConfig = updatedConfig.copy(entriesDeadAlpha = configEntry.entriesDeadAlpha)
                     }
                     if (searchViewEntry?.orderBy != null) {
                         updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)

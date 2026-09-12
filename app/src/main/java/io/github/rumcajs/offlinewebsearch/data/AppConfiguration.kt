@@ -108,6 +108,8 @@ enum class ViewStyle(val displayName: String) {
 
 @Serializable
 data class DatabaseConfiguration(
+    val instanceTitle: String = "",
+    val instanceDescription: String = "",
     val directLinks: Boolean = false,
     val showIcons: Boolean = false,
     val videoPreview: Boolean = false,
@@ -131,7 +133,10 @@ data class DatabaseConfiguration(
     val acceptNonDomainLinks: Boolean = false,
     val acceptUnknownLinks: Boolean = false,
     val acceptOnionLinks: Boolean = false,
-    val acceptSameHashes: Boolean = false
+    val acceptSameHashes: Boolean = false,
+    // Visual alpha settings read from configurationentry table
+    val entriesVisitAlpha: Float = 0.6f,
+    val entriesDeadAlpha: Float = 0.6f
 ) {
     val effectiveLinksPerPage: Int
         get() = kotlin.math.max(MIN_LINKS_PER_PAGE, linksPerPage)
