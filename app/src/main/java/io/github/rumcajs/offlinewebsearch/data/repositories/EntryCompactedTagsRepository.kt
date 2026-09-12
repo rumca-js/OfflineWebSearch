@@ -85,6 +85,8 @@ object EntryCompactedTagsRepository : RepositoryInterface {
             }
             db.close()
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Exception in $functionName", e.message)
             e.printStackTrace()
         }
 
@@ -124,6 +126,8 @@ object EntryCompactedTagsRepository : RepositoryInterface {
             db.close()
             if (rowId != -1L) Pair(true, null) else Pair(false, "Insert failed")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Tag: $tag Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -155,6 +159,8 @@ object EntryCompactedTagsRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -180,6 +186,8 @@ object EntryCompactedTagsRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing compacted tags in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }

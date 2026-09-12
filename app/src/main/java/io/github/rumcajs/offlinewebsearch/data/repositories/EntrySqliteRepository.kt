@@ -224,7 +224,7 @@ object EntrySqliteRepository : EntryRepository() {
             }
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${entry.id} Clearing source entries $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${entry.id} Adding entry in $functionName", e.message)
 
             e.printStackTrace()
             Triple(false, -1L, e.message ?: "Unknown SQL error")
@@ -268,7 +268,7 @@ object EntrySqliteRepository : EntryRepository() {
             rows > 0
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} Clearing source entries $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} Updating entry in $functionName", e.message)
 
             e.printStackTrace()
             false
@@ -303,7 +303,7 @@ object EntrySqliteRepository : EntryRepository() {
             if (rows > 0) Pair(true, newVotes) else Pair(false, null)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} Setting vote $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} Setting vote in $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, null)
@@ -337,7 +337,7 @@ object EntrySqliteRepository : EntryRepository() {
             true
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} incrementing visits in $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} incrementing visits in $functionName", e.message)
 
             e.printStackTrace()
             false
@@ -373,7 +373,7 @@ object EntrySqliteRepository : EntryRepository() {
             }
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} deleting entry $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} deleting entry in $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
@@ -481,7 +481,7 @@ object EntrySqliteRepository : EntryRepository() {
             Pair(true, deletedCount)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Removing outdated $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Removing outdated source entries in $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, 0)
@@ -564,7 +564,7 @@ object EntrySqliteRepository : EntryRepository() {
             Pair(true, count)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Source:${sourceId}. Removing source entries $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Source:${sourceId}. Removing source entries in $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, 0)
@@ -607,7 +607,7 @@ object EntrySqliteRepository : EntryRepository() {
             }
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Source:${id}. Removing entry $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id}. Removing entry in $functionName", e.message)
 
             e.printStackTrace()
             false
@@ -636,14 +636,14 @@ object EntrySqliteRepository : EntryRepository() {
             Pair(true, null)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Clearing $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
 
-    private fun countEntriesSql(
+    private suspend fun countEntriesSql(
         context: Context,
         state: DatabaseState,
         searchQuery: String,
@@ -673,15 +673,15 @@ object EntrySqliteRepository : EntryRepository() {
                 cursor.use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
             }
         } catch (e: Exception) {
-            //val functionName = object {}.javaClass.enclosingMethod?.name
-            //AppLoggingRepository.error(context, state, "counting entries $functionName")
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, state, "Counting entries in $functionName", e.message)
 
             e.printStackTrace()
             0
         }
     }
 
-    private fun getPageFromSql(
+    private suspend fun getPageFromSql(
         context: Context,
         state: DatabaseState,
         searchQuery: String,
@@ -741,8 +741,8 @@ object EntrySqliteRepository : EntryRepository() {
                 }
             }
         } catch (e: Exception) {
-            //val functionName = object {}.javaClass.enclosingMethod?.name
-            //AppLoggingRepository.error(context, state, "counting entries $functionName")
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, state, "Getting entries page in $functionName", e.message)
 
             e.printStackTrace()
         }

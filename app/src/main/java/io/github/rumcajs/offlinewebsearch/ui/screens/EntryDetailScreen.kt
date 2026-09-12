@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -206,6 +208,43 @@ fun EntryDetailScreen(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
+                    }
+                }
+            }
+
+            val isDead = io.github.rumcajs.offlinewebsearch.util.EntryUtils.isDead(entry)
+            val isBookmarked = entry.bookmarked == true
+            val hasAge = (entry.age ?: 0) > 0
+            if (isBookmarked || isDead || hasAge) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isBookmarked) {
+                        Icon(
+                            imageVector = Icons.Default.Bookmark,
+                            contentDescription = "Bookmarked",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (isDead) {
+                        Text(text = "💀", fontSize = 16.sp)
+                    }
+                    if (hasAge) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.error,
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        ) {
+                            Text(
+                                text = "A",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                color = MaterialTheme.colorScheme.onError
+                            )
+                        }
                     }
                 }
             }

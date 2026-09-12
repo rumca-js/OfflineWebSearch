@@ -96,6 +96,8 @@ object SocialDataRepository : RepositoryInterface {
             db.close()
             socialData
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Exception in $functionName", e.message)
             e.printStackTrace()
             null
         }
@@ -136,6 +138,8 @@ object SocialDataRepository : RepositoryInterface {
             db.close()
             if (newId != -1L) Pair(true, null) else Pair(false, "Failed to insert into ${getTableName()}")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: ${socialData.entryId} Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -179,6 +183,8 @@ object SocialDataRepository : RepositoryInterface {
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; socialdata record may not exist")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Social ID: ${socialData.id} Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -205,6 +211,8 @@ object SocialDataRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing social data in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }

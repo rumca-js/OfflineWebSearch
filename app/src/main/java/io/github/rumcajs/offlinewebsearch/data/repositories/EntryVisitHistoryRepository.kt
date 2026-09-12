@@ -88,6 +88,8 @@ object EntryVisitHistoryRepository : RepositoryInterface {
             }
             db.close()
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception when loading visit history in $functionName", e.message)
             e.printStackTrace()
         }
 
@@ -142,6 +144,8 @@ object EntryVisitHistoryRepository : RepositoryInterface {
             }
             db.close()
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception when loading visited entries in $functionName", e.message)
             e.printStackTrace()
         }
 
@@ -220,6 +224,8 @@ object EntryVisitHistoryRepository : RepositoryInterface {
 
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Exception when recording visit in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -255,6 +261,8 @@ object EntryVisitHistoryRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing visit history $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }

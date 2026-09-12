@@ -44,6 +44,8 @@ interface RepositoryInterface {
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Table: ${getTableName()} ID: $id Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }

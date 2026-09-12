@@ -88,6 +88,8 @@ object SearchHistoryRepository : RepositoryInterface {
             }
             db.close()
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting search history in $functionName", e.message)
             e.printStackTrace()
         }
 
@@ -152,6 +154,8 @@ object SearchHistoryRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Query: $trimmedQuery Exception when inserting search in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -178,6 +182,8 @@ object SearchHistoryRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing search history in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }

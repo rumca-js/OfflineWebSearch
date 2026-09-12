@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.repositories.AppLoggingRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
@@ -59,6 +60,8 @@ object DatabaseStatsRepository {
                 socialDataCount = SocialDataRepository.getRowCount(it)
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, state, "Database: ${state.displayName} Exception in $functionName", e.message)
             e.printStackTrace()
         }
 
@@ -106,6 +109,8 @@ object DatabaseStatsRepository {
                 }
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, state, "Database: ${state.displayName} Exception in $functionName", e.message)
             e.printStackTrace()
         }
 

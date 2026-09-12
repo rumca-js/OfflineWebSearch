@@ -132,6 +132,21 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
                                 modifier = Modifier.padding(end = 4.dp)
                             )
                         }
+                        if ((entry.age ?: 0) > 0) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.error,
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                modifier = Modifier.padding(end = 4.dp)
+                            ) {
+                                Text(
+                                    text = "A",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                    color = MaterialTheme.colorScheme.onError
+                                )
+                            }
+                        }
                         entry.page_rating_votes?.takeIf { it > 0 }?.let { votes ->
                             Surface(
                                 color = MaterialTheme.colorScheme.secondaryContainer,

@@ -24,7 +24,7 @@ import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResultsContainer(
+fun EntryListSearchResultsContainer(
     isLoading: Boolean,
     filteredData: List<Entry>,
     activeSearchQuery: String,
@@ -119,9 +119,23 @@ fun SearchResultsContainer(
                             onClick = onNavigateToDetail
                         )
                     }
-                    if (activeSearchQuery.isNotEmpty() && filteredData.isEmpty()) {
+                    if (!isLoading && filteredData.isEmpty()) {
                         item {
-                            Text("No results found for \"$activeSearchQuery\"")
+                            Box(
+                                modifier = Modifier
+                                    .fillParentMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (activeSearchQuery.isNotEmpty())
+                                        "No results found for \"$activeSearchQuery\""
+                                    else
+                                        "No entries found",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 

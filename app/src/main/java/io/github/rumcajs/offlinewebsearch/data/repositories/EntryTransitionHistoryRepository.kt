@@ -113,6 +113,8 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
             db.close()
             TransitionLoadResult(result, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "FromEntry ID: $fromEntryId Exception in $functionName", e.message)
             e.printStackTrace()
             TransitionLoadResult(emptyList(), e.message ?: "Unknown SQL error loading entry transitions")
         }
@@ -131,7 +133,7 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
         if (fromEntryId == toEntryId) {
             return@withContext Pair(true, null)
         }
-        if (activeDatabaseState == null || activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
@@ -172,6 +174,8 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "FromEntry ID: $fromEntryId ToEntry ID: $toEntryId Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -199,6 +203,8 @@ object EntryTransitionHistoryRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing transition history $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }

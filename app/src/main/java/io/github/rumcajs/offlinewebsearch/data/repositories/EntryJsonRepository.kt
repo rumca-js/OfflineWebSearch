@@ -78,7 +78,7 @@ object EntryJsonRepository : EntryRepository() {
     /**
      * Reads and deserializes entry records from APK bundled assets.
      */
-    fun getEntriesFromAssets(context: Context, assets: List<String>): List<Entry> {
+    suspend fun getEntriesFromAssets(context: Context, assets: List<String>): List<Entry> {
         val loaded = mutableListOf<Entry>()
         assets.forEach { fileName ->
             try {
@@ -88,6 +88,8 @@ object EntryJsonRepository : EntryRepository() {
                     loaded.addAll(places)
                 }
             } catch (e: Exception) {
+                val functionName = object {}.javaClass.enclosingMethod?.name
+                AppLoggingRepository.error(context, null, "Asset: $fileName Exception in $functionName", e.message)
                 e.printStackTrace()
             }
         }
@@ -97,7 +99,7 @@ object EntryJsonRepository : EntryRepository() {
     /**
      * Reads and deserializes entry records from a local JSON database file.
      */
-    fun getEntriesFromJson(context: Context, state: DatabaseState): List<Entry> {
+    suspend fun getEntriesFromJson(context: Context, state: DatabaseState): List<Entry> {
         val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return emptyList()
         return try {
@@ -105,6 +107,8 @@ object EntryJsonRepository : EntryRepository() {
                 jsonConfig.decodeFromString(reader.readText())
             }
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, state, "Database: ${state.displayName} Exception in $functionName", e.message)
             e.printStackTrace()
             emptyList()
         }

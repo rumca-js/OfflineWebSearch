@@ -94,6 +94,8 @@ object ReadLaterRepository : RepositoryInterface {
             }
             db.close()
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting read later entries in $functionName", e.message)
             e.printStackTrace()
         }
 
@@ -127,6 +129,8 @@ object ReadLaterRepository : RepositoryInterface {
             db.close()
             exists
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Exception in $functionName", e.message)
             e.printStackTrace()
             false
         }
@@ -175,6 +179,8 @@ object ReadLaterRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Exception when adding read later in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -214,6 +220,8 @@ object ReadLaterRepository : RepositoryInterface {
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Entry ID: $entryId Exception when removing read later in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -242,6 +250,8 @@ object ReadLaterRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing read later in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }

@@ -172,6 +172,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
             db.close()
             result
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $sourceObjId Exception in $functionName", e.message)
             e.printStackTrace()
             null
         }
@@ -229,6 +231,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $sourceObjId Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -271,6 +275,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
             db.close()
             setSourceFetch(context, activeDatabaseState, sourceId, fetchTime, numberOfEntries, pageHash, bodyHash)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source URL: $sourceUrl Exception in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
@@ -298,6 +304,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
             db.close()
             true
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $sourceObjId Exception in $functionName", e.message)
             e.printStackTrace()
             false
         }
@@ -325,6 +333,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Clearing operational data in $functionName", e.message)
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
         }
