@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,8 +30,10 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
     val config by AppConfigManager.config.collectAsState()
     val isDead = EntryUtils.isDead(entry)
     val isVisited = (entry.page_rating_visits ?: 0) > 0
+    val isBookmarked = entry.bookmarked == true
 
     val itemAlpha = when {
+        isBookmarked -> 1f
         isDead && isVisited -> config.dbconfig.entriesDeadAlpha * config.dbconfig.entriesVisitAlpha
         isDead -> config.dbconfig.entriesDeadAlpha
         isVisited -> config.dbconfig.entriesVisitAlpha
@@ -113,10 +116,13 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (entry.bookmarked == true) {
-                            Text(
-                                text = "📌",
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(end = 4.dp)
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = "Bookmarked",
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .padding(end = 4.dp),
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                         if (isDead) {

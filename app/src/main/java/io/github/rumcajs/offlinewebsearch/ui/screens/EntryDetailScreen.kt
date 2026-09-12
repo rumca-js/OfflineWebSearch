@@ -85,6 +85,8 @@ fun EntryDetailScreen(
                             val (success, err) = ReadLaterRepository.removeReadLaterByEntryId(context, activeDbState, entryId)
                             if (success) {
                                 isReadLater = false
+                                val updatedEntry = entry.copy(bookmarked = false)
+                                onSelectEntry?.invoke(updatedEntry)
                                 onReadLaterChanged?.invoke(false)
                                 Toast.makeText(context, "Removed from Read Later", Toast.LENGTH_SHORT).show()
                             } else {
@@ -94,6 +96,8 @@ fun EntryDetailScreen(
                             val (success, err) = ReadLaterRepository.addReadLater(context, activeDbState, entryId)
                             if (success) {
                                 isReadLater = true
+                                val updatedEntry = entry.copy(bookmarked = true)
+                                onSelectEntry?.invoke(updatedEntry)
                                 onReadLaterChanged?.invoke(true)
                                 Toast.makeText(context, "Added to Read Later", Toast.LENGTH_SHORT).show()
                             } else {

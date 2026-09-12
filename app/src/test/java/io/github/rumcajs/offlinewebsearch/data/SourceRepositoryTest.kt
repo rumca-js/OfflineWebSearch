@@ -184,7 +184,7 @@ class SourceRepositoryTest {
         val sourceObjId = 9999L
         val values = android.content.ContentValues().apply {
             put("date_fetched", "2026-09-03T18:00:00Z")
-            put("source_obj_id", sourceObjId)
+            put("source_id", sourceObjId)
             put("import_seconds", 42)
             put("number_of_entries", 150)
             put("page_hash", byteArrayOf(1, 2, 3, 4))

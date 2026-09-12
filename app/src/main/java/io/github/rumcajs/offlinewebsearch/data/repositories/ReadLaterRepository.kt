@@ -134,6 +134,7 @@ object ReadLaterRepository : RepositoryInterface {
 
     /**
      * Adds an entry to the ReadLater list if not already present.
+     * Also marks the entry as bookmarked in the `linkdatamodel` table (`bookmarked = 1`).
      */
     suspend fun addReadLater(
         context: Context,
@@ -166,6 +167,11 @@ object ReadLaterRepository : RepositoryInterface {
                 db.insert(getTableName(), null, values)
             }
 
+            val entryValues = ContentValues().apply {
+                put("bookmarked", 1)
+            }
+            db.update(EntrySqliteRepository.getTableName(), entryValues, "id = ?", arrayOf(entryId.toString()))
+
             db.close()
             Pair(true, null)
         } catch (e: Exception) {
@@ -176,6 +182,7 @@ object ReadLaterRepository : RepositoryInterface {
 
     /**
      * Removes an entry from ReadLater by [entryId] and [userId].
+     * Also marks the entry as not bookmarked in the `linkdatamodel` table (`bookmarked = 0`).
      */
     suspend fun removeReadLaterByEntryId(
         context: Context,
@@ -198,6 +205,12 @@ object ReadLaterRepository : RepositoryInterface {
                 "entry_id = ? AND user_id = ?",
                 arrayOf(entryId.toString(), userId.toString())
             )
+
+            val entryValues = ContentValues().apply {
+                put("bookmarked", 0)
+            }
+            db.update(EntrySqliteRepository.getTableName(), entryValues, "id = ?", arrayOf(entryId.toString()))
+
             db.close()
             if (rows > 0) Pair(true, null) else Pair(false, "No rows deleted")
         } catch (e: Exception) {
@@ -208,6 +221,7 @@ object ReadLaterRepository : RepositoryInterface {
 
     /**
      * Clears all records from the `readlater` table.
+     * Also marks all corresponding entries as not bookmarked in `linkdatamodel` (`bookmarked = 0`).
      */
     override suspend fun clear(
         context: Context,
@@ -223,6 +237,7 @@ object ReadLaterRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
+            db.execSQL("UPDATE ${EntrySqliteRepository.getTableName()} SET bookmarked = 0 WHERE id IN (SELECT entry_id FROM ${getTableName()})")
             db.delete(getTableName(), null, null)
             db.close()
             Pair(true, null)
