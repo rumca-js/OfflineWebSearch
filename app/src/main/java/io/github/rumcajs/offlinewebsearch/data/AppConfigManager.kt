@@ -289,6 +289,23 @@ object AppConfigManager {
     }
 
     /**
+     * Updates the display name field of a configured database.
+     *
+     * @param url The database URL or key identifier.
+     * @param displayName The new display name for the database.
+     */
+    fun updateDatabaseDisplayName(url: String, displayName: String) {
+        updateConfig { config ->
+            val newDatabases = config.databases.toMutableMap().apply {
+                get(url)?.let { state ->
+                    put(url, state.copy(displayNameField = displayName.trim()))
+                }
+            }
+            config.copy(databases = newDatabases)
+        }
+    }
+
+    /**
      * Removes the local database file and any associated SQLite sidecar files (-wal, -shm, -journal).
      */
     fun removeDatabaseFiles(context: Context, localFileName: String) {

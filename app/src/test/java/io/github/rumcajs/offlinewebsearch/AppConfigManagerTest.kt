@@ -100,6 +100,21 @@ class AppConfigManagerTest {
         }
 
         @Test
+        fun testUpdateDatabaseDisplayName() = runBlocking {
+            val url = "http://example.com/db_custom_name.db"
+            AppConfigManager.addDatabase(url)
+            var config = AppConfigManager.config.first()
+            assertEquals("db_custom_name.db", config.databases[url]?.displayName)
+
+            AppConfigManager.updateDatabaseDisplayName(url, "My Custom Database")
+            config = AppConfigManager.config.first()
+            assertEquals("My Custom Database", config.databases[url]?.displayNameField)
+            assertEquals("My Custom Database", config.databases[url]?.displayName)
+
+            AppConfigManager.removeDatabase(url)
+        }
+
+        @Test
         fun testRemoveActiveDatabaseSwitchesToDefault() = runBlocking {
             val url = "http://example.com/db_active"
             AppConfigManager.addDatabase(url)

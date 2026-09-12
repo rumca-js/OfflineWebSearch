@@ -55,10 +55,6 @@ fun DatabaseScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    var urlInput by remember { mutableStateOf(url ?: "") }
-    var isVerifying by remember { mutableStateOf(false) }
-    var verificationError by remember { mutableStateOf<String?>(null) }
-
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("*/*")
     ) { destinationUri: Uri? ->
@@ -111,26 +107,13 @@ fun DatabaseScreen(
     }
 
     if (showEditDialog && url != null) {
-        io.github.rumcajs.offlinewebsearch.ui.components.AddByUrlDialog(
-            urlInput = urlInput,
-            editingUrl = url,
-            isVerifying = isVerifying,
-            verificationError = verificationError,
-            onUrlInputChange = {
-                urlInput = it
-                verificationError = null
-            },
-            onDismiss = { if (!isVerifying) showEditDialog = false },
-            onSave = {
-                val isZip = urlInput.endsWith(".db.zip", ignoreCase = true) || urlInput.endsWith(".zip", ignoreCase = true)
-                val newState = DatabaseState.fromUrl(urlInput)
-                if (newState.extension != ".json" && newState.extension != ".db" && !isZip) {
-                    verificationError = "URL must end with .json, .db, .zip, or .db.zip"
-                } else {
-                    showEditDialog = false
-                    AppConfigManager.refreshDatabaseInBackground(context, urlInput)
-                    Toast.makeText(context, "Database update started", Toast.LENGTH_SHORT).show()
-                }
+        io.github.rumcajs.offlinewebsearch.ui.components.EditDisplayNameDialog(
+            initialName = state.displayName,
+            onDismiss = { showEditDialog = false },
+            onSave = { newDisplayName ->
+                showEditDialog = false
+                AppConfigManager.updateDatabaseDisplayName(url, newDisplayName)
+                Toast.makeText(context, "Display name updated", Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -184,11 +167,9 @@ fun DatabaseScreen(
                     }
                     if (url != null) {
                         IconButton(onClick = {
-                            urlInput = url
-                            verificationError = null
                             showEditDialog = true
                         }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Database")
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Display Name")
                         }
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete Database")
