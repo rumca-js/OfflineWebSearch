@@ -42,6 +42,7 @@ fun SourceEditScreen(
     var url by remember { mutableStateOf(source.url) }
     var enabled by remember { mutableStateOf(source.enabled) }
     var ageText by remember { mutableStateOf((source.age ?: 0).toString()) }
+    var autoTag by remember { mutableStateOf(source.auto_tag) }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var urlError by remember { mutableStateOf<String?>(null) }
@@ -63,7 +64,8 @@ fun SourceEditScreen(
                 title = title,
                 url = url,
                 enabled = enabled,
-                age = finalAge
+                age = finalAge,
+                auto_tag = autoTag.trim().lowercase()
             )
             errorMessage = if (!success) err else null
             success
@@ -75,7 +77,8 @@ fun SourceEditScreen(
                 title = title,
                 url = url,
                 enabled = enabled,
-                age = finalAge
+                age = finalAge,
+                auto_tag = autoTag.trim().lowercase()
             )
             errorMessage = if (!success) err else null
             success
@@ -109,7 +112,8 @@ fun SourceEditScreen(
                                                 title = title,
                                                 url = url,
                                                 enabled = enabled,
-                                                age = finalAge
+                                                age = finalAge,
+                                                auto_tag = autoTag.trim().lowercase()
                                             )
                                         )
                                     } else {
@@ -147,6 +151,8 @@ fun SourceEditScreen(
                 onEnabledChange = { enabled = it },
                 age = ageText,
                 onAgeChange = { ageText = it },
+                autoTag = autoTag,
+                onAutoTagChange = { autoTag = it },
                 isEditable = isEditable,
                 urlError = urlError
             )

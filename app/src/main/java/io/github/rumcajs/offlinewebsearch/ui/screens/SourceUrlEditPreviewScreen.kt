@@ -50,6 +50,7 @@ fun SourceUrlEditPreviewScreen(
     var url by remember { mutableStateOf(initialUrl) }
     var enabled by remember { mutableStateOf(true) }
     var ageText by remember { mutableStateOf("0") }
+    var autoTag by remember { mutableStateOf("") }
     var favicon by remember { mutableStateOf("") }
 
     var isSaving by remember { mutableStateOf(false) }
@@ -128,7 +129,8 @@ fun SourceUrlEditPreviewScreen(
             title = title,
             url = url,
             enabled = enabled,
-            age = finalAge
+            age = finalAge,
+            auto_tag = autoTag.trim().lowercase()
         )
         errorMessage = if (!success) err else null
         return success
@@ -207,6 +209,8 @@ fun SourceUrlEditPreviewScreen(
                 onEnabledChange = { enabled = it },
                 age = ageText,
                 onAgeChange = { ageText = it },
+                autoTag = autoTag,
+                onAutoTagChange = { autoTag = it },
                 isEditable = isEditable,
                 urlError = urlError
             )

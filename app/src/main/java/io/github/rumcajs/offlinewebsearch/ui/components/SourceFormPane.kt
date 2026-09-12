@@ -24,6 +24,8 @@ fun SourceFormPane(
     onEnabledChange: (Boolean) -> Unit,
     age: String = "0",
     onAgeChange: (String) -> Unit = {},
+    autoTag: String = "",
+    onAutoTagChange: (String) -> Unit = {},
     isEditable: Boolean,
     urlError: String? = null,
     modifier: Modifier = Modifier
@@ -82,6 +84,19 @@ fun SourceFormPane(
             enabled = isEditable,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = autoTag,
+            onValueChange = { if (isEditable) onAutoTagChange(it) },
+            label = { Text("Auto Tag") },
+            placeholder = { Text("news, tech, android") },
+            supportingText = { Text("Tags separated by comma (e.g. news, tech, android)") },
+            enabled = isEditable,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = false
         )
 
         Spacer(modifier = Modifier.height(16.dp))
