@@ -26,6 +26,8 @@ fun SourceFormPane(
     onAgeChange: (String) -> Unit = {},
     autoTag: String = "",
     onAutoTagChange: (String) -> Unit = {},
+    language: String = "",
+    onLanguageChange: (String) -> Unit = {},
     isEditable: Boolean,
     urlError: String? = null,
     modifier: Modifier = Modifier
@@ -97,6 +99,18 @@ fun SourceFormPane(
             enabled = isEditable,
             modifier = Modifier.fillMaxWidth(),
             singleLine = false
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = language,
+            onValueChange = { if (isEditable) onLanguageChange(it) },
+            label = { Text("Language") },
+            placeholder = { Text("en") },
+            enabled = isEditable,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))

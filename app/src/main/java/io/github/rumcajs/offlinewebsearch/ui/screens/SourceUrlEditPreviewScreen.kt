@@ -51,6 +51,7 @@ fun SourceUrlEditPreviewScreen(
     var enabled by remember { mutableStateOf(true) }
     var ageText by remember { mutableStateOf("0") }
     var autoTag by remember { mutableStateOf("") }
+    var language by remember { mutableStateOf("") }
     var favicon by remember { mutableStateOf("") }
 
     var isSaving by remember { mutableStateOf(false) }
@@ -94,6 +95,10 @@ fun SourceUrlEditPreviewScreen(
                 if (title.isBlank() && !extractedTitle.isNullOrBlank()) {
                     title = extractedTitle
                 }
+                val extractedLanguage = page.getLanguage()
+                if (language.isBlank() && !extractedLanguage.isNullOrBlank()) {
+                    language = extractedLanguage
+                }
                 val thumbnails = page.getThumbnails()
                 val extractedFavicon = thumbnails.firstOrNull { it.isNotBlank() }
                 if (extractedFavicon != null) {
@@ -130,7 +135,8 @@ fun SourceUrlEditPreviewScreen(
             url = url,
             enabled = enabled,
             age = finalAge,
-            auto_tag = autoTag.trim().lowercase()
+            auto_tag = autoTag.trim().lowercase(),
+            language = language.trim()
         )
         errorMessage = if (!success) err else null
         return success
@@ -211,6 +217,8 @@ fun SourceUrlEditPreviewScreen(
                 onAgeChange = { ageText = it },
                 autoTag = autoTag,
                 onAutoTagChange = { autoTag = it },
+                language = language,
+                onLanguageChange = { language = it },
                 isEditable = isEditable,
                 urlError = urlError
             )

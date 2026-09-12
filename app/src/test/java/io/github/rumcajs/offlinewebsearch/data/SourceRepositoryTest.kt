@@ -620,5 +620,87 @@ class SourceRepositoryTest {
         assertNotNull(updated)
         assertEquals(21, updated!!.age)
     }
+
+    @Test
+    fun `insertSource with language sets language column and defaults to empty string`() = runBlocking {
+        val (okDefault, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Default Lang Source",
+            url = "https://default-lang.com/feed.xml",
+            enabled = true
+        )
+        assertTrue(okDefault)
+        val defaultSource = SourceRepository.getSourceByUrl(context, dbState, "https://default-lang.com/feed.xml")
+        assertNotNull(defaultSource)
+        assertEquals("", defaultSource!!.language)
+
+        val (okCustom, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Custom Lang Source",
+            url = "https://custom-lang.com/feed.xml",
+            enabled = true,
+            language = "pl"
+        )
+        assertTrue(okCustom)
+        val customSource = SourceRepository.getSourceByUrl(context, dbState, "https://custom-lang.com/feed.xml")
+        assertNotNull(customSource)
+        assertEquals("pl", customSource!!.language)
+    }
+
+    @Test
+    fun `updateSourceLanguage updates language column in database`() = runBlocking {
+        val (okInsert, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Update Lang Source",
+            url = "https://update-lang.com/feed.xml",
+            enabled = true
+        )
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, "https://update-lang.com/feed.xml")!!
+        assertEquals("", source.language)
+
+        val (okUpdate, err) = SourceRepository.updateSourceLanguage(
+            context = context,
+            activeDatabaseState = dbState,
+            id = source.id!!,
+            language = "de"
+        )
+        assertTrue(err ?: "", okUpdate)
+
+        val updated = SourceRepository.getSourceById(context, dbState, source.id!!)
+        assertNotNull(updated)
+        assertEquals("de", updated!!.language)
+    }
+
+    @Test
+    fun `updateSourceProperties updates language column in database`() = runBlocking {
+        val (okInsert, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Update Props Lang Source",
+            url = "https://update-props-lang.com/feed.xml",
+            enabled = true
+        )
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, "https://update-props-lang.com/feed.xml")!!
+
+        val (okUpdate, err) = SourceRepository.updateSourceProperties(
+            context = context,
+            activeDatabaseState = dbState,
+            id = source.id!!,
+            title = "New Title",
+            url = "https://update-props-lang.com/feed.xml",
+            enabled = true,
+            language = "fr"
+        )
+        assertTrue(err ?: "", okUpdate)
+
+        val updated = SourceRepository.getSourceById(context, dbState, source.id!!)
+        assertNotNull(updated)
+        assertEquals("fr", updated!!.language)
+    }
 }
 

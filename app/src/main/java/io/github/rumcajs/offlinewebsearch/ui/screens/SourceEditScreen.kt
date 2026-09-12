@@ -43,6 +43,7 @@ fun SourceEditScreen(
     var enabled by remember { mutableStateOf(source.enabled) }
     var ageText by remember { mutableStateOf((source.age ?: 0).toString()) }
     var autoTag by remember { mutableStateOf(source.auto_tag) }
+    var language by remember { mutableStateOf(source.language) }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var urlError by remember { mutableStateOf<String?>(null) }
@@ -65,7 +66,8 @@ fun SourceEditScreen(
                 url = url,
                 enabled = enabled,
                 age = finalAge,
-                auto_tag = autoTag.trim().lowercase()
+                auto_tag = autoTag.trim().lowercase(),
+                language = language.trim()
             )
             errorMessage = if (!success) err else null
             success
@@ -78,7 +80,8 @@ fun SourceEditScreen(
                 url = url,
                 enabled = enabled,
                 age = finalAge,
-                auto_tag = autoTag.trim().lowercase()
+                auto_tag = autoTag.trim().lowercase(),
+                language = language.trim()
             )
             errorMessage = if (!success) err else null
             success
@@ -113,7 +116,8 @@ fun SourceEditScreen(
                                                 url = url,
                                                 enabled = enabled,
                                                 age = finalAge,
-                                                auto_tag = autoTag.trim().lowercase()
+                                                auto_tag = autoTag.trim().lowercase(),
+                                                language = language.trim()
                                             )
                                         )
                                     } else {
@@ -153,6 +157,8 @@ fun SourceEditScreen(
                 onAgeChange = { ageText = it },
                 autoTag = autoTag,
                 onAutoTagChange = { autoTag = it },
+                language = language,
+                onLanguageChange = { language = it },
                 isEditable = isEditable,
                 urlError = urlError
             )

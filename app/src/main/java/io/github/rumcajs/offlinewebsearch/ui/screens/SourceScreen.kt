@@ -334,6 +334,7 @@ fun SourceScreen(
                     add(PropertyItem(label = "ID", value = currentSource.id?.toString() ?: "N/A"))
                     add(PropertyItem(label = "Status", value = if (currentSource.enabled) "Enabled" else "Disabled"))
                     add(PropertyItem(label = "Type", value = currentSource.source_type?.takeIf { it.isNotBlank() } ?: SourceRepository.SOURCE_TYPE_RSS))
+                    add(PropertyItem(label = "Language", value = currentSource.language.takeIf { it.isNotBlank() } ?: "N/A"))
                     add(PropertyItem(label = "Auto Tag", value = currentSource.auto_tag.takeIf { it.isNotBlank() } ?: "None"))
                     add(PropertyItem(label = "Default Entry Age", value = (currentSource.age ?: 0).toString()))
                     add(PropertyItem(label = "Favicon", value = currentSource.favicon.takeIf { it.isNotBlank() } ?: "", type= PropertyType.LINK))

@@ -371,6 +371,44 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Updates the language setting for a source in `sourcedatamodel`.
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param id ID of the source.
+     * @param language Language code string (e.g. "en", "pl").
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    suspend fun updateSourceLanguage(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long,
+        language: String
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val values = ContentValues().apply {
+                put("language", language.take(1000))
+            }
+            val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
+            db.close()
+            if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $id Exception when updating source language in $functionName")
+
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
      * Updates the age designation for a source in `sourcedatamodel`.
      * @param context Application context.
      * @param activeDatabaseState Current database state.
