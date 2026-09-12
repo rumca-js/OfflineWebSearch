@@ -12,7 +12,6 @@ interface Page {
      */
     fun getDatePublished(): Date?
     fun getEntries(): List<Entry>
-    // TODO refactor. It should be string, not List
     fun getThumbnails(): List<String>
     fun getFeeds(): List<String> = emptyList()
 
