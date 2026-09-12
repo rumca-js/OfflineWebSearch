@@ -1,0 +1,1 @@
+Entry list show visited, and bookmarked entries properly. Entry detail uses correct button to edit tags. RSS and HTML correctly read hashes.
