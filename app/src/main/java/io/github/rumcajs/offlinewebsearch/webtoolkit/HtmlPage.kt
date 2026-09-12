@@ -71,29 +71,41 @@ class HtmlPage(val url: String, val contents: String) : Page {
         }
     }
 
-    // TODO write test for it
-    // TODO make it getFeeds, returns list, consistent with API
-    fun getFeed(): String? {
-        if (contents.isBlank()) return null
+    /**
+     * Finds and returns all RSS/Atom feed links declared in `<link>` tags.
+     * Resolves relative URLs to absolute URLs against the page URL.
+     */
+    override fun getFeeds(): List<String> {
+        if (contents.isBlank()) return emptyList()
 
+        val feeds = mutableListOf<String>()
         // Regex to match any <link ...> tag in a case-insensitive manner
         val linkTagRegex = """<link\s+([^>]+)>""".toRegex(RegexOption.IGNORE_CASE)
 
         linkTagRegex.findAll(contents).forEach { matchResult ->
             val tag = matchResult.value
-            val type = getAttrValue(tag, "type")
-            val rel = getAttrValue(tag, "rel")
+            val type = getAttrValue(tag, "type")?.lowercase()
+            val rel = getAttrValue(tag, "rel")?.lowercase()
 
-            // RSS links have type="application/rss+xml" (or sometimes type="application/atom+xml")
-            // and usually rel="alternate"
-            if (type?.lowercase() == "application/rss+xml" || type?.lowercase() == "application/atom+xml") {
+            // RSS links have type="application/rss+xml", "application/atom+xml", etc.
+            val isFeedType = type == "application/rss+xml" ||
+                    type == "application/atom+xml" ||
+                    type == "application/rdf+xml" ||
+                    type == "application/feed+json" ||
+                    (type == "application/json" && rel == "alternate") ||
+                    (type == "text/xml" && (rel == "alternate" || tag.contains("rss", ignoreCase = true)))
+
+            if (isFeedType) {
                 val href = getAttrValue(tag, "href")
-                if (href != null) {
-                    return resolveUrl(unescapeHtml(href))
+                if (!href.isNullOrBlank()) {
+                    val resolved = resolveUrl(unescapeHtml(href))
+                    if (!feeds.contains(resolved)) {
+                        feeds.add(resolved)
+                    }
                 }
             }
         }
-        return null
+        return feeds
     }
 
     override fun getTitle(): String? = title

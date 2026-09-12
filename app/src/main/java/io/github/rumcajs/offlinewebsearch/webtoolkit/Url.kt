@@ -77,6 +77,13 @@ open class Url(val url: String) {
     }
 
     /**
+     * Returns the list of feed URLs extracted from the page.
+     */
+    open suspend fun getFeeds(): List<String> {
+        return baseUrl.getFeeds()
+    }
+
+    /**
      * Returns a PageHandler matching this URL if one is available from HandlerBuilder.
      */
     open fun getPageHandler(): PageHandler? {

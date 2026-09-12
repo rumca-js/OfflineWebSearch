@@ -82,4 +82,38 @@ class HtmlPageTest {
         assertTrue(htmlPage.getThumbnails().isEmpty())
         assertNull(htmlPage.getDatePublished())
     }
+
+    @Test
+    fun testGetFeeds() {
+        val html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="https://example.com/rss.xml" />
+                <link rel="alternate" type="application/atom+xml" title="Atom Feed" href="/feed.atom" />
+                <link rel="stylesheet" href="/style.css" />
+                <link type="application/rdf+xml" href="relative/rdf.xml" />
+            </head>
+            <body></body>
+            </html>
+        """.trimIndent()
+
+        val htmlPage = HtmlPage("https://example.com/blog/index.html", html)
+        val feeds = htmlPage.getFeeds()
+
+        assertEquals(3, feeds.size)
+        assertEquals("https://example.com/rss.xml", feeds[0])
+        assertEquals("https://example.com/feed.atom", feeds[1])
+        assertEquals("https://example.com/blog/relative/rdf.xml", feeds[2])
+    }
+
+    @Test
+    fun testGetFeedsEmpty() {
+        val html = "<html><head><link rel=\"stylesheet\" href=\"style.css\"/></head><body></body></html>"
+        val htmlPage = HtmlPage("https://example.com/", html)
+        assertTrue(htmlPage.getFeeds().isEmpty())
+
+        val emptyPage = HtmlPage("https://example.com/", "")
+        assertTrue(emptyPage.getFeeds().isEmpty())
+    }
 }

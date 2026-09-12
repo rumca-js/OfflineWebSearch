@@ -80,6 +80,13 @@ class BaseUrl(val url: String) {
     }
 
     /**
+     * Returns the list of feed URLs extracted from the page.
+     */
+    suspend fun getFeeds(): List<String> {
+        return getPage().getFeeds()
+    }
+
+    /**
      * Returns a PageHandler matching this URL if one is available from HandlerBuilder.
      */
     fun getPageHandler(): PageHandler? {
