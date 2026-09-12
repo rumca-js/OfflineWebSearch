@@ -10,6 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -23,6 +26,7 @@ import kotlinx.coroutines.launch
  *
  * Entries are loaded from the active database and presented newest-first.
  * Each row shows the log level badge, timestamp, summary text, and optional detail text.
+ * Tapping a row opens a detail dialog displaying all log fields.
  *
  * @param onBack Callback invoked when the user taps the back navigation icon.
  */
@@ -35,12 +39,20 @@ fun AppLoggingScreen(onBack: () -> Unit = {}) {
 
     var logs by remember { mutableStateOf<List<AppLogging>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var selectedLog by remember { mutableStateOf<AppLogging?>(null) }
 
     // Load logs whenever the active database changes.
     LaunchedEffect(config.activeDatabaseState) {
         isLoading = true
         logs = AppLoggingRepository.getLogs(context, config.activeDatabaseState)
         isLoading = false
+    }
+
+    if (selectedLog != null) {
+        LogDetailDialog(
+            log = selectedLog!!,
+            onDismiss = { selectedLog = null }
+        )
     }
 
     Scaffold(
@@ -92,7 +104,10 @@ fun AppLoggingScreen(onBack: () -> Unit = {}) {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(logs) { log ->
-                            LogEntryCard(log)
+                            LogEntryCard(
+                                log = log,
+                                onClick = { selectedLog = log }
+                            )
                         }
                     }
                 }
@@ -105,9 +120,13 @@ fun AppLoggingScreen(onBack: () -> Unit = {}) {
  * Card composable that renders a single [AppLogging] entry.
  *
  * @param log The log entry to display.
+ * @param onClick Callback when the card is clicked.
  */
 @Composable
-private fun LogEntryCard(log: AppLogging) {
+private fun LogEntryCard(
+    log: AppLogging,
+    onClick: () -> Unit
+) {
     val levelColor = when (log.level) {
         AppLoggingRepository.LEVEL_ERROR -> MaterialTheme.colorScheme.errorContainer
         AppLoggingRepository.LEVEL_WARNING -> MaterialTheme.colorScheme.tertiaryContainer
@@ -120,6 +139,7 @@ private fun LogEntryCard(log: AppLogging) {
     }
 
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = levelColor)
     ) {
@@ -129,11 +149,23 @@ private fun LogEntryCard(log: AppLogging) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = levelLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = levelLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    log.id?.let { id ->
+                        Text(
+                            text = "#$id",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 log.date?.let { date ->
                     Text(
                         text = date,
@@ -150,14 +182,128 @@ private fun LogEntryCard(log: AppLogging) {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
-            log.detail_text?.takeIf { it.isNotBlank() }?.let { detail ->
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = detail,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
+}
+
+/**
+ * Dialog displaying full information for a selected [AppLogging] entry.
+ *
+ * @param log The log entry whose details are shown.
+ * @param onDismiss Callback to dismiss the dialog.
+ */
+@Composable
+private fun LogDetailDialog(
+    log: AppLogging,
+    onDismiss: () -> Unit
+) {
+    val levelLabel = when (log.level) {
+        AppLoggingRepository.LEVEL_ERROR -> "ERROR"
+        AppLoggingRepository.LEVEL_WARNING -> "WARN"
+        else -> "INFO"
+    }
+
+    val levelColor = when (log.level) {
+        AppLoggingRepository.LEVEL_ERROR -> MaterialTheme.colorScheme.error
+        AppLoggingRepository.LEVEL_WARNING -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "[$levelLabel]",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = levelColor
+                    )
+                    log.date?.let { date ->
+                        Text(
+                            text = date,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = log.info_text.ifBlank { "Log Entry #${log.id ?: ""}" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                HorizontalDivider(modifier = Modifier.padding(bottom = 12.dp))
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "ID: ",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = log.id?.toString() ?: "N/A",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Level: ",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "$levelLabel (${log.level})",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Date: ",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = log.date ?: "N/A",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Description / Details:",
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                SelectionContainer {
+                    Text(
+                        text = log.detail_text?.takeIf { it.isNotBlank() } ?: "None",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (log.detail_text.isNullOrBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }
