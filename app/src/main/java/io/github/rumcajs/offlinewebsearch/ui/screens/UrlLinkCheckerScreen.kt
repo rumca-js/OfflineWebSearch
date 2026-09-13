@@ -160,6 +160,7 @@ fun UrlLinkCheckerScreen(
                     .weight(1f)
                     .fillMaxWidth(),
                 refreshTrigger = refreshTrigger,
+                showResponseInfo = true,
                 onLoadingChanged = { isLoading = it },
                 onPageLoaded = { page = it },
                 onNavigateToDetail = onNavigateToDetail

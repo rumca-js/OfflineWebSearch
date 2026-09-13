@@ -25,6 +25,7 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
+import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
 
@@ -32,13 +33,15 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
  * Reusable pane for fetching and displaying the preview of a web page or RSS feed.
  *
  * Handles network loading, parsing HTML/RSS page content, error states, and rendering
- * metadata, thumbnail galleries, or feed entry lists.
+ * metadata, thumbnail galleries, or feed entry lists. Optionally displays HTTP response info.
  *
  * @param url The URL to fetch and preview.
  * @param modifier Modifier for container layout and sizing.
  * @param refreshTrigger Trigger value to force-refresh data on change.
+ * @param showResponseInfo Whether to display the HTTP response info pane (status code, length, headers).
  * @param onLoadingChanged Callback invoked when loading state changes.
  * @param onPageLoaded Callback invoked when page data is fetched or cleared.
+ * @param onResponseLoaded Callback invoked when raw HTTP response is fetched or cleared.
  * @param onNavigateToDetail Callback invoked when a feed entry is clicked.
  */
 @Composable
@@ -46,13 +49,16 @@ fun UrlPreviewPane(
     url: String,
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0,
+    showResponseInfo: Boolean = false,
     onLoadingChanged: (Boolean) -> Unit = {},
     onPageLoaded: (Page?) -> Unit = {},
+    onResponseLoaded: (PageResponseObject?) -> Unit = {},
     onNavigateToDetail: (Entry) -> Unit = {}
 ) {
     val config by AppConfigManager.config.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf<Page?>(null) }
+    var pageResponse by remember { mutableStateOf<PageResponseObject?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var internalRetryTrigger by remember { mutableStateOf(0) }
 
@@ -60,17 +66,21 @@ fun UrlPreviewPane(
         if (url.isBlank()) {
             isLoading = false
             page = null
+            pageResponse = null
             error = null
             onLoadingChanged(false)
             onPageLoaded(null)
+            onResponseLoaded(null)
             return@LaunchedEffect
         }
         if (config.networkConfig.disabled) {
             isLoading = false
             page = null
+            pageResponse = null
             error = "Network communication is disabled in settings."
             onLoadingChanged(false)
             onPageLoaded(null)
+            onResponseLoaded(null)
             return@LaunchedEffect
         }
 
@@ -80,6 +90,8 @@ fun UrlPreviewPane(
         try {
             val urlObj = Url(url)
             val resp = urlObj.getResponse()
+            pageResponse = resp
+            onResponseLoaded(resp)
             if (resp.text != null) {
                 val parsedPage = urlObj.getPage()
                 page = parsedPage
@@ -133,23 +145,29 @@ fun UrlPreviewPane(
             error != null && page == null -> {
                 Column(
                     modifier = Modifier
-                        .align(Alignment.Center)
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    if (showResponseInfo && pageResponse != null) {
+                        UrlResponseInfoPane(
+                            pageResponse = pageResponse!!,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     Text(
                         text = "Failed to load page",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = error ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Button(onClick = { internalRetryTrigger++ }) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -159,18 +177,33 @@ fun UrlPreviewPane(
             }
 
             page == null -> {
-                Text(
-                    text = "No content loaded.",
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (showResponseInfo && pageResponse != null) {
+                        UrlResponseInfoPane(
+                            pageResponse = pageResponse!!,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Text(
+                        text = "No content loaded.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             page is HtmlPage -> {
                 HtmlPageDetails(
                     page = page as HtmlPage,
                     url = url,
-                    showIcons = config.dbconfig.showIcons
+                    showIcons = config.dbconfig.showIcons,
+                    pageResponse = if (showResponseInfo) pageResponse else null
                 )
             }
 
@@ -180,7 +213,8 @@ fun UrlPreviewPane(
                     url = url,
                     showIcons = config.dbconfig.showIcons,
                     onNavigateToDetail = onNavigateToDetail,
-                    error = error
+                    error = error,
+                    pageResponse = if (showResponseInfo) pageResponse else null
                 )
             }
 
@@ -293,10 +327,15 @@ private fun PageMetadataSection(page: Page, url: String) {
 }
 
 /**
- * Details view for HTML web pages, including hero image and thumbnail gallery.
+ * Details view for HTML web pages, including optional response info, hero image, and thumbnail gallery.
  */
 @Composable
-private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
+private fun HtmlPageDetails(
+    page: HtmlPage,
+    url: String,
+    showIcons: Boolean,
+    pageResponse: PageResponseObject? = null
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -304,6 +343,14 @@ private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Optional Response Info
+        if (pageResponse != null) {
+            UrlResponseInfoPane(
+                pageResponse = pageResponse,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         // Hero Section or Main image
         val thumbnails = page.getThumbnails()
         if (showIcons && thumbnails.isNotEmpty()) {
@@ -355,7 +402,7 @@ private fun HtmlPageDetails(page: HtmlPage, url: String, showIcons: Boolean) {
 }
 
 /**
- * Details view for RSS feeds, rendering feed metadata and list of entry cards.
+ * Details view for RSS feeds, rendering optional response info, feed metadata, and list of entry cards.
  */
 @Composable
 private fun RssPageDetails(
@@ -363,7 +410,8 @@ private fun RssPageDetails(
     url: String,
     showIcons: Boolean,
     onNavigateToDetail: (Entry) -> Unit,
-    error: String?
+    error: String?,
+    pageResponse: PageResponseObject? = null
 ) {
     val entries = page.getEntries()
     LazyColumn(
@@ -376,6 +424,13 @@ private fun RssPageDetails(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
+                if (pageResponse != null) {
+                    UrlResponseInfoPane(
+                        pageResponse = pageResponse,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 PageMetadataSection(page = page, url = url)
 
                 if (entries.isNotEmpty()) {

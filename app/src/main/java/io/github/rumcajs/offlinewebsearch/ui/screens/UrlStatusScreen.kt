@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,9 +12,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.rumcajs.offlinewebsearch.ui.components.UrlResponseInfoPane
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 
+/**
+ * Screen that performs a lightweight HTTP HEAD/header request for a URL
+ * and displays response info (status code, content length, type, error) before
+ * optionally navigating to the full page preview.
+ *
+ * @param url The URL target to inspect.
+ * @param onNavigateToLinkData Callback to navigate to full link data preview.
+ * @param onBack Callback invoked when navigating back.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UrlStatusScreen(
@@ -38,7 +48,7 @@ fun UrlStatusScreen(
                 title = { Text("Link Preview") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -108,131 +118,10 @@ fun UrlStatusScreen(
                     }
 
                     if (pageResponse != null) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "Response Info",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
-
-                                val (statusColor, statusText) = when {
-                                    pageResponse.isValid -> {
-                                        androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${pageResponse.statusCode})"
-                                    }
-                                    pageResponse.isInvalid -> {
-                                        MaterialTheme.colorScheme.error to "Error (${pageResponse.statusCode})"
-                                    }
-                                    else -> {
-                                        MaterialTheme.colorScheme.error to "Unknown (${pageResponse.statusCode})"
-                                    }
-                                }
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Status Code",
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    SuggestionChip(
-                                        onClick = {},
-                                        label = { Text(statusText) },
-                                        colors = SuggestionChipDefaults.suggestionChipColors(
-                                            labelColor = statusColor
-                                        )
-                                    )
-                                }
-
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Response Length",
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    val lengthDisplay = pageResponse.length?.let { len ->
-                                        "$len bytes (${formatBytes(len)})"
-                                    } ?: "Unknown"
-                                    Text(
-                                        text = lengthDisplay,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Content Type",
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        text = pageResponse.contentType ?: "N/A",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-
-                                if (pageResponse.error != null) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(vertical = 8.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant
-                                    )
-                                    
-                                    Text(
-                                        text = "Error Details",
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                    Text(
-                                        text = pageResponse.error,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
+                        UrlResponseInfoPane(
+                            pageResponse = pageResponse,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -248,11 +137,4 @@ fun UrlStatusScreen(
             }
         }
     }
-}
-
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt()
-    val pre = "KMGTPE"[exp - 1]
-    return String.format("%.2f %sB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
 }
