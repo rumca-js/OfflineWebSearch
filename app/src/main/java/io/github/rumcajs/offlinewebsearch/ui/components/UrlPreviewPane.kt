@@ -1,6 +1,9 @@
 package io.github.rumcajs.offlinewebsearch.ui.components
 
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -15,7 +18,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,7 +32,6 @@ import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
-import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
 
 /**
@@ -114,6 +119,8 @@ fun UrlPreviewPane(
     Box(
         modifier = modifier
     ) {
+        val currentPage = page
+        val currentPageResponse = pageResponse
         when {
             isLoading -> {
                 Column(
@@ -143,7 +150,7 @@ fun UrlPreviewPane(
                 }
             }
 
-            error != null && page == null -> {
+            error != null && currentPage == null -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -152,9 +159,9 @@ fun UrlPreviewPane(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (showResponseInfo && pageResponse != null) {
+                    if (showResponseInfo && currentPageResponse != null) {
                         UrlResponseInfoPane(
-                            pageResponse = pageResponse!!,
+                            pageResponse = currentPageResponse,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -177,7 +184,7 @@ fun UrlPreviewPane(
                 }
             }
 
-            page == null -> {
+            currentPage == null -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -186,9 +193,9 @@ fun UrlPreviewPane(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (showResponseInfo && pageResponse != null) {
+                    if (showResponseInfo && currentPageResponse != null) {
                         UrlResponseInfoPane(
-                            pageResponse = pageResponse!!,
+                            pageResponse = currentPageResponse,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -199,41 +206,62 @@ fun UrlPreviewPane(
                 }
             }
 
-            page is HtmlPage -> {
+            currentPage is HtmlPage -> {
                 HtmlPageDetails(
-                    page = page as HtmlPage,
+                    page = currentPage,
                     url = url,
                     showIcons = config.dbconfig.showIcons,
                     onFeedClick = onFeedClick,
-                    pageResponse = if (showResponseInfo) pageResponse else null
-                )
-            }
-
-            page is RssPage -> {
-                RssPageDetails(
-                    page = page as RssPage,
-                    url = url,
-                    showIcons = config.dbconfig.showIcons,
                     onNavigateToDetail = onNavigateToDetail,
-                    onFeedClick = onFeedClick,
-                    error = error,
-                    pageResponse = if (showResponseInfo) pageResponse else null
+                    pageResponse = if (showResponseInfo) currentPageResponse else null
                 )
             }
 
             else -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No content loaded.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                DefaultPageDetails(
+                    page = currentPage,
+                    url = url,
+                    showIcons = config.dbconfig.showIcons,
+                    onFeedClick = onFeedClick,
+                    onNavigateToDetail = onNavigateToDetail,
+                    error = error,
+                    pageResponse = if (showResponseInfo) currentPageResponse else null
+                )
             }
         }
     }
+}
+
+/**
+ * A [SuggestionChip] that displays a feed URL.
+ * - Single tap triggers [onClick].
+ * - Long press copies the URL to the clipboard and shows a toast.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FeedSuggestionChip(feedUrl: String, onClick: () -> Unit) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    SuggestionChip(
+        onClick = onClick,
+        label = {
+            Text(
+                feedUrl,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    clipboardManager.setText(AnnotatedString(feedUrl))
+                    Toast.makeText(context, "URL copied", Toast.LENGTH_SHORT).show()
+                }
+            )
+    )
 }
 
 /**
@@ -330,119 +358,105 @@ private fun PageMetadataSection(page: Page, url: String) {
 }
 
 /**
- * Details view for HTML web pages, including optional response info, hero image, and thumbnail gallery.
+ * Shared header section rendered inside both [DefaultPageDetails] and [RssPageDetails].
+ *
+ * Displays, in order:
+ * 1. Optional HTTP response info.
+ * 2. [extraTopContent] slot — inserted before metadata (e.g. hero image for HTML pages).
+ * 3. Page metadata (title, date, description, source link).
+ * 4. Feed chips with long-press copy support.
+ *
+ * @param page The page whose metadata is displayed.
+ * @param url The source URL, used to filter out self-referential feeds.
+ * @param onFeedClick Called when a feed chip is tapped.
+ * @param pageResponse Optional HTTP response to display in [UrlResponseInfoPane].
+ * @param extraTopContent Optional composable slot rendered between response info and metadata.
  */
 @Composable
-private fun HtmlPageDetails(
-    page: HtmlPage,
+private fun PageDetailsHeader(
+    page: Page,
     url: String,
     showIcons: Boolean,
     onFeedClick: (String) -> Unit,
-    pageResponse: PageResponseObject? = null
+    pageResponse: PageResponseObject?
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Optional Response Info
-        if (pageResponse != null) {
-            UrlResponseInfoPane(
-                pageResponse = pageResponse,
-                modifier = Modifier.fillMaxWidth()
+    if (pageResponse != null) {
+        UrlResponseInfoPane(
+            pageResponse = pageResponse,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    // Hero image — shown for any page type that provides a thumbnail
+    val thumbnails = page.getThumbnails()
+    if (showIcons && thumbnails.isNotEmpty()) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            RemoteImage(
+                url = thumbnails.first(),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
         }
+    }
 
-        // Hero Section or Main image
-        val thumbnails = page.getThumbnails()
-        if (showIcons && thumbnails.isNotEmpty()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                RemoteImage(
-                    url = thumbnails.first(),
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-        }
+    PageMetadataSection(page = page, url = url)
 
-        // Generic page details handling
-        PageMetadataSection(page = page, url = url)
-
-        // Feed links advertised by the page itself, excluding the current URL
-        val pageFeeds = page.getFeeds().filter { it.isNotBlank() && it != url }
-        if (pageFeeds.isNotEmpty()) {
-            Text(
-                text = "Feeds",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = 4.dp)
+    // Feed links advertised by the page itself, excluding the current URL
+    val pageFeeds = page.getFeeds().filter { it.isNotBlank() && it != url }
+    if (pageFeeds.isNotEmpty()) {
+        Text(
+            text = "Feeds",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        pageFeeds.forEach { feedUrl ->
+            FeedSuggestionChip(
+                feedUrl = feedUrl,
+                onClick = { onFeedClick(feedUrl) }
             )
-            pageFeeds.forEach { feedUrl ->
-                SuggestionChip(
-                    onClick = { onFeedClick(feedUrl) },
-                    label = {
-                        Text(
-                            feedUrl,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        // Gallery of other thumbnails if more than 1
-        if (showIcons && thumbnails.size > 1) {
-            Text(
-                text = "Thumbnails",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(thumbnails.drop(1)) { imageUrl ->
-                    Card(
-                        modifier = Modifier.size(120.dp, 80.dp),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        RemoteImage(
-                            url = imageUrl,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-            }
         }
     }
 }
 
 /**
- * Details view for RSS feeds, rendering optional response info, feed metadata, and list of entry cards.
+ * Generic page details view backed by the [Page] interface.
+ *
+ * Uses a [LazyColumn] so that a potentially large entries list renders efficiently.
+ * The shared header (response info, hero image, metadata, feeds) occupies the first
+ * item. Entry cards follow. An [extraContent] slot is placed after the header and
+ * before the entries, allowing subtype-specific content (e.g. a thumbnail gallery
+ * for HTML pages).
+ *
+ * Entries are shown for any [Page] implementation that returns a non-empty list from
+ * [Page.getEntries]. For [HtmlPage] this is always empty, so the section is skipped.
+ *
+ * @param page The page to display.
+ * @param url The source URL.
+ * @param showIcons Whether thumbnails should be displayed.
+ * @param onFeedClick Called when a feed chip is tapped.
+ * @param onNavigateToDetail Called when an entry card is tapped.
+ * @param pageResponse Optional HTTP response info.
+ * @param error Optional partial-load error message shown above the entry list.
+ * @param extraContent Slot rendered between the header and the entries section.
  */
 @Composable
-private fun RssPageDetails(
-    page: RssPage,
+private fun DefaultPageDetails(
+    page: Page,
     url: String,
     showIcons: Boolean,
-    onNavigateToDetail: (Entry) -> Unit,
     onFeedClick: (String) -> Unit,
-    error: String?,
-    pageResponse: PageResponseObject? = null
+    onNavigateToDetail: (Entry) -> Unit,
+    pageResponse: PageResponseObject? = null,
+    error: String? = null,
+    extraContent: @Composable () -> Unit = {}
 ) {
     val entries = page.getEntries()
     LazyColumn(
@@ -450,74 +464,34 @@ private fun RssPageDetails(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Shared header: response info, hero image, metadata, feeds
         item {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                if (pageResponse != null) {
-                    UrlResponseInfoPane(
-                        pageResponse = pageResponse,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                PageMetadataSection(page = page, url = url)
-
-                // Feed links advertised by the page itself, excluding the current URL
-                val pageFeeds = page.getFeeds().filter { it.isNotBlank() && it != url }
-                if (pageFeeds.isNotEmpty()) {
-                    Text(
-                        text = "Feeds",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                    pageFeeds.forEach { feedUrl ->
-                        SuggestionChip(
-                            onClick = { onFeedClick(feedUrl) },
-                            label = {
-                                Text(
-                                    feedUrl,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                if (entries.isNotEmpty()) {
-                    Text(
-                        text = "Feed Entries (${entries.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                PageDetailsHeader(
+                    page = page,
+                    url = url,
+                    showIcons = showIcons,
+                    onFeedClick = onFeedClick,
+                    pageResponse = pageResponse
+                )
+                extraContent()
             }
         }
 
-        if (entries.isEmpty()) {
+        // Entry count label (only when there are entries)
+        if (entries.isNotEmpty()) {
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No entries found in feed.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "Feed Entries (${entries.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
 
+        // Partial-load error banner
         if (error != null) {
             item {
                 Text(
@@ -529,6 +503,7 @@ private fun RssPageDetails(
             }
         }
 
+        // Entry cards — skipped automatically when getEntries() returns empty
         items(entries) { entry ->
             FeedEntryCard(
                 entry = entry,
@@ -538,6 +513,61 @@ private fun RssPageDetails(
         }
     }
 }
+
+/**
+ * Details view for HTML web pages.
+ *
+ * Extends [DefaultPageDetails] with a horizontal thumbnail gallery (additional images
+ * beyond the hero) rendered after the shared header.
+ */
+@Composable
+private fun HtmlPageDetails(
+    page: HtmlPage,
+    url: String,
+    showIcons: Boolean,
+    onFeedClick: (String) -> Unit,
+    onNavigateToDetail: (Entry) -> Unit,
+    pageResponse: PageResponseObject? = null
+) {
+    val thumbnails = page.getThumbnails()
+    DefaultPageDetails(
+        page = page,
+        url = url,
+        showIcons = showIcons,
+        onFeedClick = onFeedClick,
+        onNavigateToDetail = onNavigateToDetail,
+        pageResponse = pageResponse,
+        extraContent = {
+            // Thumbnail gallery (images beyond the first, which is already the hero)
+            if (showIcons && thumbnails.size > 1) {
+                Text(
+                    text = "Thumbnails",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(thumbnails.drop(1)) { imageUrl ->
+                        Card(
+                            modifier = Modifier.size(120.dp, 80.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            RemoteImage(
+                                url = imageUrl,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
 
 /**
  * Card representing a single RSS feed item.
