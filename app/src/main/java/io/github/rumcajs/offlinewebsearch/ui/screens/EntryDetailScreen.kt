@@ -55,7 +55,7 @@ fun EntryDetailScreen(
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
+    val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isReadLater by remember { mutableStateOf(false) }
 
