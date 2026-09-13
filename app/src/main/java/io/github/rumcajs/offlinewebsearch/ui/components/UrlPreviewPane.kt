@@ -204,6 +204,7 @@ fun UrlPreviewPane(
                     page = page as HtmlPage,
                     url = url,
                     showIcons = config.dbconfig.showIcons,
+                    onFeedClick = onFeedClick,
                     pageResponse = if (showResponseInfo) pageResponse else null
                 )
             }
@@ -336,6 +337,7 @@ private fun HtmlPageDetails(
     page: HtmlPage,
     url: String,
     showIcons: Boolean,
+    onFeedClick: (String) -> Unit,
     pageResponse: PageResponseObject? = null
 ) {
     Column(
@@ -373,6 +375,32 @@ private fun HtmlPageDetails(
 
         // Generic page details handling
         PageMetadataSection(page = page, url = url)
+
+        // Feed links advertised by the page itself, excluding the current URL
+        val pageFeeds = page.getFeeds().filter { it.isNotBlank() && it != url }
+        if (pageFeeds.isNotEmpty()) {
+            Text(
+                text = "Feeds",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            pageFeeds.forEach { feedUrl ->
+                SuggestionChip(
+                    onClick = { onFeedClick(feedUrl) },
+                    label = {
+                        Text(
+                            feedUrl,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
 
         // Gallery of other thumbnails if more than 1
         if (showIcons && thumbnails.size > 1) {
