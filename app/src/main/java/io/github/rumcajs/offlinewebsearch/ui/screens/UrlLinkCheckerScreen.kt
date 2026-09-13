@@ -21,27 +21,10 @@ import io.github.rumcajs.offlinewebsearch.ui.components.UrlPreviewPane
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
+import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 
 /**
- * Normalizes a user-entered URL string by adding a scheme prefix if missing.
- *
- * @param raw The raw input string.
- * @return Normalized URL string with protocol.
- */
-private fun normalizeUrl(raw: String): String {
-    val trimmed = raw.trim()
-    if (trimmed.isEmpty()) return ""
-    return if (!trimmed.contains("://") && !trimmed.startsWith("//")) {
-        "https://$trimmed"
-    } else if (trimmed.startsWith("//")) {
-        "https:$trimmed"
-    } else {
-        trimmed
-    }
-}
-
-/**
- * Screen for checking links with an interactive URL input bar.
+ * Screen for checking links with an interactive URL input bar and URL argument cleaner.
  *
  * Allows users to type or paste any URL to inspect its status, metadata,
  * HTML page preview, or RSS feed entries.
@@ -59,7 +42,7 @@ fun UrlLinkCheckerScreen(
 ) {
     val config by AppConfigManager.config.collectAsState()
     var inputUrlText by remember(initialUrl) { mutableStateOf(initialUrl) }
-    var activeUrl by remember(initialUrl) { mutableStateOf(normalizeUrl(initialUrl)) }
+    var activeUrl by remember(initialUrl) { mutableStateOf(UrlLocation.normalizeUrl(initialUrl)) }
     var isLoading by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf<Page?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
@@ -97,59 +80,85 @@ fun UrlLinkCheckerScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            // URL Input bar
+            // URL Input bar & Controls
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 tonalElevation = 1.dp
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    OutlinedTextField(
-                        value = inputUrlText,
-                        onValueChange = { inputUrlText = it },
-                        label = { Text("URL") },
-                        placeholder = { Text("https://example.com") },
-                        singleLine = true,
-                        trailingIcon = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (inputUrlText.isNotBlank()) {
-                                    IconButton(onClick = { inputUrlText = "" }) {
-                                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = inputUrlText,
+                            onValueChange = { inputUrlText = it },
+                            label = { Text("URL") },
+                            placeholder = { Text("https://example.com") },
+                            singleLine = true,
+                            trailingIcon = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (inputUrlText.isNotBlank()) {
+                                        IconButton(onClick = { inputUrlText = "" }) {
+                                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                        }
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            val normalized = UrlLocation.normalizeUrl(inputUrlText)
+                                            if (normalized.isNotBlank()) {
+                                                activeUrl = normalized
+                                                refreshTrigger++
+                                            }
+                                        },
+                                        enabled = inputUrlText.isNotBlank() && !isLoading
+                                    ) {
+                                        Icon(Icons.Default.Search, contentDescription = "Check")
                                     }
                                 }
-                                IconButton(
-                                    onClick = {
-                                        val normalized = normalizeUrl(inputUrlText)
-                                        if (normalized.isNotBlank()) {
-                                            activeUrl = normalized
-                                            refreshTrigger++
-                                        }
-                                    },
-                                    enabled = inputUrlText.isNotBlank() && !isLoading
-                                ) {
-                                    Icon(Icons.Default.Search, contentDescription = "Check")
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Go
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onGo = {
+                                    val normalized = UrlLocation.normalizeUrl(inputUrlText)
+                                    if (normalized.isNotBlank()) {
+                                        activeUrl = normalized
+                                        refreshTrigger++
+                                    }
                                 }
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Uri,
-                            imeAction = ImeAction.Go
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onGo = {
-                                val normalized = normalizeUrl(inputUrlText)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                val cleaned = UrlLocation.clearUrlArgs(inputUrlText)
+                                inputUrlText = cleaned
+                                val normalized = UrlLocation.normalizeUrl(cleaned)
                                 if (normalized.isNotBlank()) {
                                     activeUrl = normalized
                                     refreshTrigger++
                                 }
-                            }
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                            },
+                            enabled = inputUrlText.contains('?') && !isLoading
+                        ) {
+                            Text("Clear Url args")
+                        }
+                    }
                 }
             }
 

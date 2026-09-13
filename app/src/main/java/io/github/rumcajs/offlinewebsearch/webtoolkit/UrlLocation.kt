@@ -7,6 +7,44 @@ class UrlLocation(private val link: String?) {
     companion object {
         /** Protocols recognised as valid web link prefixes (case-insensitive). */
         val VALID_PREFIXES = listOf("http://", "https://", "smb://", "ftp://")
+
+        /**
+         * Normalizes a user-entered URL string by adding a scheme prefix if missing.
+         *
+         * @param raw The raw input string.
+         * @return Normalized URL string with protocol.
+         */
+        fun normalizeUrl(raw: String): String {
+            val trimmed = raw.trim()
+            if (trimmed.isEmpty()) return ""
+            return if (!trimmed.contains("://") && !trimmed.startsWith("//")) {
+                "https://$trimmed"
+            } else if (trimmed.startsWith("//")) {
+                "https:$trimmed"
+            } else {
+                trimmed
+            }
+        }
+
+        /**
+         * Strips query parameters (everything after '?') from a URL string,
+         * preserving any trailing fragment if present.
+         *
+         * @param url The URL string to process.
+         * @return URL string with query arguments removed.
+         */
+        fun clearUrlArgs(url: String): String {
+            val trimmed = url.trim()
+            if (trimmed.isEmpty()) return ""
+            val questionMarkIndex = trimmed.indexOf('?')
+            if (questionMarkIndex == -1) return trimmed
+            val hashIndex = trimmed.indexOf('#', startIndex = questionMarkIndex)
+            return if (hashIndex != -1) {
+                trimmed.substring(0, questionMarkIndex) + trimmed.substring(hashIndex)
+            } else {
+                trimmed.substring(0, questionMarkIndex)
+            }
+        }
     }
 
     /**
