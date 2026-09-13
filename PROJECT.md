@@ -134,7 +134,7 @@ There are several list styles:
  If thumbnail is not available, then it should be skipped.
  - Visited entries apply configurable visit alpha.
  - Dead entries apply configurable dead alpha.
- - Bookmarked entries do not apply alpha (remain fully opaque).
+ - Bookmarked entries, or entries with votes do not apply alpha (remain fully opaque).
 
 ## Search
  - Search is performed against the selected database.

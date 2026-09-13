@@ -34,6 +34,7 @@ fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
 
     val itemAlpha = when {
         isBookmarked -> 1f
+        entry.page_rating_votes!! > 0 -> 1f
         isDead && isVisited -> config.dbconfig.entriesDeadAlpha * config.dbconfig.entriesVisitAlpha
         isDead -> config.dbconfig.entriesDeadAlpha
         isVisited -> config.dbconfig.entriesVisitAlpha
