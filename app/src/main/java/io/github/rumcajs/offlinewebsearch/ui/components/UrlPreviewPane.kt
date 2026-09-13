@@ -53,7 +53,8 @@ fun UrlPreviewPane(
     onLoadingChanged: (Boolean) -> Unit = {},
     onPageLoaded: (Page?) -> Unit = {},
     onResponseLoaded: (PageResponseObject?) -> Unit = {},
-    onNavigateToDetail: (Entry) -> Unit = {}
+    onNavigateToDetail: (Entry) -> Unit = {},
+    onFeedClick: (String) -> Unit = {}
 ) {
     val config by AppConfigManager.config.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
@@ -213,6 +214,7 @@ fun UrlPreviewPane(
                     url = url,
                     showIcons = config.dbconfig.showIcons,
                     onNavigateToDetail = onNavigateToDetail,
+                    onFeedClick = onFeedClick,
                     error = error,
                     pageResponse = if (showResponseInfo) pageResponse else null
                 )
@@ -410,6 +412,7 @@ private fun RssPageDetails(
     url: String,
     showIcons: Boolean,
     onNavigateToDetail: (Entry) -> Unit,
+    onFeedClick: (String) -> Unit,
     error: String?,
     pageResponse: PageResponseObject? = null
 ) {
@@ -432,6 +435,32 @@ private fun RssPageDetails(
                 }
 
                 PageMetadataSection(page = page, url = url)
+
+                // Feed links advertised by the page itself, excluding the current URL
+                val pageFeeds = page.getFeeds().filter { it.isNotBlank() && it != url }
+                if (pageFeeds.isNotEmpty()) {
+                    Text(
+                        text = "Feeds",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                    pageFeeds.forEach { feedUrl ->
+                        SuggestionChip(
+                            onClick = { onFeedClick(feedUrl) },
+                            label = {
+                                Text(
+                                    feedUrl,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
 
                 if (entries.isNotEmpty()) {
                     Text(

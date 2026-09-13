@@ -221,7 +221,8 @@ fun UrlLinkCheckerScreen(
                 showResponseInfo = true,
                 onLoadingChanged = { isLoading = it },
                 onPageLoaded = { page = it },
-                onNavigateToDetail = onNavigateToDetail
+                onNavigateToDetail = onNavigateToDetail,
+                onFeedClick = { feedUrl -> inputUrlText = feedUrl }
             )
         }
     }
