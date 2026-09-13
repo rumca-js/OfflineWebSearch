@@ -50,6 +50,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)
     object AppLogging : Screen("app_logging", "Logs", Icons.AutoMirrored.Filled.List)
     object OptionsAdvanced : Screen("options_advanced", "Advanced", Icons.Filled.Settings)
+    object LinkChecker : Screen("link_checker", "Link Checker", Icons.AutoMirrored.Filled.List)
 }
 
 class MainActivity : androidx.activity.ComponentActivity() {
@@ -304,6 +305,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToAdvanced = {
                                     navController.navigate(Screen.OptionsAdvanced.route)
                                 },
+                                onNavigateToLinkChecker = {
+                                    navController.navigate(Screen.LinkChecker.route)
+                                },
                                 onSetActive = { url ->
                                     handleDatabaseChange(url, searchViewModel, navController)
                                 }
@@ -437,6 +441,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     }
                                 )
                             }
+                        }
+                        composable(Screen.LinkChecker.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.UrlLinkCheckerScreen(
+                                initialUrl = "",
+                                onBack = { navController.popBackStack() },
+                                onNavigateToDetail = { entry ->
+                                    searchViewModel.selectedEntry = entry
+                                    navController.navigate(Screen.Detail.route)
+                                }
+                            )
                         }
                     }
                 }

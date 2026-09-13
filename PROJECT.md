@@ -258,6 +258,9 @@ The screen displays, where available:
 - Each database should contain buttons to: refresh (if it is from the internet), remove (should not contain badge, nor combo indicating it is active)
 - single tap on database makes it's active
 - long press transitions to DatabaseScreen
+- Provides button to navigate to Logs.
+- Provides button to navigate to Advanced options.
+- Provides button to navigate to Link checker (UrlLinkChecker).
 - Provides button to navigate to AboutScreen.
 
 ## DatabaseScreen

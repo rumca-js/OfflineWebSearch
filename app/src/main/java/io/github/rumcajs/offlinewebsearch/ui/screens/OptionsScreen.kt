@@ -17,6 +17,18 @@ import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.ui.components.DatabasesContainer
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 
+/**
+ * Screen for configuring application settings, database management, and troubleshooting.
+ *
+ * @param onNavigateToDatabases Callback to navigate to databases list.
+ * @param onNavigateToDatabaseDetail Callback to navigate to a database detail screen.
+ * @param onNavigateToPreselectedList Callback to navigate to preselected database list screen.
+ * @param onNavigateToAbout Callback to navigate to About screen.
+ * @param onNavigateToLogs Callback to navigate to Logs screen.
+ * @param onNavigateToAdvanced Callback to navigate to Advanced settings screen.
+ * @param onNavigateToLinkChecker Callback to navigate to Link Checker screen.
+ * @param onSetActive Callback to set an active database.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OptionsScreen(
@@ -26,6 +38,7 @@ fun OptionsScreen(
     onNavigateToAbout: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
     onNavigateToAdvanced: () -> Unit = {},
+    onNavigateToLinkChecker: () -> Unit = {},
     onSetActive: (String?) -> Unit
 ) {
     val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
@@ -118,6 +131,17 @@ fun OptionsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Advanced")
+        }
+
+        if (!config.networkConfig.disabled) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onNavigateToLinkChecker,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Link checker")
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
