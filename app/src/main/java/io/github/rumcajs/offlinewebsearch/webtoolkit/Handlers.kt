@@ -85,13 +85,31 @@ class YouTubeChannelHandler(private val link: String) : PageHandler {
     override fun isHandledBy(): Boolean {
         val domain = UrlLocation(link).getDomain()
         if (domain == "youtube.com" || domain == "www.youtube.com" || domain == "m.youtube.com") {
-            val path = getPath(link)
-            return path.startsWith("/channel/") ||
-                    path.startsWith("/c/") ||
-                    path.startsWith("/user/") ||
-                    path.startsWith("/@")
+            return isHandledByChannelPath() || isHandledByRssPath()
         }
         return false
+    }
+
+    /**
+     * Returns true when [link] points to a YouTube channel page
+     * (e.g. `/channel/…`, `/c/…`, `/user/…`, `/@handle`).
+     */
+    fun isHandledByChannelPath(): Boolean {
+        val path = getPath(link)
+        return path.startsWith("/channel/") ||
+                path.startsWith("/c/") ||
+                path.startsWith("/user/") ||
+                path.startsWith("/@")
+    }
+
+    /**
+     * Returns true when [link] is a YouTube RSS feed URL
+     * (`/feed/videos.xml` or `/feeds/videos.xml`) with a resolvable `channel_id`.
+     */
+    fun isHandledByRssPath(): Boolean {
+        val path = getPath(link)
+        return (path == "/feed/videos.xml" || path == "/feeds/videos.xml") &&
+                channelUid != null
     }
 
     override fun getFeeds(): List<String> {
