@@ -9,21 +9,37 @@ class UrlLocation(private val link: String?) {
         val VALID_PREFIXES = listOf("http://", "https://", "smb://", "ftp://")
 
         /**
-         * Normalizes a user-entered URL string by adding a scheme prefix if missing.
+         * Normalizes a user-entered URL string:
+         * - Adds a `https://` scheme prefix when none is present.
+         * - Strips a trailing slash that immediately follows the host with no further path
+         *   (e.g. `https://example.com/` → `https://example.com`).
+         *   A slash that is part of an actual path (e.g. `/path/`) is preserved.
          *
          * @param raw The raw input string.
-         * @return Normalized URL string with protocol.
+         * @return Normalized URL string.
          */
         fun normalizeUrl(raw: String): String {
             val trimmed = raw.trim()
             if (trimmed.isEmpty()) return ""
-            return if (!trimmed.contains("://") && !trimmed.startsWith("//")) {
+            val withScheme = if (!trimmed.contains("://") && !trimmed.startsWith("//")) {
                 "https://$trimmed"
             } else if (trimmed.startsWith("//")) {
                 "https:$trimmed"
             } else {
                 trimmed
             }
+            // Strip a trailing slash only when it is directly after the host (no real path).
+            // Pattern: scheme://host/ with nothing after the slash.
+            val schemeEnd = withScheme.indexOf("://")
+            if (schemeEnd != -1) {
+                val afterScheme = withScheme.substring(schemeEnd + 3)
+                val slashIndex = afterScheme.indexOf('/')
+                if (slashIndex != -1 && slashIndex == afterScheme.length - 1) {
+                    // The only slash is the very last character — strip it.
+                    return withScheme.dropLast(1)
+                }
+            }
+            return withScheme
         }
 
         /**

@@ -158,6 +158,23 @@ fun UrlLinkCheckerScreen(
                         ) {
                             Text("Clear Url args")
                         }
+
+                        val normalizedPreview = UrlLocation.normalizeUrl(inputUrlText)
+                        if (normalizedPreview != inputUrlText) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    inputUrlText = normalizedPreview
+                                    if (normalizedPreview.isNotBlank()) {
+                                        activeUrl = normalizedPreview
+                                        refreshTrigger++
+                                    }
+                                },
+                                enabled = !isLoading
+                            ) {
+                                Text("Normalize")
+                            }
+                        }
                     }
                 }
             }
