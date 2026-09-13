@@ -18,16 +18,35 @@ import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.ui.components.UrlPreviewPane
+import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 
 /**
+ * Resolves [HandlerBuilder] suggestions for [url] as a flat list of URLs.
+ *
+ * Combines feed URLs and the channel URL (when non-blank) into a single deduplicated list.
+ * Returns an empty list when no handler matches or when the handler provides no links.
+ */
+private fun resolveHandlerSuggestions(url: String): List<String> {
+    if (url.isBlank()) return emptyList()
+    val handler = HandlerBuilder(url).build() ?: return emptyList()
+    return (handler.getFeeds() + listOf(handler.getChannel()))
+        .filter { it.isNotBlank() }
+        .distinct()
+}
+
+/**
  * Screen for checking links with an interactive URL input bar and URL argument cleaner.
  *
  * Allows users to type or paste any URL to inspect its status, metadata,
  * HTML page preview, or RSS feed entries.
+ *
+ * When a URL is loaded and a known handler matches it (YouTube, GitHub, Reddit, Odysee),
+ * suggested feed / channel URLs are displayed as clickable chips so the user can
+ * quickly navigate to related links.
  *
  * @param initialUrl The initial URL to inspect (defaults to empty string).
  * @param onBack Callback invoked when navigating back.
@@ -46,6 +65,9 @@ fun UrlLinkCheckerScreen(
     var isLoading by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf<Page?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
+
+    // Derive handler suggestions whenever the active URL changes.
+    val suggestions: List<String> = remember(activeUrl) { resolveHandlerSuggestions(activeUrl) }
 
     val titleText = when {
         page is HtmlPage -> "Web Page"
@@ -140,6 +162,7 @@ fun UrlLinkCheckerScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // URL manipulation buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start
@@ -176,6 +199,15 @@ fun UrlLinkCheckerScreen(
                             }
                         }
                     }
+
+                    // Handler-derived suggestions: feeds and channel link
+                    if (suggestions.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        UrlSuggestionsRow(
+                            suggestions = suggestions,
+                            onSuggestionClick = { inputUrlText = it }
+                        )
+                    }
                 }
             }
 
@@ -190,6 +222,33 @@ fun UrlLinkCheckerScreen(
                 onLoadingChanged = { isLoading = it },
                 onPageLoaded = { page = it },
                 onNavigateToDetail = onNavigateToDetail
+            )
+        }
+    }
+}
+
+/**
+ * Displays a list of URL suggestions as clickable [SuggestionChip]s.
+ *
+ * Each chip shows the full URL as its label. When clicked, the URL is passed
+ * to [onSuggestionClick] so the caller can place it in the input bar.
+ *
+ * @param suggestions Flat list of suggested URLs.
+ * @param onSuggestionClick Callback invoked with the selected URL string.
+ */
+@Composable
+private fun UrlSuggestionsRow(
+    suggestions: List<String>,
+    onSuggestionClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        suggestions.forEach { url ->
+            SuggestionChip(
+                onClick = { onSuggestionClick(url) },
+                label = { Text(url, style = MaterialTheme.typography.labelSmall) }
             )
         }
     }
