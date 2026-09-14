@@ -24,7 +24,7 @@ import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EntryListSearchResultsContainer(
+fun EntriesListSearchResultsContainer(
     isLoading: Boolean,
     filteredData: List<Entry>,
     activeSearchQuery: String,

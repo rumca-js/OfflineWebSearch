@@ -14,7 +14,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.ui.SearchFilter
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
-import io.github.rumcajs.offlinewebsearch.ui.components.EntryListSearchResultsContainer
+import io.github.rumcajs.offlinewebsearch.ui.components.EntriesListSearchResultsContainer
 
 /**
  * Primary search screen.
@@ -110,7 +110,7 @@ fun EntriesListScreen(
                 }
             }
         )
-        EntryListSearchResultsContainer(
+        EntriesListSearchResultsContainer(
             isLoading = viewModel.isLoading,
             filteredData = viewModel.filteredData,
             activeSearchQuery = viewModel.activeSearchQuery,
