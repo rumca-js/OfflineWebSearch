@@ -22,6 +22,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -37,10 +38,14 @@ import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
 import io.github.rumcajs.offlinewebsearch.ui.components.LinkText
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
+
+/** Default dead / disabled alpha if configuration is not accessible. */
+private const val DEFAULT_DEAD_ALPHA = 0.6f
 
 /** Key constants for [SourcesListScreen] filter dropdown options. */
 private const val FILTER_KEY_BY_URL = "by_url"
@@ -407,7 +412,8 @@ fun SourcesListScreen(
                                 isEditable = isEditable,
                                 onClick = { onNavigateToSource(source) },
                                 onEditClick = { onNavigateToEditSource(source) },
-                                onDeleteClick = { sourceToDelete = source }
+                                onDeleteClick = { sourceToDelete = source },
+                                config = config
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -425,14 +431,18 @@ private fun SourceListItem(
     isEditable: Boolean,
     onClick: () -> Unit,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    config: AppConfiguration? = null
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val deadAlpha = config?.dbconfig?.entriesDeadAlpha ?: DEFAULT_DEAD_ALPHA
+    val itemAlpha = if (!source.enabled) deadAlpha else 1f
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(itemAlpha)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
@@ -498,44 +508,6 @@ private fun SourceListItem(
                 if (source.url.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     LinkText(text = source.url)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Action buttons & status chip
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = {
-                            Text(if (source.enabled) "Enabled" else "Disabled")
-                        }
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onEditClick) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Source",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        IconButton(
-                            onClick = onDeleteClick,
-                            enabled = isEditable
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Source",
-                                tint = if (isEditable) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                        }
-                    }
                 }
             }
         }
