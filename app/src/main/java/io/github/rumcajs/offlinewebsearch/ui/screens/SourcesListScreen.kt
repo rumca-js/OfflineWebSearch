@@ -1,12 +1,16 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -16,6 +20,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -113,6 +118,7 @@ fun SourcesListScreen(
     var sources by remember { mutableStateOf<List<Source>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isRefreshingAll by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
     var sourceToDelete by remember { mutableStateOf<Source?>(null) }
 
     val loadSources: () -> Unit = {
@@ -328,6 +334,7 @@ fun SourcesListScreen(
             // The search widget is the first item in the LazyColumn so it scrolls
             // together with the source list — consistent with EntryListScreen.
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
@@ -342,11 +349,21 @@ fun SourcesListScreen(
                                 searchQuery = ""
                                 activeSearchQuery = ""
                             },
-                            onPerformSearch = { activeSearchQuery = searchQuery },
+                            onPerformSearch = {
+                                activeSearchQuery = searchQuery
+                                scope.launch {
+                                    listState.scrollToItem(0)
+                                }
+                            },
                             isSearchButtonEnabled = isSearchButtonEnabled,
                             filterOptions = SOURCE_FILTER_OPTIONS,
                             activeFilterKey = activeFilterKey,
-                            onFilterSelected = onFilterSelected,
+                            onFilterSelected = { option ->
+                                onFilterSelected(option)
+                                scope.launch {
+                                    listState.scrollToItem(0)
+                                }
+                            },
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
@@ -418,6 +435,36 @@ fun SourcesListScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
+                }
+            }
+
+            val showScrollToTop by remember {
+                derivedStateOf {
+                    listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+                }
+            }
+
+            AnimatedVisibility(
+                visible = showScrollToTop,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 16.dp)
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        scope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowUp,
+                        contentDescription = "Scroll to top"
+                    )
                 }
             }
         }

@@ -1,9 +1,14 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -13,8 +18,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.ui.SearchFilter
-import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.EntriesListSearchResultsContainer
+import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
+import kotlinx.coroutines.launch
 
 /**
  * Primary search screen.
@@ -82,58 +88,92 @@ fun EntriesListScreen(
         )
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        SearchContainer(
-            searchQuery = viewModel.searchQuery,
-            onSearchQueryChange = {
-                viewModel.searchQuery = it
-                viewModel.showSuggestions = true
-            },
-            onClearSearch = {
-                viewModel.clearSearch()
-                viewModel.performSearch(context)
-            },
-            onPerformSearch = {
-                viewModel.performSearch(context)
-            },
-            isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
-            filterOptions = filterOptions,
-            activeFilterKey = viewModel.activeFilter.takeIf { it != SearchFilter.None }?.name,
-            onFilterSelected = { option ->
-                viewModel.setFilter(context, SearchFilter.fromKey(option.key))
-                coroutineScope.launch {
-                    listState.scrollToItem(0)
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            SearchContainer(
+                searchQuery = viewModel.searchQuery,
+                onSearchQueryChange = {
+                    viewModel.searchQuery = it
+                    viewModel.showSuggestions = true
+                },
+                onClearSearch = {
+                    viewModel.clearSearch()
+                    viewModel.performSearch(context)
+                },
+                onPerformSearch = {
+                    viewModel.performSearch(context)
+                },
+                isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
+                filterOptions = filterOptions,
+                activeFilterKey = viewModel.activeFilter.takeIf { it != SearchFilter.None }?.name,
+                onFilterSelected = { option ->
+                    viewModel.setFilter(context, SearchFilter.fromKey(option.key))
+                    coroutineScope.launch {
+                        listState.scrollToItem(0)
+                    }
                 }
+            )
+            EntriesListSearchResultsContainer(
+                isLoading = viewModel.isLoading,
+                filteredData = viewModel.filteredData,
+                activeSearchQuery = viewModel.activeSearchQuery,
+                currentPage = viewModel.currentPage,
+                totalPages = viewModel.totalPages,
+                onPreviousPage = { viewModel.previousPage(context) },
+                onNextPage = { viewModel.nextPage(context) },
+                onNavigateToDetail = onNavigateToDetail,
+                listState = listState,
+                showSuggestions = viewModel.showSuggestions,
+                suggestions = viewModel.suggestions,
+                onSuggestionClick = { suggestion ->
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
+                    viewModel.searchQuery = suggestion
+                    viewModel.performSearch(context)
+                    coroutineScope.launch {
+                        listState.scrollToItem(0)
+                    }
+                },
+                onAddEntry = if (isEditable && !viewModel.isFilterReadLater && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
+                onRefresh = { viewModel.performSearch(context) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        val showScrollToTop by remember {
+            derivedStateOf {
+                listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
             }
-        )
-        EntriesListSearchResultsContainer(
-            isLoading = viewModel.isLoading,
-            filteredData = viewModel.filteredData,
-            activeSearchQuery = viewModel.activeSearchQuery,
-            currentPage = viewModel.currentPage,
-            totalPages = viewModel.totalPages,
-            onPreviousPage = { viewModel.previousPage(context) },
-            onNextPage = { viewModel.nextPage(context) },
-            onNavigateToDetail = onNavigateToDetail,
-            listState = listState,
-            showSuggestions = viewModel.showSuggestions,
-            suggestions = viewModel.suggestions,
-            onSuggestionClick = { suggestion ->
-                keyboardController?.hide()
-                focusManager.clearFocus()
-                viewModel.searchQuery = suggestion
-                viewModel.performSearch(context)
-                coroutineScope.launch {
-                    listState.scrollToItem(0)
-                }
-            },
-            onAddEntry = if (isEditable && !viewModel.isFilterReadLater && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
-            onRefresh = { viewModel.performSearch(context) },
-            modifier = Modifier.weight(1f)
-        )
+        }
+
+        AnimatedVisibility(
+            visible = showScrollToTop,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 16.dp, end = 0.dp)
+        ) {
+            FloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(0)
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Scroll to top"
+                )
+            }
+        }
     }
 }
