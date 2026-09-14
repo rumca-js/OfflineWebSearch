@@ -89,8 +89,8 @@ Screens:
  - DatabaseScreen - Shows information and actions for a database.
  - AboutScreen - Shows information about the application.
  - AppLoggingScreen - shows log information
- - UrlLinkCheckerScreen - provides a tool to show dynamic URL link contents (title, description, etc.), with link input
- - UrlPreviewScreen - shows preview for entry, without ability to select link
+ - UrlPreviewScreen - shows preview for page data (title, description, meta properties). Should apply similar style as EntryDetailScreen for title, link, etc.
+ - UrlLinkCheckerScreen - provides url input, and same display as in UrlPreviewScreen
  - UrlStatusScreen - shows entry status (status code, content-type)
  - VisitedEntriesScreen - To be removed
  - DatabasesScreen - To be removed
