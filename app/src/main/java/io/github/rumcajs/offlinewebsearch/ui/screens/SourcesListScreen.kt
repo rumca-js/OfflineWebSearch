@@ -463,7 +463,10 @@ private fun SourceListItem(
             verticalAlignment = Alignment.Top
         ) {
             // Thumbnail / favicon
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier.size(56.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 if (source.favicon.isNotBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
@@ -473,15 +476,8 @@ private fun SourceListItem(
                         contentDescription = "Thumbnail for ${source.title}",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(56.dp)
+                            .fillMaxSize()
                             .clip(RoundedCornerShape(8.dp))
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LinkText(
-                        text = source.favicon,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 80.dp)
                     )
                 } else {
                     Icon(
