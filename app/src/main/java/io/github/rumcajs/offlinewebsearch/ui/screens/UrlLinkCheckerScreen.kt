@@ -48,20 +48,20 @@ private fun resolveHandlerSuggestions(url: String): List<String> {
  * suggested feed / channel URLs are displayed as clickable chips so the user can
  * quickly navigate to related links.
  *
- * @param initialUrl The initial URL to inspect (defaults to empty string).
+ * @param url The initial URL to inspect (defaults to empty string).
  * @param onBack Callback invoked when navigating back.
  * @param onNavigateToDetail Callback invoked when selecting a feed entry.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UrlLinkCheckerScreen(
-    initialUrl: String = "",
+    url: String = "",
     onBack: () -> Unit,
     onNavigateToDetail: (Entry) -> Unit = {}
 ) {
     val config by AppConfigManager.config.collectAsState()
-    var inputUrlText by remember(initialUrl) { mutableStateOf(initialUrl) }
-    var activeUrl by remember(initialUrl) { mutableStateOf(UrlLocation.normalizeUrl(initialUrl)) }
+    var inputUrlText by remember(url) { mutableStateOf(url) }
+    var activeUrl by remember(url) { mutableStateOf(UrlLocation.normalizeUrl(url)) }
     var isLoading by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf<Page?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
@@ -265,7 +265,7 @@ fun UrlLinkChecker(
     onNavigateToDetail: (Entry) -> Unit = {}
 ) {
     UrlLinkCheckerScreen(
-        initialUrl = initialUrl,
+        url = initialUrl,
         onBack = onBack,
         onNavigateToDetail = onNavigateToDetail
     )

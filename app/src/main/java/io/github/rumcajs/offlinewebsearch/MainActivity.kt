@@ -56,7 +56,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 class MainActivity : androidx.activity.ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.initialize(this)
+        AppConfigManager.initialize(this)
         enableEdgeToEdge()
         setContent {
             val searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel()
@@ -67,7 +67,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                            val cfg = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                            val cfg = AppConfigManager.config.value
                             val activeState = cfg.activeDatabaseState
                             if (activeState != null && !activeState.isReadOnly && activeState.extension == ".db" && !cfg.networkConfig.disabled) {
                                 val count = SourceRepository.updateOutdatedSources(context, activeState)
@@ -142,24 +142,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToReadLater = {
                                     navController.navigate(Screen.ReadLater.route)
                                 }
-                            )
-                        }
-                        composable(Screen.Visited.route) {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.VisitedEntriesScreen(
-                                onNavigateToDetail = { entry ->
-                                    searchViewModel.selectedEntry = entry
-                                    navController.navigate(Screen.Detail.route)
-                                },
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable(Screen.ReadLater.route) {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.ReadLaterScreen(
-                                onNavigateToDetail = { entry ->
-                                    searchViewModel.selectedEntry = entry
-                                    navController.navigate(Screen.Detail.route)
-                                },
-                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable(Screen.Sources.route) {
@@ -243,21 +225,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onBack = { navController.popBackStack() }
                             )
                         }
-                        composable(Screen.Databases.route) {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabasesScreen(
-                                onNavigateToDatabaseDetail = { url, state ->
-                                    searchViewModel.selectedDatabaseUrl = url
-                                    searchViewModel.selectedDatabaseState = state
-                                    navController.navigate(Screen.DatabaseDetail.route)
-                                },
-                                onSetActive = { url ->
-                                    handleDatabaseChange(url, searchViewModel, navController)
-                                }
-                            )
-                        }
                         composable(Screen.DatabaseDetail.route) {
                             val url = searchViewModel.selectedDatabaseUrl
-                            val config = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState().value
+                            val config = AppConfigManager.config.collectAsState().value
                             val state = if (url == null) {
                                 searchViewModel.selectedDatabaseState ?: _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseState(
                                     url = "",
@@ -327,7 +297,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val context = androidx.compose.ui.platform.LocalContext.current
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabasePreselectedListScreen(
                                 onDatabaseSelected = { dbUrl ->
-                                    _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.refreshDatabaseInBackground(context, dbUrl)
+                                    AppConfigManager.refreshDatabaseInBackground(context, dbUrl)
                                     navController.popBackStack()
                                 },
                                 onBack = { navController.popBackStack() }
@@ -444,7 +414,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.LinkChecker.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.UrlLinkCheckerScreen(
-                                initialUrl = "",
+                                url = "",
                                 onBack = { navController.popBackStack() },
                                 onNavigateToDetail = { entry ->
                                     searchViewModel.selectedEntry = entry
@@ -470,7 +440,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel,
         navController: androidx.navigation.NavController? = null
     ) {
-        io.github.rumcajs.offlinewebsearch.data.AppConfigManager.setActiveDatabase(databaseUrl)
+        AppConfigManager.setActiveDatabase(databaseUrl)
         searchViewModel.resetToDefaults()
 
         // If the user changed the database from DatabaseDetail (or another sub-screen),

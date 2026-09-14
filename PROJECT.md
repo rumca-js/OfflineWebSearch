@@ -88,6 +88,10 @@ Screens:
  - OptionsScreen - Configures databases and application settings.
  - DatabaseScreen - Shows information and actions for a database.
  - AboutScreen - Shows information about the application.
+ - AppLoggingScreen - shows log information
+ - UrlLinkCheckerScreen - provides a tool to show dynamic URL link contents (title, description, etc.), with link input
+ - UrlPreviewScreen - shows preview for entry, without ability to select link
+ - UrlStatusScreen - shows entry status (status code, content-type)
  - VisitedEntriesScreen - To be removed
  - DatabasesScreen - To be removed
  - ReadLaterScreen - To be removed
