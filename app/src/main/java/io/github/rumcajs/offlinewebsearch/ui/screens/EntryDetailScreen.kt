@@ -154,7 +154,7 @@ fun EntryDetailScreen(
             }
 
             val hasVideoPreview = config.dbconfig.videoPreview && !isRestricted && entry.link?.let { YouTubeVideoHandler(it).isHandledBy() } == true
-            val hasThumbnail = !entry.thumbnail.isNullOrBlank()
+            val hasThumbnail = config.dbconfig.showIcons && !entry.thumbnail.isNullOrBlank()
             if (hasVideoPreview || hasThumbnail) {
                 EntryThumbnailPreview(
                     entry = entry,
@@ -162,7 +162,7 @@ fun EntryDetailScreen(
                     videoPreview = config.dbconfig.videoPreview,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = 8.dp),
                     onTap = { entry.link?.let { uriHandler.openUri(it) } },
                     onLongPress = { if (!isRestricted) { copyLink() } }
                 )

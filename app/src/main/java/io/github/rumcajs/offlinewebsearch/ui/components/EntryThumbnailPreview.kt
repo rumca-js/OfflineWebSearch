@@ -75,14 +75,15 @@ fun EntryThumbnailPreview(
         RemoteImage(
             url = entry.thumbnail,
             modifier = modifier
-                .heightIn(min = 100.dp, max = 300.dp)
+                .fillMaxWidth()
+                .height(200.dp)
                 .pointerInput(entry.link) {
                     detectTapGestures(
                         onTap = { onTap() },
                         onLongPress = { onLongPress() }
                     )
                 },
-            contentScale = ContentScale.Fit,
+            contentScale = ContentScale.Crop,
             isRestricted = isRestricted
         )
     }
