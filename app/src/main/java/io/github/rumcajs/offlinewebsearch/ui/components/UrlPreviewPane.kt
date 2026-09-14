@@ -33,6 +33,7 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
+import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeVideoHandler
 
 /**
  * Reusable pane for fetching and displaying the preview of a web page or RSS feed.
@@ -269,92 +270,38 @@ private fun FeedSuggestionChip(feedUrl: String, onClick: () -> Unit) {
  */
 @Composable
 private fun PageMetadataSection(page: Page, url: String) {
-    val uriHandler = LocalUriHandler.current
-
     // Title
     val title = page.getTitle() ?: "Untitled Page"
-    Text(
-        text = title,
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
+    DetailTitle(
+        title = title,
+        link = url
     )
 
-    // Date published badge
+    // Link
+    DetailLink(link = url)
+
+    // Date published
     val datePublished = page.getDatePublished()
         ?.let { DateUtils.toIsoString(it) }
     if (!datePublished.isNullOrBlank()) {
-        SuggestionChip(
-            onClick = {},
-            label = {
-                Text(
-                    text = "Published: $datePublished",
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
+        DetailPublishedDate(date = datePublished)
+    }
+
+    // Description
+    val description = page.getDescription()
+    if (!description.isNullOrBlank()) {
+        LinkableText(
+            text = description,
+            fontSize = 16.sp,
+            lineHeight = 24.sp
         )
     }
 
-    // Description Card
-    val description = page.getDescription()
-    if (!description.isNullOrBlank()) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            ),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Description",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 22.sp
-                )
-            }
-        }
-    }
-
-    // Source Link
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "Source Link",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = url,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-            Button(
-                onClick = { uriHandler.openUri(url) },
-                modifier = Modifier.align(Alignment.End),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text("Open in Browser", fontSize = 12.sp)
-            }
-        }
-    }
+    // Page metadata properties and handler info
+    PageMetadataPane(
+        page = page,
+        url = url
+    )
 }
 
 /**
@@ -387,22 +334,30 @@ private fun PageDetailsHeader(
         )
     }
 
-    // Hero image — shown for any page type that provides a thumbnail
+    val config by AppConfigManager.config.collectAsState()
     val thumbnails = page.getThumbnails()
-    if (showIcons && thumbnails.isNotEmpty()) {
-        Card(
+    val heroThumbnail = thumbnails.firstOrNull()
+    val hasVideoPreview = config.dbconfig.videoPreview && url.isNotBlank() && YouTubeVideoHandler(url).isHandledBy()
+    val hasThumbnail = showIcons && !heroThumbnail.isNullOrBlank()
+
+    if (hasVideoPreview || hasThumbnail) {
+        val uriHandler = LocalUriHandler.current
+        val clipboardManager = LocalClipboardManager.current
+        val context = LocalContext.current
+
+        ThumbnailPreview(
+            link = url,
+            thumbnailUrl = heroThumbnail,
+            videoPreview = config.dbconfig.videoPreview,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            RemoteImage(
-                url = thumbnails.first(),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        }
+                .padding(bottom = 8.dp),
+            onTap = { uriHandler.openUri(url) },
+            onLongPress = {
+                clipboardManager.setText(AnnotatedString(url))
+                Toast.makeText(context, "Link copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+        )
     }
 
     PageMetadataSection(page = page, url = url)

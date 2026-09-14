@@ -14,20 +14,35 @@ import androidx.compose.ui.viewinterop.AndroidView
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.webtoolkit.YouTubeVideoHandler
 
+/**
+ * Shared thumbnail and video preview component for web links and entries.
+ *
+ * Displays an embedded YouTube video player when [videoPreview] is enabled and [link] is a supported YouTube URL.
+ * Otherwise renders a remote image thumbnail at full width.
+ *
+ * @param link Optional target link URL. Used to detect YouTube video embeds and for tap/long-press actions.
+ * @param thumbnailUrl Optional thumbnail image URL.
+ * @param isRestricted When true, disables video embedding and masks thumbnail content.
+ * @param modifier Optional modifier applied to the preview container.
+ * @param videoPreview Whether YouTube video preview is enabled.
+ * @param onTap Callback invoked on single tap.
+ * @param onLongPress Callback invoked on long press.
+ */
 @Composable
-fun EntryThumbnailPreview(
-    entry: Entry,
-    isRestricted: Boolean,
+fun ThumbnailPreview(
+    link: String?,
+    thumbnailUrl: String?,
+    isRestricted: Boolean = false,
     modifier: Modifier = Modifier,
     videoPreview: Boolean = true,
     onTap: () -> Unit = {},
     onLongPress: () -> Unit = {}
 ) {
-    val youtubeVideoHandler = remember(entry.link) {
-        entry.link?.let { YouTubeVideoHandler(it) }
+    val youtubeVideoHandler = remember(link) {
+        link?.let { YouTubeVideoHandler(it) }
     }
 
-    val youtubeVideoId = remember(youtubeVideoHandler) {
+    val youtubeVideoId = remember(youtubeVideoHandler, videoPreview) {
         if (videoPreview && youtubeVideoHandler?.isHandledBy() == true) {
             youtubeVideoHandler.getVideoId()
         } else {
@@ -71,13 +86,13 @@ fun EntryThumbnailPreview(
                 modifier = Modifier.fillMaxSize()
             )
         }
-    } else if (!entry.thumbnail.isNullOrBlank()) {
+    } else if (!thumbnailUrl.isNullOrBlank()) {
         RemoteImage(
-            url = entry.thumbnail,
+            url = thumbnailUrl,
             modifier = modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .pointerInput(entry.link) {
+                .pointerInput(link, isRestricted) {
                     detectTapGestures(
                         onTap = { onTap() },
                         onLongPress = { onLongPress() }
@@ -87,4 +102,34 @@ fun EntryThumbnailPreview(
             isRestricted = isRestricted
         )
     }
+}
+
+/**
+ * Convenience wrapper for [ThumbnailPreview] when displaying an [Entry].
+ *
+ * @param entry The entry to display thumbnail/video preview for.
+ * @param isRestricted When true, disables video embedding and masks thumbnail content.
+ * @param modifier Optional modifier applied to the preview container.
+ * @param videoPreview Whether YouTube video preview is enabled.
+ * @param onTap Callback invoked on single tap.
+ * @param onLongPress Callback invoked on long press.
+ */
+@Composable
+fun EntryThumbnailPreview(
+    entry: Entry,
+    isRestricted: Boolean,
+    modifier: Modifier = Modifier,
+    videoPreview: Boolean = true,
+    onTap: () -> Unit = {},
+    onLongPress: () -> Unit = {}
+) {
+    ThumbnailPreview(
+        link = entry.link,
+        thumbnailUrl = entry.thumbnail,
+        isRestricted = isRestricted,
+        modifier = modifier,
+        videoPreview = videoPreview,
+        onTap = onTap,
+        onLongPress = onLongPress
+    )
 }

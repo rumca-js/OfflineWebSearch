@@ -30,6 +30,9 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRe
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import kotlinx.coroutines.launch
+import io.github.rumcajs.offlinewebsearch.ui.components.DetailLink
+import io.github.rumcajs.offlinewebsearch.ui.components.DetailPublishedDate
+import io.github.rumcajs.offlinewebsearch.ui.components.DetailTitle
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryDetailTopBar
 import io.github.rumcajs.offlinewebsearch.ui.components.EntryThumbnailPreview
 import io.github.rumcajs.offlinewebsearch.ui.components.SocialDataPane
@@ -168,49 +171,27 @@ fun EntryDetailScreen(
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Text(
-                    text = _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayTitle(entry, config.userAge),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 30.sp,
-                    color = if (entry.link != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    textDecoration = if (entry.link != null) TextDecoration.Underline else TextDecoration.None,
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .padding(end = 8.dp)
-                        .pointerInput(entry.link) {
-                            detectTapGestures(
-                                onTap = {
-                                    entry.link?.let { uriHandler.openUri(it) }
-                                },
-                                onLongPress = {
-                                    if (!isRestricted) {
-                                        copyLink()
-                                    }
-                                }
+            DetailTitle(
+                title = io.github.rumcajs.offlinewebsearch.util.EntryUtils.getDisplayTitle(entry, config.userAge),
+                link = entry.link,
+                isRestricted = isRestricted,
+                trailingContent = entry.page_rating_votes?.takeIf { it > 0 }?.let { votes ->
+                    {
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        ) {
+                            Text(
+                                text = "⭐ $votes",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
-                )
-                entry.page_rating_votes?.takeIf { it > 0 }?.let { votes ->
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = androidx.compose.foundation.shape.CircleShape
-                    ) {
-                        Text(
-                            text = "⭐ $votes",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
                     }
                 }
-            }
+            )
 
             val isDead = io.github.rumcajs.offlinewebsearch.util.EntryUtils.isDead(entry)
             val isBookmarked = entry.bookmarked == true
@@ -251,30 +232,17 @@ fun EntryDetailScreen(
 
             entry.link?.let { link ->
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (isRestricted) "xXx" else link,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    textDecoration = TextDecoration.Underline,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerInput(link) {
-                            if (!isRestricted) {
-                                detectTapGestures(
-                                    onTap = { uriHandler.openUri(link) },
-                                    onLongPress = { copyLink() }
-                                )
-                            }
-                        }
+                DetailLink(
+                    link = link,
+                    isRestricted = isRestricted
                 )
             }
 
             entry.date_published?.let { date ->
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Published: ${if (isRestricted) "xXx" else _root_ide_package_.io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedDate(date)}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                DetailPublishedDate(
+                    date = io.github.rumcajs.offlinewebsearch.util.EntryUtils.getFormattedDate(date),
+                    isRestricted = isRestricted
                 )
             }
 
