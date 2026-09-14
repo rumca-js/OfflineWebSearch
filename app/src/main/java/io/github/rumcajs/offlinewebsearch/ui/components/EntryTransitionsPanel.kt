@@ -87,7 +87,7 @@ fun EntryTransitionsPanel(
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
-                    EntryItem(
+                    EntryListItem(
                         entry = targetEntry,
                         onClick = { selectedEntry ->
                             if (activeDbState != null && config.dbconfig.trackUserNavigation) {

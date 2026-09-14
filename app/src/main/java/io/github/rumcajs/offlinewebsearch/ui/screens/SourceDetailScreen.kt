@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SourceScreen(
+fun SourceDetailScreen(
     source: Source,
     onNavigateToEdit: (() -> Unit)? = null,
     onDelete: ((deleteEntries: Boolean) -> Unit)? = null,

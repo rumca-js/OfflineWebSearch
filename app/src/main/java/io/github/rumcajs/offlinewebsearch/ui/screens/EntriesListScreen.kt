@@ -37,7 +37,7 @@ import io.github.rumcajs.offlinewebsearch.ui.components.EntryListSearchResultsCo
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EntryListScreen(
+fun EntriesListScreen(
     viewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel(),
     onNavigateToDetail: (Entry) -> Unit = {},
     onNavigateToAddEntry: (() -> Unit)? = null,

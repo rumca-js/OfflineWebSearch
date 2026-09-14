@@ -24,7 +24,7 @@ import io.github.rumcajs.offlinewebsearch.util.EntryUtils
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun EntryItem(entry: Entry, onClick: (Entry) -> Unit) {
+fun EntryListItem(entry: Entry, onClick: (Entry) -> Unit) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val config by AppConfigManager.config.collectAsState()

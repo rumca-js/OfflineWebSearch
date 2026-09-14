@@ -42,7 +42,7 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
 
-/** Key constants for [SourcesScreen] filter dropdown options. */
+/** Key constants for [SourcesListScreen] filter dropdown options. */
 private const val FILTER_KEY_BY_URL = "by_url"
 private const val FILTER_KEY_BY_TITLE = "by_title"
 private const val FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
@@ -50,7 +50,7 @@ private const val FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
 /** Sort mode applied to the in-memory source list. */
 private enum class SourceOrder { ByUrl, ByTitle, ByFetchTime }
 
-/** [FilterOption] list shown in the [SearchContainer] dropdown for [SourcesScreen]. */
+/** [FilterOption] list shown in the [SearchContainer] dropdown for [SourcesListScreen]. */
 private val SOURCE_FILTER_OPTIONS = listOf(
     FilterOption(
         key = FILTER_KEY_BY_URL,
@@ -75,7 +75,7 @@ private val SOURCE_FILTER_OPTIONS = listOf(
  * Supports pull-to-refresh to reload the source list from the active database.
  *
  * The search widget is the first item inside a [LazyColumn] so that it scrolls
- * together with the source list — consistent with [EntryListScreen].
+ * together with the source list — consistent with [EntriesListScreen].
  *
  * The widget uses the shared [SearchContainer] component:
  *  - Full-width text field
@@ -88,7 +88,7 @@ private val SOURCE_FILTER_OPTIONS = listOf(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SourcesScreen(
+fun SourcesListScreen(
     onNavigateToSource: (Source) -> Unit,
     onNavigateToEditSource: (Source) -> Unit,
     onNavigateToAddSource: (() -> Unit)? = null,
@@ -402,7 +402,7 @@ fun SourcesScreen(
                     }
                     else -> {
                         items(filteredSources, key = { it.id ?: it.url }) { source ->
-                            SourceItemRow(
+                            SourceListItem(
                                 source = source,
                                 isEditable = isEditable,
                                 onClick = { onNavigateToSource(source) },
@@ -420,7 +420,7 @@ fun SourcesScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SourceItemRow(
+private fun SourceListItem(
     source: Source,
     isEditable: Boolean,
     onClick: () -> Unit,

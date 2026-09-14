@@ -114,7 +114,7 @@ fun EntryListSearchResultsContainer(
                         items = filteredData,
                         key = { entry -> entry.id ?: entry.link ?: entry.hashCode() }
                     ) { entry ->
-                        EntryItem(
+                        EntryListItem(
                             entry = entry,
                             onClick = onNavigateToDetail
                         )

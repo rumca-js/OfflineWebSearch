@@ -76,24 +76,24 @@ App should contain on bottom selection of main views:
  - Options
 
 Screens:
- - EntryListScreen - Provides the search interface. Shows search results.
+ - EntriesListScreen - Provides the search interface. Shows search results.
  - EntryDetailScreen - Shows details of a selected entry.
  - EntryEditScreen - Adds or edits an entry.
  - EntryStatusScreen - Checks the HTTP status of an entry URL.
  - EntryPreviewScreen - Fetches and displays the current web page data.
- - OptionsScreen - Configures databases and application settings.
- - DatabasesScreen - To be removed
- - DatabaseScreen - Shows information and actions for a database.
  - SourceScreen - Shows information and actions for a source.
  - SourceEditScreen - Adds or edits a source.
  - SourceUrlEditPreviewScreen - Preview screen shown when adding a source by URL. Fetches RSS feed data to pre-populate fields.
  - SourcesScreen - Shows the list of configured sources.
+ - OptionsScreen - Configures databases and application settings.
+ - DatabaseScreen - Shows information and actions for a database.
  - AboutScreen - Shows information about the application.
  - VisitedEntriesScreen - To be removed
+ - DatabasesScreen - To be removed
  - ReadLaterScreen - To be removed
 
-## EntryListScreen
- - Entries screen is scrollable (search widget, entry results, pagination controls)
+## EntriesListScreen
+ - Entries screen is scrollable (search widget, entry results, pagination controls are in one scrollable container)
  - Provides search widget with full width text input
  - Search widget is followed with "Search" button and a button to select "filters" for search results.
  Filters are read from SQLite table, but if it nos available by default by Date published filter should be used. Always some filter need to be applied
@@ -117,7 +117,7 @@ Screens:
  - swipe left performs "next" pagination on results
  - swipe right performs "previous" pagination on results
 
-### EntryItem - row in EntryListScreen
+### EntryListItem - row in EntryListScreen
 There are several list styles:
  - Gallery (emphasis on thumbnail, should look like YouTube or TikTok)
  - Standard (similar to gallery, but thumbnail is smaller, and on the left, should remind Feed readers
@@ -207,7 +207,7 @@ The screen displays, where available:
  - Provides an Update entry data button.
  - The button updates the stored entry metadata.
 
-## SourcesScreen
+## SourcesListScreen
  - Provides bar on top with buttons: add, fetch
  - Selecting source opens SourceScreen.
  - Provides search widget, similar to EntryListScreen, it should be scrollable
@@ -219,7 +219,7 @@ The screen displays, where available:
  - just as EntryListScreen, pull to refresh sources
  - search widget should, just as EntryListScreen support LIKE syntax
 
-## SourceScreen
+## SourceDetailScreen
  - Displays information about a source.
  - Provides a top bar with the following actions:
     -- Fetch / Update

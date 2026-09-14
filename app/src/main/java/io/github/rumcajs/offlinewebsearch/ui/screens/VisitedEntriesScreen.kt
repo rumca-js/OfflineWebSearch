@@ -16,7 +16,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistory
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
-import io.github.rumcajs.offlinewebsearch.ui.components.EntryItem
+import io.github.rumcajs.offlinewebsearch.ui.components.EntryListItem
 import kotlinx.coroutines.launch
 
 /**
@@ -118,7 +118,7 @@ fun VisitedEntriesScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(visitedEntries) { (history, entry) ->
-                        EntryItem(
+                        EntryListItem(
                             entry = entry,
                             onClick = onNavigateToDetail
                         )

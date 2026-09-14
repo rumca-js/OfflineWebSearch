@@ -16,7 +16,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLater
 import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
-import io.github.rumcajs.offlinewebsearch.ui.components.EntryItem
+import io.github.rumcajs.offlinewebsearch.ui.components.EntryListItem
 import kotlinx.coroutines.launch
 
 /**
@@ -118,7 +118,7 @@ fun ReadLaterScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(readLaterEntries) { (readLater, entry) ->
-                        EntryItem(
+                        EntryListItem(
                             entry = entry,
                             onClick = onNavigateToDetail
                         )

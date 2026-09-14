@@ -127,7 +127,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(Screen.Home.route) {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryListScreen(
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntriesListScreen(
                                 viewModel = searchViewModel,
                                 onNavigateToDetail = { entry ->
                                     searchViewModel.selectedEntry = entry
@@ -163,7 +163,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             )
                         }
                         composable(Screen.Sources.route) {
-                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourcesScreen(
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourcesListScreen(
                                 onNavigateToSource = { source ->
                                     searchViewModel.selectedSource = source
                                     navController.navigate(Screen.SourceDetail.route)
@@ -182,7 +182,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val scope = androidx.compose.runtime.rememberCoroutineScope()
                             val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
                             searchViewModel.selectedSource?.let { source ->
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceScreen(
+                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceDetailScreen(
                                     source = source,
                                     onNavigateToEdit = {
                                         navController.navigate(Screen.SourceEdit.route)
