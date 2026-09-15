@@ -35,6 +35,8 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalData
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
+import io.github.rumcajs.offlinewebsearch.ui.components.DetailLink
+import io.github.rumcajs.offlinewebsearch.ui.components.DetailTitle
 import io.github.rumcajs.offlinewebsearch.ui.components.PropertiesPane
 import io.github.rumcajs.offlinewebsearch.ui.components.PropertyItem
 import io.github.rumcajs.offlinewebsearch.ui.components.PropertyType
@@ -309,28 +311,23 @@ fun SourceDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Text(
-                text = currentSource.title.ifBlank { "Untitled Source" },
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            DetailTitle(
+                title = currentSource.title.ifBlank { "Untitled Source" },
+                link = currentSource.url.takeIf { it.isNotBlank() }
             )
+
+            if (currentSource.url.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                DetailLink(
+                    link = currentSource.url
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Source properties displayed as a unified properties list
             PropertiesPane(
                 properties = buildList {
-                    if (currentSource.url.isNotBlank()) {
-                        add(
-                            PropertyItem(
-                                label = "URL",
-                                value = currentSource.url,
-                                type = PropertyType.LINK,
-                                toastMessage = "Source URL copied to clipboard"
-                            )
-                        )
-                    }
                     add(PropertyItem(label = "ID", value = currentSource.id?.toString() ?: "N/A"))
                     add(PropertyItem(label = "Status", value = if (currentSource.enabled) "Enabled" else "Disabled"))
                     add(PropertyItem(label = "Type", value = currentSource.source_type?.takeIf { it.isNotBlank() } ?: SourceRepository.SOURCE_TYPE_RSS))
