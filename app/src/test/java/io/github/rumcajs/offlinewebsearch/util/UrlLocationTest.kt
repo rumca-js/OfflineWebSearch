@@ -86,4 +86,44 @@ class UrlLocationTest {
         assertTrue(UrlLocation("http://www.google.com").isWebLink())
         assertTrue(UrlLocation("https://sub.example.co.uk/path?q=1").isWebLink())
     }
+
+    @Test
+    fun testGetGoogleRedirectFixWithUrlParam() {
+        val googleUrl = "https://www.google.com/url?url=https%3A%2F%2Fexample.com%2Ftarget%3Ffoo%3Dbar&sa=D"
+        assertEquals("https://example.com/target?foo=bar", UrlLocation.getGoogleRedirectFix(googleUrl))
+        assertEquals("https://example.com/target?foo=bar", UrlLocation(googleUrl).getGoogleRedirectFix())
+    }
+
+    @Test
+    fun testGetGoogleRedirectFixWithQParam() {
+        val googleUrl = "https://www.google.com/url?q=https://example.com/article&usg=AOvVaw0123"
+        assertEquals("https://example.com/article", UrlLocation.getGoogleRedirectFix(googleUrl))
+        assertEquals("https://example.com/article", UrlLocation(googleUrl).getGoogleRedirectFix())
+    }
+
+    @Test
+    fun testGetGoogleRedirectFixNonGoogleUrl() {
+        val regularUrl = "https://example.com/search?q=something"
+        assertEquals(regularUrl, UrlLocation.getGoogleRedirectFix(regularUrl))
+        assertEquals(regularUrl, UrlLocation(regularUrl).getGoogleRedirectFix())
+    }
+
+    @Test
+    fun testGetGoogleRedirectFixCustomDomainLocation() {
+        val customGoogleUrl = "https://www.google.com/custom_redirect?q=https%3A%2F%2Fexample.com%2Fdestination"
+        assertEquals(
+            "https://example.com/destination",
+            UrlLocation.getGoogleRedirectFix(customGoogleUrl, domainLocation = "custom_redirect")
+        )
+    }
+
+    @Test
+    fun testGetUrlArgAndCleaned() {
+        val testUrl = "https://example.com/path?key1=hello+world&key2=foo%2Fbar#frag"
+        assertEquals("hello+world", UrlLocation.getUrlArg(testUrl, "key1"))
+        assertEquals("hello world", UrlLocation.getCleanedLink(UrlLocation.getUrlArg(testUrl, "key1")!!))
+        assertEquals("foo%2Fbar", UrlLocation.getUrlArg2(testUrl, "key2"))
+        assertEquals("foo/bar", UrlLocation.getCleanedLink(UrlLocation.getUrlArg2(testUrl, "key2")!!))
+        assertEquals(null, UrlLocation.getUrlArg(testUrl, "nonexistent"))
+    }
 }
