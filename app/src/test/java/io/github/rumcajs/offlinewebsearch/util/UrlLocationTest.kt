@@ -118,12 +118,21 @@ class UrlLocationTest {
     }
 
     @Test
+    fun testYouTubeRedirectTest() {
+        val customGoogleUrl = "https://www.youtube.com/redirect?event=video_description&redir_token=QUZZTVljRXRSdUJkRE5vMVJYMHZPcVZrTzhNUHxBTl9pYzRlM0Z6UnNZRHZDRGRjVlZuSkM3V2RvdDBHSHJqVFVxWHVYTG9HR3BPZHdkM1doaG41aERtMTg3NXozdFlNamhMSURjSzZENjlqd2xPeEpsbUJLbW5wRjROeURPRXl3&q=https%3A%2F%2Fmeter.com%2Fltt&v=3xngArcFpek"
+        assertEquals(
+            "https://meter.com/ltt",
+            UrlLocation.getGoogleRedirectFix(customGoogleUrl, domainLocation = "custom_redirect")
+        )
+    }
+
+    @Test
     fun testGetUrlArgAndCleaned() {
         val testUrl = "https://example.com/path?key1=hello+world&key2=foo%2Fbar#frag"
-        assertEquals("hello+world", UrlLocation.getUrlArg(testUrl, "key1"))
-        assertEquals("hello world", UrlLocation.getCleanedLink(UrlLocation.getUrlArg(testUrl, "key1")!!))
-        assertEquals("foo%2Fbar", UrlLocation.getUrlArg2(testUrl, "key2"))
-        assertEquals("foo/bar", UrlLocation.getCleanedLink(UrlLocation.getUrlArg2(testUrl, "key2")!!))
+        assertEquals("hello world", UrlLocation.getUrlArg(testUrl, "key1"))
+        assertEquals("https://hello world", UrlLocation.getCleanedLink(UrlLocation.getUrlArg(testUrl, "key1")!!))
+        assertEquals("foo/bar", UrlLocation.getUrlArg(testUrl, "key2"))
+        assertEquals("https://foo/bar", UrlLocation.getCleanedLink(UrlLocation.getUrlArg(testUrl, "key2")!!))
         assertEquals(null, UrlLocation.getUrlArg(testUrl, "nonexistent"))
     }
 }

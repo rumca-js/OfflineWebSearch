@@ -1,6 +1,8 @@
 package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import java.net.URI
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class UrlLocation(private val link: String?) {
 
@@ -9,34 +11,27 @@ class UrlLocation(private val link: String?) {
         val VALID_PREFIXES = listOf("http://", "https://", "smb://", "ftp://")
 
         /**
-         * Normalizes a user-entered URL string:
-         * - Adds a `https://` scheme prefix when none is present.
-         * - Strips a trailing slash that immediately follows the host with no further path
-         *   (e.g. `https://example.com/` → `https://example.com`).
-         *   A slash that is part of an actual path (e.g. `/path/`) is preserved.
-         *
-         * @param raw The raw input string.
-         * @return Normalized URL string.
+         * Normalizes a raw URL string by adding a scheme, unwrapping redirects,
+         * and stripping root trailing slashes.
          */
         fun normalizeUrl(raw: String): String {
-            var cleaned = getCleanedLink(raw);
-            cleaned = getGoogleRedirectFix(cleaned);
-            cleaned = getYoutubeRedirectFix(cleaned);
-            return cleaned;
+            var cleaned = getCleanedLink(raw)
+            cleaned = getGoogleRedirectFix(cleaned)
+            cleaned = getYoutubeRedirectFix(cleaned)
+            return cleaned
         }
 
         /**
          * Strips query parameters (everything after '?') from a URL string,
-         * preserving any trailing fragment if present.
-         *
-         * @param url The URL string to process.
-         * @return URL string with query arguments removed.
+         * preserving any trailing fragment (#) if present.
          */
         fun clearUrlArgs(url: String): String {
             val trimmed = url.trim()
             if (trimmed.isEmpty()) return ""
+
             val questionMarkIndex = trimmed.indexOf('?')
             if (questionMarkIndex == -1) return trimmed
+
             val hashIndex = trimmed.indexOf('#', startIndex = questionMarkIndex)
             return if (hashIndex != -1) {
                 trimmed.substring(0, questionMarkIndex) + trimmed.substring(hashIndex)
@@ -46,55 +41,44 @@ class UrlLocation(private val link: String?) {
         }
 
         /**
-         * Extracts the raw value of a specified query parameter key from [url].
-         *
-         * @param url The URL string to search.
-         * @param key The query parameter name.
-         * @return The parameter value if found, or null otherwise.
+         * Extracts and URL-decodes the value of a specific query parameter.
          */
         fun getUrlArg(url: String, key: String): String? {
             val questionMarkIndex = url.indexOf('?')
             if (questionMarkIndex == -1) return null
+
             val queryPart = url.substring(questionMarkIndex + 1).substringBefore('#')
             for (param in queryPart.split('&')) {
                 if (param.isEmpty()) continue
                 val parts = param.split('=', limit = 2)
                 if (parts[0] == key) {
-                    return if (parts.size > 1) parts[1] else ""
+                    val rawValue = if (parts.size > 1) parts[1] else ""
+                    return runCatching {
+                        URLDecoder.decode(rawValue, StandardCharsets.UTF_8.name())
+                    }.getOrDefault(rawValue)
                 }
             }
             return null
         }
 
         /**
-         * Alias for [getUrlArg].
-         */
-        fun getUrlArg2(url: String, key: String): String? = getUrlArg(url, key)
-
-        /**
-         * Decodes URL-encoded characters in [raw] using UTF-8 and trims whitespace.
-         *
-         * @param raw The parameter value to clean.
-         * @return The cleaned and decoded string.
+         * Normalizes scheme (defaults to https://) and removes trailing slash on domain-only URLs.
          */
         fun getCleanedLink(raw: String): String {
             val trimmed = raw.trim()
             if (trimmed.isEmpty()) return ""
-            val withScheme = if (!trimmed.contains("://") && !trimmed.startsWith("//")) {
-                "https://$trimmed"
-            } else if (trimmed.startsWith("//")) {
-                "https:$trimmed"
-            } else {
-                trimmed
+
+            val withScheme = when {
+                trimmed.startsWith("//") -> "https:$trimmed"
+                !trimmed.contains("://") -> "https://$trimmed"
+                else -> trimmed
             }
-            // Strip a trailing slash only when it is directly after the host (no real path).
-            // Pattern: scheme://host/ with nothing after the slash.
+
             val schemeEnd = withScheme.indexOf("://")
             if (schemeEnd != -1) {
                 val afterScheme = withScheme.substring(schemeEnd + 3)
                 val slashIndex = afterScheme.indexOf('/')
                 if (slashIndex != -1 && slashIndex == afterScheme.length - 1) {
-                    // The only slash is the very last character — strip it.
                     return withScheme.dropLast(1)
                 }
             }
@@ -102,39 +86,26 @@ class UrlLocation(private val link: String?) {
         }
 
         /**
-         * Resolves the destination URL from a Google redirect URL (e.g. `https://www.google.com/url?q=...` or `https://www.google.com/url?url=...`).
-         *
-         * @param url The input URL to check and resolve.
-         * @param domainLocation The path component for the redirect handler (defaults to "url").
-         * @return The extracted and cleaned target URL if it is a Google redirect; otherwise the original [url].
+         * Extracts destination URL from Google search/ad redirect links.
          */
         fun getGoogleRedirectFix(url: String, domainLocation: String = "url"): String {
-            val stupidGoogleString = "https://www.google.com/$domainLocation"
-            if (url.contains(stupidGoogleString)) {
-                val paramValueUrl = getUrlArg2(url, "url")
-                if (!paramValueUrl.isNullOrEmpty()) {
-                    return getCleanedLink(paramValueUrl)
-                }
-                val paramValueQ = getUrlArg2(url, "q")
-                if (!paramValueQ.isNullOrEmpty()) {
-                    return getCleanedLink(paramValueQ)
+            if (url.contains("google.") && url.contains("/$domainLocation")) {
+                val target = getUrlArg(url, "url") ?: getUrlArg(url, "q")
+                if (!target.isNullOrEmpty()) {
+                    return getCleanedLink(target)
                 }
             }
             return url
         }
 
         /**
-         * Resolves the destination URL from a YouTube redirect URL (e.g. `https://www.youtube.com/redirect?q=...`).
-         *
-         * @param url The input URL to check and resolve.
-         * @return The extracted and cleaned target URL if it is a YouTube redirect; otherwise the original [url].
+         * Extracts destination URL from YouTube outgoing redirect links.
          */
         fun getYoutubeRedirectFix(url: String): String {
-            val stupidYoutubeString = "https://www.youtube.com/redirect"
-            if (url.contains(stupidYoutubeString)) {
-                val paramValue = getUrlArg2(url, "q")
-                if (!paramValue.isNullOrEmpty()) {
-                    return getCleanedLink(paramValue)
+            if (url.contains("youtube.com/redirect") || url.contains("youtu.be/redirect")) {
+                val target = getUrlArg(url, "q")
+                if (!target.isNullOrEmpty()) {
+                    return getCleanedLink(target)
                 }
             }
             return url
@@ -277,12 +248,6 @@ class UrlLocation(private val link: String?) {
     }
 
     /**
-     * Snake-case alias for [getGoogleRedirectFix].
-     */
-    fun get_google_redirect_fix(domainLocation: String = "url"): String =
-        getGoogleRedirectFix(domainLocation)
-
-    /**
      * Resolves the destination URL if this [link] is a YouTube redirect URL.
      *
      * @return The extracted and cleaned target URL if it is a YouTube redirect; otherwise the original link (or empty string if null).
@@ -290,9 +255,4 @@ class UrlLocation(private val link: String?) {
     fun getYoutubeRedirectFix(): String {
         return if (link != null) getYoutubeRedirectFix(link) else ""
     }
-
-    /**
-     * Snake-case alias for [getYoutubeRedirectFix].
-     */
-    fun get_youtube_redirect_fix(): String = getYoutubeRedirectFix()
 }
