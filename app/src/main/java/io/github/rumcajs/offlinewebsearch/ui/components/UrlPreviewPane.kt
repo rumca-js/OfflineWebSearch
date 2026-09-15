@@ -345,7 +345,7 @@ private fun PageDetailsHeader(
         val clipboardManager = LocalClipboardManager.current
         val context = LocalContext.current
 
-        ThumbnailPreview(
+        DetailThumbnail(
             link = url,
             thumbnailUrl = heroThumbnail,
             videoPreview = config.dbconfig.videoPreview,

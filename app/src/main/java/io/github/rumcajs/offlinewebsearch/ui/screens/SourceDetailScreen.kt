@@ -24,22 +24,24 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.runtime.*
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
-import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalData
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.DetailLink
+import io.github.rumcajs.offlinewebsearch.ui.components.DetailThumbnail
 import io.github.rumcajs.offlinewebsearch.ui.components.DetailTitle
 import io.github.rumcajs.offlinewebsearch.ui.components.PropertiesPane
 import io.github.rumcajs.offlinewebsearch.ui.components.PropertyItem
 import io.github.rumcajs.offlinewebsearch.ui.components.PropertyType
+import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
 
 /**
@@ -296,19 +298,23 @@ fun SourceDetailScreen(
         ) {
             // Thumbnail
             if (currentSource.favicon.isNotBlank()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(currentSource.favicon)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Thumbnail for ${currentSource.title}",
-                    contentScale = ContentScale.Crop,
+                val uriHandler = LocalUriHandler.current
+                val clipboardManager = LocalClipboardManager.current
+                DetailThumbnail(
+                    thumbnailUrl = currentSource.favicon,
+                    link = currentSource.url.takeIf { it.isNotBlank() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .padding(bottom = 16.dp),
+                    videoPreview = false,
+                    onTap = { currentSource.url.takeIf { it.isNotBlank() }?.let { uriHandler.openUri(it) } },
+                    onLongPress = {
+                        if (currentSource.url.isNotBlank()) {
+                            clipboardManager.setText(AnnotatedString(currentSource.url))
+                            Toast.makeText(context, "Link copied to clipboard", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
             DetailTitle(
