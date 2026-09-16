@@ -826,6 +826,55 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Checks if there is at least one enabled source that is outdated (older than 1 hour or never fetched).
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @return true if there are outdated enabled sources to refresh.
+     */
+    suspend fun hasOutdatedSources(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext false
+        }
+        val config = AppConfigManager.config.value
+        if (config.networkConfig.disabled) {
+            return@withContext false
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val sqlText = "SELECT s.id AS id, sod.date_fetched AS date_fetched " +
+                    "FROM ${getTableName()} AS s " +
+                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id " +
+                    "WHERE s.enabled = 1 AND s.url != ''"
+            val cursor = db.rawQuery(sqlText, null)
+            cursor.use {
+                while (it.moveToNext()) {
+                    val dateFetchedIndex = it.getColumnIndex("date_fetched")
+                    val dateFetched = if (dateFetchedIndex >= 0 && !it.isNull(dateFetchedIndex)) it.getString(dateFetchedIndex) else null
+                    if (SourceOperationalDataRepository.isFetchOutdated(dateFetched)) {
+                        db.close()
+                        return@withContext true
+                    }
+                }
+            }
+            db.close()
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception in $functionName")
+            e.printStackTrace()
+        }
+
+        false
+    }
+
+    /**
      * Deletes a source by ID from `sourcedatamodel` and cleans up associated operational data.
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */

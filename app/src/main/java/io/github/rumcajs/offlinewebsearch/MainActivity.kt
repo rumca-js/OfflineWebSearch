@@ -108,6 +108,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
                     Screen.Options,
                 )
                 val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
+                var hasOutdatedSources by remember { mutableStateOf(false) }
+
+                LaunchedEffect(config.activeDatabase, config.networkConfig.disabled, sourceRefreshProgress.isRunning) {
+                    if (!sourceRefreshProgress.isRunning) {
+                        hasOutdatedSources = SourceRepository.hasOutdatedSources(context, config.activeDatabaseState)
+                    } else {
+                        hasOutdatedSources = false
+                    }
+                }
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
@@ -123,7 +133,15 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                                 strokeWidth = 2.dp
                                             )
                                         } else {
-                                            Icon(screen.icon, contentDescription = null)
+                                            BadgedBox(
+                                                badge = {
+                                                    if (screen == Screen.Sources && hasOutdatedSources) {
+                                                        Badge()
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(screen.icon, contentDescription = null)
+                                            }
                                         }
                                     },
                                     label = { Text(screen.label) },
