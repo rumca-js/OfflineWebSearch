@@ -298,11 +298,6 @@ fun SourcesListScreen(
                     }
                 },
                 actions = {
-                    if (isEditable && onNavigateToAddSource != null) {
-                        IconButton(onClick = onNavigateToAddSource) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Source")
-                        }
-                    }
                     if (isEditable && !config.networkConfig.disabled && sources.isNotEmpty()) {
                         IconButton(
                             onClick = performRefreshAll,
@@ -438,33 +433,52 @@ fun SourcesListScreen(
                 }
             }
 
+            val showAddSource = isEditable && onNavigateToAddSource != null
             val showScrollToTop by remember {
                 derivedStateOf {
                     listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
                 }
             }
 
-            AnimatedVisibility(
-                visible = showScrollToTop,
-                enter = fadeIn(),
-                exit = fadeOut(),
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = 16.dp, end = 16.dp)
+                    .padding(bottom = 16.dp, end = 16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                FloatingActionButton(
-                    onClick = {
-                        scope.launch {
-                            listState.animateScrollToItem(0)
-                        }
-                    },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                if (showAddSource) {
+                    FloatingActionButton(
+                        onClick = onNavigateToAddSource!!,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Source"
+                        )
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = showScrollToTop,
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Scroll to top"
-                    )
+                    FloatingActionButton(
+                        onClick = {
+                            scope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowUp,
+                            contentDescription = "Scroll to top"
+                        )
+                    }
                 }
             }
         }

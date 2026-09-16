@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -139,38 +140,56 @@ fun EntriesListScreen(
                     listState.scrollToItem(0)
                 }
             },
-            onAddEntry = if (isEditable && !viewModel.isFilterReadLater && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
             onRefresh = { viewModel.performSearch(context) },
             modifier = Modifier.fillMaxSize()
         )
 
+        val showAddEntry = isEditable && !viewModel.isFilterReadLater && onNavigateToAddEntry != null
         val showScrollToTop by remember {
             derivedStateOf {
                 listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
             }
         }
 
-        AnimatedVisibility(
-            visible = showScrollToTop,
-            enter = fadeIn(),
-            exit = fadeOut(),
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = 16.dp, end = 0.dp)
+                .padding(bottom = 16.dp, end = 0.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            FloatingActionButton(
-                onClick = {
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(0)
-                    }
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            if (showAddEntry) {
+                FloatingActionButton(
+                    onClick = onNavigateToAddEntry!!,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Entry"
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = showScrollToTop,
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowUp,
-                    contentDescription = "Scroll to top"
-                )
+                FloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowUp,
+                        contentDescription = "Scroll to top"
+                    )
+                }
             }
         }
     }

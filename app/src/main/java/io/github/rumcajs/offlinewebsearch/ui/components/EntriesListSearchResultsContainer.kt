@@ -13,7 +13,6 @@ import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -38,7 +37,6 @@ fun EntriesListSearchResultsContainer(
     showSuggestions: Boolean = false,
     suggestions: List<String> = emptyList(),
     onSuggestionClick: (String) -> Unit = {},
-    onAddEntry: (() -> Unit)? = null,
     onRefresh: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -172,26 +170,6 @@ fun EntriesListSearchResultsContainer(
                                 ) {
                                     Text("Next")
                                 }
-                            }
-                        }
-                    }
-
-                    // Add entry button — scrollable, after pagination
-                    if (onAddEntry != null) {
-                        item {
-                            Button(
-                                onClick = onAddEntry,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(ButtonDefaults.IconSize)
-                                )
-                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Add Entry")
                             }
                         }
                     }
