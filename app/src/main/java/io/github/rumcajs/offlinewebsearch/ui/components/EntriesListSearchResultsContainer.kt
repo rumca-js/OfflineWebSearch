@@ -34,6 +34,7 @@ fun EntriesListSearchResultsContainer(
     onNextPage: () -> Unit,
     onNavigateToDetail: (Entry) -> Unit,
     listState: LazyListState,
+    searchWidget: (@Composable () -> Unit)? = null,
     showSuggestions: Boolean = false,
     suggestions: List<String> = emptyList(),
     onSuggestionClick: (String) -> Unit = {},
@@ -50,36 +51,39 @@ fun EntriesListSearchResultsContainer(
         modifier = modifier
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Scrollable entry list
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .pointerInput(currentPage, totalPages) {
-                            detectHorizontalDragGestures(
-                                onDragStart = { totalDragX = 0f },
-                                onDragEnd = {
-                                    if (totalDragX > swipeThreshold) {
-                                        // Swipe right -> Previous page
-                                        if (currentPage > 0) {
-                                            onPreviousPage()
-                                        }
-                                    } else if (totalDragX < -swipeThreshold) {
-                                        // Swipe left -> Next page (older/next results)
-                                        if (currentPage + 1 < totalPages) {
-                                            onNextPage()
-                                        }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(currentPage, totalPages) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { totalDragX = 0f },
+                            onDragEnd = {
+                                if (totalDragX > swipeThreshold) {
+                                    // Swipe right -> Previous page
+                                    if (currentPage > 0) {
+                                        onPreviousPage()
                                     }
-                                    totalDragX = 0f
-                                },
-                                onDragCancel = { totalDragX = 0f },
-                                onHorizontalDrag = { _, dragAmount ->
-                                    totalDragX += dragAmount
+                                } else if (totalDragX < -swipeThreshold) {
+                                    // Swipe left -> Next page (older/next results)
+                                    if (currentPage + 1 < totalPages) {
+                                        onNextPage()
+                                    }
                                 }
-                            )
-                        },
-                    state = listState
-                ) {
+                                totalDragX = 0f
+                            },
+                            onDragCancel = { totalDragX = 0f },
+                            onHorizontalDrag = { _, dragAmount ->
+                                totalDragX += dragAmount
+                            }
+                        )
+                    },
+                state = listState
+            ) {
+                if (searchWidget != null) {
+                    item(key = "search_widget") {
+                        searchWidget()
+                    }
+                }
                     if (showSuggestions && suggestions.isNotEmpty()) {
                         item {
                             Surface(
@@ -192,7 +196,6 @@ fun EntriesListSearchResultsContainer(
                         }
                     }
                 }
-            }
             if (isLoading && filteredData.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()

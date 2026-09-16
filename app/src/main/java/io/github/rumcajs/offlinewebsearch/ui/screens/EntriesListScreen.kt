@@ -93,58 +93,56 @@ fun EntriesListScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            SearchContainer(
-                searchQuery = viewModel.searchQuery,
-                onSearchQueryChange = {
-                    viewModel.searchQuery = it
-                    viewModel.showSuggestions = true
-                },
-                onClearSearch = {
-                    viewModel.clearSearch()
-                    viewModel.performSearch(context)
-                },
-                onPerformSearch = {
-                    viewModel.performSearch(context)
-                },
-                isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
-                filterOptions = filterOptions,
-                activeFilterKey = viewModel.activeFilter.takeIf { it != SearchFilter.None }?.name,
-                onFilterSelected = { option ->
-                    viewModel.setFilter(context, SearchFilter.fromKey(option.key))
-                    coroutineScope.launch {
-                        listState.scrollToItem(0)
+        EntriesListSearchResultsContainer(
+            isLoading = viewModel.isLoading,
+            filteredData = viewModel.filteredData,
+            activeSearchQuery = viewModel.activeSearchQuery,
+            currentPage = viewModel.currentPage,
+            totalPages = viewModel.totalPages,
+            onPreviousPage = { viewModel.previousPage(context) },
+            onNextPage = { viewModel.nextPage(context) },
+            onNavigateToDetail = onNavigateToDetail,
+            listState = listState,
+            searchWidget = {
+                SearchContainer(
+                    searchQuery = viewModel.searchQuery,
+                    onSearchQueryChange = {
+                        viewModel.searchQuery = it
+                        viewModel.showSuggestions = true
+                    },
+                    onClearSearch = {
+                        viewModel.clearSearch()
+                        viewModel.performSearch(context)
+                    },
+                    onPerformSearch = {
+                        viewModel.performSearch(context)
+                    },
+                    isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
+                    filterOptions = filterOptions,
+                    activeFilterKey = viewModel.activeFilter.takeIf { it != SearchFilter.None }?.name,
+                    onFilterSelected = { option ->
+                        viewModel.setFilter(context, SearchFilter.fromKey(option.key))
+                        coroutineScope.launch {
+                            listState.scrollToItem(0)
+                        }
                     }
+                )
+            },
+            showSuggestions = viewModel.showSuggestions,
+            suggestions = viewModel.suggestions,
+            onSuggestionClick = { suggestion ->
+                keyboardController?.hide()
+                focusManager.clearFocus()
+                viewModel.searchQuery = suggestion
+                viewModel.performSearch(context)
+                coroutineScope.launch {
+                    listState.scrollToItem(0)
                 }
-            )
-            EntriesListSearchResultsContainer(
-                isLoading = viewModel.isLoading,
-                filteredData = viewModel.filteredData,
-                activeSearchQuery = viewModel.activeSearchQuery,
-                currentPage = viewModel.currentPage,
-                totalPages = viewModel.totalPages,
-                onPreviousPage = { viewModel.previousPage(context) },
-                onNextPage = { viewModel.nextPage(context) },
-                onNavigateToDetail = onNavigateToDetail,
-                listState = listState,
-                showSuggestions = viewModel.showSuggestions,
-                suggestions = viewModel.suggestions,
-                onSuggestionClick = { suggestion ->
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                    viewModel.searchQuery = suggestion
-                    viewModel.performSearch(context)
-                    coroutineScope.launch {
-                        listState.scrollToItem(0)
-                    }
-                },
-                onAddEntry = if (isEditable && !viewModel.isFilterReadLater && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
-                onRefresh = { viewModel.performSearch(context) },
-                modifier = Modifier.weight(1f)
-            )
-        }
+            },
+            onAddEntry = if (isEditable && !viewModel.isFilterReadLater && onNavigateToAddEntry != null) onNavigateToAddEntry else null,
+            onRefresh = { viewModel.performSearch(context) },
+            modifier = Modifier.fillMaxSize()
+        )
 
         val showScrollToTop by remember {
             derivedStateOf {
