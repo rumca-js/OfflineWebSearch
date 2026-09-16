@@ -1,0 +1,1 @@
+Entries with votes do not use alpha. These are visible. Url checker refactor. Using widgets for parts of entry display. Added buttons to scroll up on lists. Input links can be read from google, youtube redirects. Entries and sources can be added via floating button. Source refresh is correctly indicated by spinning wheel.
