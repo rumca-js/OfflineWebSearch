@@ -88,11 +88,16 @@ class UrlLocation(private val link: String?) {
         /**
          * Extracts destination URL from Google search/ad redirect links.
          */
-        fun getGoogleRedirectFix(url: String, domainLocation: String = "url"): String {
-            if (url.contains("google.") && url.contains("/$domainLocation")) {
+        fun getGoogleRedirectFix(url: String, domainLocation: String? = null): String {
+            if (url.contains("google.")) {
+                if (domainLocation != null && !url.contains("/$domainLocation")) {
+                    return url
+                }
                 val target = getUrlArg(url, "url") ?: getUrlArg(url, "q")
                 if (!target.isNullOrEmpty()) {
-                    return getCleanedLink(target)
+                    if (domainLocation != null || url.contains("/url") || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("//") || target.contains("://")) {
+                        return getCleanedLink(target)
+                    }
                 }
             }
             return url
@@ -240,10 +245,10 @@ class UrlLocation(private val link: String?) {
     /**
      * Resolves the destination URL if this [link] is a Google redirect URL.
      *
-     * @param domainLocation The path component for the redirect handler (defaults to "url").
+     * @param domainLocation The path component for the redirect handler (optional).
      * @return The extracted and cleaned target URL if it is a Google redirect; otherwise the original link (or empty string if null).
      */
-    fun getGoogleRedirectFix(domainLocation: String = "url"): String {
+    fun getGoogleRedirectFix(domainLocation: String? = null): String {
         return if (link != null) getGoogleRedirectFix(link, domainLocation) else ""
     }
 

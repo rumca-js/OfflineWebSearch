@@ -131,6 +131,25 @@ class UrlLocationTest {
     }
 
     @Test
+    fun testNormalize() {
+        val youtubeUrl = "https://www.youtube.com/redirect?event=video_description&redir_token=QUZZTVljRXRSdUJkRE5vMVJYMHZPcVZrTzhNUHxBTl9pYzRlM0Z6UnNZRHZDRGRjVlZuSkM3V2RvdDBHSHJqVFVxWHVYTG9HR3BPZHdkM1doaG41aERtMTg3NXozdFlNamhMSURjSzZENjlqd2xPeEpsbUJLbW5wRjROeURPRXl3&q=https%3A%2F%2Fmeter.com%2Fltt&v=3xngArcFpek"
+        assertEquals(
+            "https://meter.com/ltt",
+            UrlLocation.normalizeUrl(youtubeUrl)
+        )
+        val customGoogleUrl = "https://www.google.com/custom_redirect?q=https%3A%2F%2Fexample.com%2Fdestination"
+        assertEquals(
+            "https://example.com/destination",
+            UrlLocation.normalizeUrl(customGoogleUrl)
+        )
+        val googleUrl = "https://www.google.com/url?q=https://example.com/article&usg=AOvVaw0123"
+        assertEquals("https://example.com/article", UrlLocation.normalizeUrl(googleUrl))
+
+        val googleNotNormalUrl = "https://www.google.com/"
+        assertEquals("https://www.google.com", UrlLocation.normalizeUrl(googleNotNormalUrl))
+    }
+
+    @Test
     fun testGetUrlArgAndCleaned() {
         val testUrl = "https://example.com/path?key1=hello+world&key2=foo%2Fbar#frag"
         assertEquals("hello world", UrlLocation.getUrlArg(testUrl, "key1"))
