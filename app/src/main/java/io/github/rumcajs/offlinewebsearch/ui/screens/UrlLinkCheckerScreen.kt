@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.ui.components.UrlInputPane
 import io.github.rumcajs.offlinewebsearch.ui.components.UrlPreviewPane
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HandlerBuilder
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
@@ -107,108 +108,68 @@ fun UrlLinkCheckerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 tonalElevation = 1.dp
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = inputUrlText,
-                            onValueChange = { inputUrlText = it },
-                            label = { Text("URL") },
-                            placeholder = { Text("https://example.com") },
-                            singleLine = true,
-                            trailingIcon = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (inputUrlText.isNotBlank()) {
-                                        IconButton(onClick = { inputUrlText = "" }) {
-                                            Icon(Icons.Default.Clear, contentDescription = "Clear")
-                                        }
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            val normalized = UrlLocation.normalizeUrl(inputUrlText)
-                                            if (normalized.isNotBlank()) {
-                                                activeUrl = normalized
-                                                refreshTrigger++
-                                            }
-                                        },
-                                        enabled = inputUrlText.isNotBlank() && !isLoading
-                                    ) {
-                                        Icon(Icons.Default.Search, contentDescription = "Check")
-                                    }
+                UrlInputPane(
+                    url = inputUrlText,
+                    onUrlChange = { inputUrlText = it },
+                    placeholder = "https://example.com",
+                    enabled = !isLoading,
+                    showClearArgsButton = true,
+                    onClearArgs = {
+                        val cleaned = UrlLocation.clearUrlArgs(inputUrlText)
+                        inputUrlText = cleaned
+                        val normalized = UrlLocation.normalizeUrl(cleaned)
+                        if (normalized.isNotBlank()) {
+                            activeUrl = normalized
+                            refreshTrigger++
+                        }
+                    },
+                    onNormalizeSelected = { normalized ->
+                        inputUrlText = normalized
+                        if (normalized.isNotBlank()) {
+                            activeUrl = normalized
+                            refreshTrigger++
+                        }
+                    },
+                    additionalSuggestions = suggestions,
+                    onSuggestionClick = { inputUrlText = it },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (inputUrlText.isNotBlank()) {
+                                IconButton(onClick = { inputUrlText = "" }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "Clear")
                                 }
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Uri,
-                                imeAction = ImeAction.Go
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onGo = {
+                            }
+                            IconButton(
+                                onClick = {
                                     val normalized = UrlLocation.normalizeUrl(inputUrlText)
                                     if (normalized.isNotBlank()) {
                                         activeUrl = normalized
                                         refreshTrigger++
                                     }
-                                }
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // URL manipulation buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                val cleaned = UrlLocation.clearUrlArgs(inputUrlText)
-                                inputUrlText = cleaned
-                                val normalized = UrlLocation.normalizeUrl(cleaned)
-                                if (normalized.isNotBlank()) {
-                                    activeUrl = normalized
-                                    refreshTrigger++
-                                }
-                            },
-                            enabled = inputUrlText.contains('?') && !isLoading
-                        ) {
-                            Text("Clear Url args")
-                        }
-
-                        val normalizedPreview = UrlLocation.normalizeUrl(inputUrlText)
-                        if (normalizedPreview != inputUrlText) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            OutlinedButton(
-                                onClick = {
-                                    inputUrlText = normalizedPreview
-                                    if (normalizedPreview.isNotBlank()) {
-                                        activeUrl = normalizedPreview
-                                        refreshTrigger++
-                                    }
                                 },
-                                enabled = !isLoading
+                                enabled = inputUrlText.isNotBlank() && !isLoading
                             ) {
-                                Text("Normalize")
+                                Icon(Icons.Default.Search, contentDescription = "Check")
                             }
                         }
-                    }
-
-                    // Handler-derived suggestions: feeds and channel link
-                    if (suggestions.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        UrlSuggestionsRow(
-                            suggestions = suggestions,
-                            onSuggestionClick = { inputUrlText = it }
-                        )
-                    }
-                }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Go
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onGo = {
+                            val normalized = UrlLocation.normalizeUrl(inputUrlText)
+                            if (normalized.isNotBlank()) {
+                                activeUrl = normalized
+                                refreshTrigger++
+                            }
+                        }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
 
             // Embedded preview pane
@@ -223,33 +184,6 @@ fun UrlLinkCheckerScreen(
                 onPageLoaded = { page = it },
                 onNavigateToDetail = onNavigateToDetail,
                 onFeedClick = { feedUrl -> inputUrlText = feedUrl }
-            )
-        }
-    }
-}
-
-/**
- * Displays a list of URL suggestions as clickable [SuggestionChip]s.
- *
- * Each chip shows the full URL as its label. When clicked, the URL is passed
- * to [onSuggestionClick] so the caller can place it in the input bar.
- *
- * @param suggestions Flat list of suggested URLs.
- * @param onSuggestionClick Callback invoked with the selected URL string.
- */
-@Composable
-private fun UrlSuggestionsRow(
-    suggestions: List<String>,
-    onSuggestionClick: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        suggestions.forEach { url ->
-            SuggestionChip(
-                onClick = { onSuggestionClick(url) },
-                label = { Text(url, style = MaterialTheme.typography.labelSmall) }
             )
         }
     }

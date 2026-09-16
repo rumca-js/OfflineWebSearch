@@ -17,6 +17,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.EntryEnrichmentWorker
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
+import io.github.rumcajs.offlinewebsearch.ui.components.UrlInputPane
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 
@@ -201,20 +202,17 @@ fun EntryEditScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = link,
-                onValueChange = {
+            UrlInputPane(
+                url = link,
+                onUrlChange = {
                     if (isEditable) {
                         link = it
                         linkError = null
                     }
                 },
-                label = { Text("URL") },
                 enabled = isEditable,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                isError = linkError != null,
-                supportingText = linkError?.let { { Text(it) } }
+                urlError = linkError,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -313,6 +313,7 @@ The screen displays, where available:
  - For example, SourceRepository provides access to the sourcedatamodel table.
  - Database access should not be performed directly from UI screens.
  - UI screens should access data through the appropriate repository or data-layer interface.
+ - links inserted by user should often by normalized by UrlLocation.normalizeUrl. changes should be proposed for the user as suggestions that can be selected, and it replaces the user input then.
 
 # Background workers
 Process of workers should be visible on some screens.
