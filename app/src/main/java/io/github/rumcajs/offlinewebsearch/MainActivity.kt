@@ -24,10 +24,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.StartupWizardDialog
+import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -66,13 +69,19 @@ class MainActivity : androidx.activity.ComponentActivity() {
             DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                            val cfg = AppConfigManager.config.value
-                            val activeState = cfg.activeDatabaseState
-                            if (activeState != null && !activeState.isReadOnly && activeState.extension == ".db" && !cfg.networkConfig.disabled) {
-                                val count = SourceRepository.updateOutdatedSources(context, activeState)
+                        val cfg = AppConfigManager.config.value
+                        val activeState = cfg.activeDatabaseState
+                        if (activeState != null && !activeState.isReadOnly && activeState.extension == ".db" && !cfg.networkConfig.disabled) {
+                            SourceRefreshWorker.enqueueOutdatedSources(context, activeState) { count ->
                                 if (count > 0) {
-                                    searchViewModel.refreshPage(context)
+                                    kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+                                        searchViewModel.refreshPage(context)
+                                        Toast.makeText(
+                                            context,
+                                            "Refreshed $count source(s)",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
                             }
                         }
@@ -161,8 +170,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.SourceDetail.route) {
                             val context = androidx.compose.ui.platform.LocalContext.current
-                            val scope = androidx.compose.runtime.rememberCoroutineScope()
-                            val config by _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
+                            val scope = rememberCoroutineScope()
+                            val config by AppConfigManager.config.collectAsState()
                             searchViewModel.selectedSource?.let { source ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceDetailScreen(
                                     source = source,

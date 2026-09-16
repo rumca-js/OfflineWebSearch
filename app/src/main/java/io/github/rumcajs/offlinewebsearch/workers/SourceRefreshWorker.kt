@@ -119,8 +119,32 @@ object SourceRefreshWorker {
                 task.onFinished?.invoke(fetchedCount)
             }
             is RefreshTask.OutdatedSources -> {
-                val refreshed = SourceRepository.updateOutdatedSources(task.context, task.dbState)
-                task.onFinished?.invoke(refreshed)
+                val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                if (config.networkConfig.disabled || task.dbState.isReadOnly || !task.dbState.isSQLite) {
+                    task.onFinished?.invoke(0)
+                    return
+                }
+                val sources = SourceRepository.getSourcesByFetchTime(task.context, task.dbState)
+                    .filter { it.enabled && it.url.isNotBlank() }
+                val total = sources.size
+                if (total == 0) {
+                    task.onFinished?.invoke(0)
+                    return
+                }
+                _progress.value = WorkerProgress(total = total, done = 0, isRunning = true)
+                var fetchedCount = 0
+                for (src in sources) {
+                    _progress.update { it.copy(currentItem = src.title) }
+                    val (success, _) = SourceRepository.updateSourceMetaAndEntries(
+                        context = task.context,
+                        activeDatabaseState = task.dbState,
+                        source = src
+                    )
+                    if (success) fetchedCount++
+                    _progress.update { it.copy(done = it.done + 1) }
+                }
+                _progress.value = WorkerProgress(total = total, done = total, isRunning = false)
+                task.onFinished?.invoke(fetchedCount)
             }
         }
     }
