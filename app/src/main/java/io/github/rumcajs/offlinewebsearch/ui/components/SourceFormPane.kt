@@ -60,15 +60,13 @@ fun SourceFormPane(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = url,
-            onValueChange = { if (isEditable) onUrlChange(it) },
-            label = { Text("URL") },
+        UrlInputPane(
+            url = url,
+            onUrlChange = { if (isEditable) onUrlChange(it) },
+            label = "URL",
             enabled = isEditable,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = urlError != null,
-            supportingText = urlError?.let { { Text(it) } }
+            urlError = urlError,
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
