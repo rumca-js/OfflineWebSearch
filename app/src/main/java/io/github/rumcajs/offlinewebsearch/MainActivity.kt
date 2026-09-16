@@ -5,6 +5,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
@@ -17,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -105,6 +107,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                     Screen.Sources,
                     Screen.Options,
                 )
+                val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
@@ -113,7 +116,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val currentDestination = navBackStackEntry?.destination
                             items.forEach { screen ->
                                 NavigationBarItem(
-                                    icon = { Icon(screen.icon, contentDescription = null) },
+                                    icon = {
+                                        if (screen == Screen.Sources && sourceRefreshProgress.isRunning) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else {
+                                            Icon(screen.icon, contentDescription = null)
+                                        }
+                                    },
                                     label = { Text(screen.label) },
                                     selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                                     onClick = {
