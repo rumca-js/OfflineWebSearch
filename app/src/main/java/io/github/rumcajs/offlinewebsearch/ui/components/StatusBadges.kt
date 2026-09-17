@@ -70,3 +70,24 @@ fun ReadOnlyBadge(
         )
     }
 }
+
+@Composable
+fun SourceRefreshBadge(
+    modifier: Modifier = Modifier,
+    label: String = "REFRESH NEEDED"
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(Color(0xFFFFF3E0))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFFEF6C00),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}

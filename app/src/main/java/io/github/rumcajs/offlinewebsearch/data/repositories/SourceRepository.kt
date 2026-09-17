@@ -549,27 +549,6 @@ object SourceRepository : RepositoryInterface {
                 db.close()
             }
 
-            val sourceId = source.id?.takeIf { it != 0L }
-            if (sourceId != null) {
-                SourceOperationalDataRepository.setSourceFetch(
-                    context = context,
-                    activeDatabaseState = activeDatabaseState,
-                    sourceObjId = sourceId,
-                    numberOfEntries = entries.size,
-                    pageHash = page.getHash(),
-                    bodyHash = page.getBodyHash()
-                )
-            } else {
-                SourceOperationalDataRepository.setSourceFetchByUrl(
-                    context = context,
-                    activeDatabaseState = activeDatabaseState,
-                    sourceUrl = urlObj.url,
-                    numberOfEntries = entries.size,
-                    pageHash = page.getHash(),
-                    bodyHash = page.getBodyHash()
-                )
-            }
-
             Pair(true, "Successfully inserted $insertedCount new entries")
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
@@ -755,6 +734,123 @@ object SourceRepository : RepositoryInterface {
     ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         updateSourceMetadata(context, activeDatabaseState, urlObj)
         fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj, source)
+        updateFetchData(context, activeDatabaseState, urlObj, source)
+    }
+
+    /**
+     * Updates operational fetch data for [source] from [urlObj].
+     * If the response is invalid ([PageResponseObject.isInvalid]), increments consecutive_errors.
+     * If the response is valid ([PageResponseObject.isValid]), resets consecutive_errors to 0.
+     * When [urlObj] points to a valid [RssPage], also records entry count, page hash, and body hash.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param urlObj The [Url] object representing the fetched source.
+     * @param source The [Source] database object being updated.
+     * @return Pair(success, resultMessage).
+     */
+    suspend fun updateFetchData(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        urlObj: Url,
+        source: Source
+    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        val response = urlObj.getCachedResponse() ?: urlObj.getResponse()
+        val sourceId = source.id?.takeIf { it != 0L }
+        val targetUrl = if (source.url.isNotBlank()) source.url else urlObj.url
+
+        if (response.isInvalid) {
+            if (sourceId != null) {
+                SourceOperationalDataRepository.setSourceFetch(
+                    context = context,
+                    activeDatabaseState = activeDatabaseState,
+                    sourceObjId = sourceId,
+                    isError = true
+                )
+            } else {
+                SourceOperationalDataRepository.setSourceFetchByUrl(
+                    context = context,
+                    activeDatabaseState = activeDatabaseState,
+                    sourceUrl = targetUrl,
+                    isError = true
+                )
+            }
+            return@withContext Pair(false, "Failed to fetch source: ${response.error ?: "HTTP status ${response.statusCode}"}")
+        }
+
+        val page = urlObj.getPage()
+        if (page !is RssPage) {
+            if (response.isValid) {
+                if (sourceId != null) {
+                    SourceOperationalDataRepository.setSourceFetch(
+                        context = context,
+                        activeDatabaseState = activeDatabaseState,
+                        sourceObjId = sourceId,
+                        isError = false
+                    )
+                } else {
+                    SourceOperationalDataRepository.setSourceFetchByUrl(
+                        context = context,
+                        activeDatabaseState = activeDatabaseState,
+                        sourceUrl = targetUrl,
+                        isError = false
+                    )
+                }
+            }
+            return@withContext Pair(false, "URL does not point to a valid RSS or Atom feed")
+        }
+
+        val entries = page.getEntries()
+
+        if (sourceId != null) {
+            SourceOperationalDataRepository.setSourceFetch(
+                context = context,
+                activeDatabaseState = activeDatabaseState,
+                sourceObjId = sourceId,
+                numberOfEntries = entries.size,
+                pageHash = page.getHash(),
+                bodyHash = page.getBodyHash(),
+                isError = false
+            )
+        } else {
+            SourceOperationalDataRepository.setSourceFetchByUrl(
+                context = context,
+                activeDatabaseState = activeDatabaseState,
+                sourceUrl = targetUrl,
+                numberOfEntries = entries.size,
+                pageHash = page.getHash(),
+                bodyHash = page.getBodyHash(),
+                isError = false
+            )
+        }
+        Pair(true, "Successfully marked fetch")
+    }
+
+    /**
+     * Checks whether a fetch is required for [source].
+     * A fetch is required if the source is enabled, has a non-blank URL, and its
+     * [SourceOperationalData.date_fetched] is outdated (null, unparseable, or older than 1 hour).
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param source The [Source] to check.
+     * @return true if fetch is required, false otherwise.
+     */
+    suspend fun isFetchRequired(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        source: Source
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (!source.enabled || source.url.isBlank()) {
+            return@withContext false
+        }
+        val sourceId = source.id ?: return@withContext true
+        val data = SourceOperationalDataRepository.getOperationalDataBySourceId(
+            context,
+            activeDatabaseState,
+            sourceId
+        )
+        SourceOperationalDataRepository.isFetchOutdated(data?.date_fetched)
     }
 
     /**
@@ -775,17 +871,10 @@ object SourceRepository : RepositoryInterface {
             return@withContext Pair(false, "Source is disabled")
         }
 
-        val sourceId = source.id
-        if (sourceId != null) {
-            val data = SourceOperationalDataRepository.getOperationalDataBySourceId(
-                context,
-                activeDatabaseState,
-                sourceId
-            )
-            if (!SourceOperationalDataRepository.isFetchOutdated(data?.date_fetched)) {
-                return@withContext Pair(false, "Source was fetched recently (less than 1 hour ago)")
-            }
+        if (!isFetchRequired(context, activeDatabaseState, source)) {
+            return@withContext Pair(false, "Source was fetched recently (less than 1 hour ago)")
         }
+
         val urlObj = Url(source.url)
         val response = urlObj.getResponse();
         if (!response.isValid)

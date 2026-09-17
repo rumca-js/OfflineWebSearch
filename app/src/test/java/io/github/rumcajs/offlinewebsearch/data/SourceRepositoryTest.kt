@@ -702,5 +702,208 @@ class SourceRepositoryTest {
         assertNotNull(updated)
         assertEquals("fr", updated!!.language)
     }
+
+    @Test
+    fun `updateFetchData increments consecutive_errors when response isInvalid`() = runBlocking {
+        val url = "https://error-feed.com/rss.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Error Feed", url, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+        val sourceId = source.id!!
+
+        val invalidUrlObj = object : io.github.rumcajs.offlinewebsearch.webtoolkit.Url(url) {
+            override suspend fun getResponse(acceptHeader: String?): io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject(
+                    statusCode = 500,
+                    headers = emptyMap(),
+                    error = "HTTP 500"
+                )
+            }
+        }
+
+        // First error: consecutive_errors should become 1
+        val (ok1, _) = SourceRepository.updateFetchData(context, dbState, invalidUrlObj, source)
+        assertFalse(ok1)
+        var opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId)
+        assertNotNull(opData)
+        assertEquals(1, opData!!.consecutive_errors)
+
+        // Second error: consecutive_errors should become 2
+        val (ok2, _) = SourceRepository.updateFetchData(context, dbState, invalidUrlObj, source)
+        assertFalse(ok2)
+        opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId)
+        assertNotNull(opData)
+        assertEquals(2, opData!!.consecutive_errors)
+    }
+
+    @Test
+    fun `updateFetchData resets consecutive_errors to 0 when response isValid`() = runBlocking {
+        val url = "https://valid-feed.com/rss.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Valid Feed", url, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+        val sourceId = source.id!!
+
+        // First simulate prior errors
+        SourceOperationalDataRepository.setSourceFetch(
+            context = context,
+            activeDatabaseState = dbState,
+            sourceObjId = sourceId,
+            isError = true
+        )
+        SourceOperationalDataRepository.setSourceFetch(
+            context = context,
+            activeDatabaseState = dbState,
+            sourceObjId = sourceId,
+            isError = true
+        )
+        var opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId)
+        assertNotNull(opData)
+        assertEquals(2, opData!!.consecutive_errors)
+
+        // Now perform a valid fetch
+        val rssXml = """
+            <rss version="2.0">
+              <channel>
+                <title>Valid Feed</title>
+                <link>https://valid-feed.com</link>
+                <item>
+                  <title>Valid Item</title>
+                  <link>https://valid-feed.com/item1</link>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val validUrlObj = object : io.github.rumcajs.offlinewebsearch.webtoolkit.Url(url) {
+            override suspend fun getResponse(acceptHeader: String?): io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject(
+                    statusCode = 200,
+                    headers = mapOf("Content-Type" to listOf("application/rss+xml")),
+                    text = rssXml
+                )
+            }
+            override suspend fun getPage(): io.github.rumcajs.offlinewebsearch.webtoolkit.Page {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage(url, rssXml)
+            }
+        }
+
+        val (ok, _) = SourceRepository.updateFetchData(context, dbState, validUrlObj, source)
+        assertTrue(ok)
+
+        opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId)
+        assertNotNull(opData)
+        assertEquals(0, opData!!.consecutive_errors)
+        assertEquals(1, opData!!.number_of_entries)
+    }
+
+    @Test
+    fun `updateFetchData by url increments and resets consecutive_errors when source id is not set`() = runBlocking {
+        val url = "https://no-id-feed.com/rss.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "No ID Feed", url, enabled = true)
+        assertTrue(okInsert)
+        val sourceInDb = SourceRepository.getSourceByUrl(context, dbState, url)!!
+        val sourceWithoutId = Source(id = null, title = "No ID Feed", url = url, enabled = true)
+
+        val invalidUrlObj = object : io.github.rumcajs.offlinewebsearch.webtoolkit.Url(url) {
+            override suspend fun getResponse(acceptHeader: String?): io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject(
+                    statusCode = 404,
+                    headers = emptyMap(),
+                    error = "HTTP 404"
+                )
+            }
+        }
+
+        val (okErr, _) = SourceRepository.updateFetchData(context, dbState, invalidUrlObj, sourceWithoutId)
+        assertFalse(okErr)
+
+        var opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceInDb.id!!)
+        assertNotNull(opData)
+        assertEquals(1, opData!!.consecutive_errors)
+
+        val rssXml = """
+            <rss version="2.0">
+              <channel>
+                <title>No ID Feed</title>
+                <link>https://no-id-feed.com</link>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val validUrlObj = object : io.github.rumcajs.offlinewebsearch.webtoolkit.Url(url) {
+            override suspend fun getResponse(acceptHeader: String?): io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject(
+                    statusCode = 200,
+                    headers = mapOf("Content-Type" to listOf("application/rss+xml")),
+                    text = rssXml
+                )
+            }
+            override suspend fun getPage(): io.github.rumcajs.offlinewebsearch.webtoolkit.Page {
+                return io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage(url, rssXml)
+            }
+        }
+
+        val (okSuccess, _) = SourceRepository.updateFetchData(context, dbState, validUrlObj, sourceWithoutId)
+        assertTrue(okSuccess)
+
+        opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceInDb.id!!)
+        assertNotNull(opData)
+        assertEquals(0, opData!!.consecutive_errors)
+    }
+
+    @Test
+    fun `isFetchRequired returns false when source is disabled`() = runBlocking {
+        val disabledSource = Source(id = 1L, url = "https://example.com/rss", title = "Disabled", enabled = false)
+        val required = SourceRepository.isFetchRequired(context, dbState, disabledSource)
+        assertFalse(required)
+    }
+
+    @Test
+    fun `isFetchRequired returns false when source url is blank`() = runBlocking {
+        val blankUrlSource = Source(id = 1L, url = "", title = "Blank URL", enabled = true)
+        val required = SourceRepository.isFetchRequired(context, dbState, blankUrlSource)
+        assertFalse(required)
+    }
+
+    @Test
+    fun `isFetchRequired returns true when source has never been fetched`() = runBlocking {
+        val url = "https://never-fetched.com/rss.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Never Fetched", url, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        val required = SourceRepository.isFetchRequired(context, dbState, source)
+        assertTrue(required)
+    }
+
+    @Test
+    fun `isFetchRequired returns false when source was fetched recently`() = runBlocking {
+        val url = "https://recently-fetched.com/rss.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Recently Fetched", url, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        val nowIso = SourceOperationalDataRepository.getCurrentIsoTimestamp()
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = nowIso)
+
+        val required = SourceRepository.isFetchRequired(context, dbState, source)
+        assertFalse(required)
+    }
+
+    @Test
+    fun `isFetchRequired returns true when source fetch timestamp is older than 1 hour`() = runBlocking {
+        val url = "https://old-fetched.com/rss.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Old Fetched", url, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        // 2 hours ago
+        val twoHoursAgoIso = "2020-01-01T00:00:00Z"
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = twoHoursAgoIso)
+
+        val required = SourceRepository.isFetchRequired(context, dbState, source)
+        assertTrue(required)
+    }
 }
 

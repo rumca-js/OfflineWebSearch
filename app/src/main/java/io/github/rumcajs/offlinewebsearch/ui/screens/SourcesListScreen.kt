@@ -38,8 +38,10 @@ import coil.request.ImageRequest
 import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
 import io.github.rumcajs.offlinewebsearch.ui.components.LinkText
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
+import io.github.rumcajs.offlinewebsearch.ui.components.SourceRefreshBadge
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
+import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
@@ -396,11 +398,13 @@ fun SourcesListScreen(
                         items(filteredSources, key = { it.id ?: it.url }) { source ->
                             SourceListItem(
                                 source = source,
+                                activeDbState = activeDbState,
                                 isEditable = isEditable,
                                 onClick = { onNavigateToSource(source) },
                                 onEditClick = { onNavigateToEditSource(source) },
                                 onDeleteClick = { sourceToDelete = source },
-                                config = config
+                                config = config,
+                                isRefreshing = isRefreshingAll
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -483,16 +487,23 @@ fun SourcesListScreen(
 @Composable
 private fun SourceListItem(
     source: Source,
+    activeDbState: DatabaseState?,
     isEditable: Boolean,
     onClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    config: AppConfiguration? = null
+    config: AppConfiguration? = null,
+    isRefreshing: Boolean = false
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val deadAlpha = config?.dbconfig?.entriesDeadAlpha ?: DEFAULT_DEAD_ALPHA
     val itemAlpha = if (!source.enabled) deadAlpha else 1f
+
+    var isFetchRequired by remember(source.id, activeDbState) { mutableStateOf(false) }
+    LaunchedEffect(source, activeDbState, isRefreshing) {
+        isFetchRequired = SourceRepository.isFetchRequired(context, activeDbState, source)
+    }
 
     Card(
         modifier = Modifier
@@ -547,13 +558,25 @@ private fun SourceListItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // Title
-                Text(
-                    text = source.title.ifBlank { "Untitled Source" },
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // Title & indicator badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = source.title.ifBlank { "Untitled Source" },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    if (isFetchRequired) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SourceRefreshBadge()
+                    }
+                }
 
                 // URL
                 if (source.url.isNotBlank()) {

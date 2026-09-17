@@ -182,6 +182,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
     /**
      * Updates or inserts a fetch record in `sourceoperationaldata` for [sourceObjId].
      * Optionally persists [numberOfEntries], [pageHash], and [bodyHash] when provided.
+     * When [isError] is true, increments [SourceOperationalData.consecutive_errors].
+     * When [isError] is false, resets [SourceOperationalData.consecutive_errors] to 0.
      */
     suspend fun setSourceFetch(
         context: Context,
@@ -190,7 +192,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
         fetchTime: String = getCurrentIsoTimestamp(),
         numberOfEntries: Int? = null,
         pageHash: ByteArray? = null,
-        bodyHash: ByteArray? = null
+        bodyHash: ByteArray? = null,
+        isError: Boolean? = false,
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -203,15 +206,30 @@ object SourceOperationalDataRepository : RepositoryInterface {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
 
-            val query = "SELECT id FROM ${getTableName()} WHERE source_id = ?"
+            val query = "SELECT id, consecutive_errors FROM ${getTableName()} WHERE source_id = ?"
             val cursor = db.rawQuery(query, arrayOf(sourceObjId.toString()))
-            val existingId = cursor.use { c ->
-                if (c.moveToFirst()) c.getLong(c.getColumnIndexOrThrow("id")) else null
+            var existingId: Long? = null
+            var currentErrors: Int? = null
+            cursor.use { c ->
+                if (c.moveToFirst()) {
+                    existingId = c.getLong(c.getColumnIndexOrThrow("id"))
+                    val errorIdx = c.getColumnIndex("consecutive_errors")
+                    currentErrors = if (errorIdx != -1 && !c.isNull(errorIdx)) c.getInt(errorIdx) else null
+                }
+            }
+
+            val newErrors = when (isError) {
+                true -> (currentErrors ?: 0) + 1
+                false -> 0
+                null -> currentErrors
             }
 
             if (existingId != null) {
                 val values = ContentValues().apply {
                     put("date_fetched", fetchTime)
+                    if (newErrors != null) {
+                        put("consecutive_errors", newErrors)
+                    }
                     numberOfEntries?.let { put("number_of_entries", it) }
                     pageHash?.let { put("page_hash", it) }
                     bodyHash?.let { put("body_hash", it) }
@@ -221,6 +239,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
                 val values = ContentValues().apply {
                     put("date_fetched", fetchTime)
                     put("source_id", sourceObjId)
+                    put("consecutive_errors", newErrors ?: 0)
                     numberOfEntries?.let { put("number_of_entries", it) }
                     pageHash?.let { put("page_hash", it) }
                     bodyHash?.let { put("body_hash", it) }
@@ -248,7 +267,8 @@ object SourceOperationalDataRepository : RepositoryInterface {
         fetchTime: String = getCurrentIsoTimestamp(),
         numberOfEntries: Int? = null,
         pageHash: ByteArray? = null,
-        bodyHash: ByteArray? = null
+        bodyHash: ByteArray? = null,
+        isError: Boolean? = false
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (sourceUrl.isBlank()) return@withContext Pair(false, "Source URL is empty")
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
@@ -273,7 +293,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
             }
 
             db.close()
-            setSourceFetch(context, activeDatabaseState, sourceId, fetchTime, numberOfEntries, pageHash, bodyHash)
+            setSourceFetch(context, activeDatabaseState, sourceId, fetchTime, numberOfEntries, pageHash, bodyHash, isError)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
             AppLoggingRepository.error(context, activeDatabaseState, "Source URL: $sourceUrl Exception in $functionName", e.message)
