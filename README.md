@@ -13,11 +13,6 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
 
 [![F-Droid](https://img.shields.io/badge/F--Droid-3DDC84?style=for-the-badge&logo=f-droid&logoColor=white)](https://f-droid.org/en/packages/io.github.rumcajs.offlinewebsearch)
 
-You can help making it available on Google Play Store. Users that use Test versions below are required for the app to go public.
-
- - https://play.google.com/store/apps/details?id=io.github.rumcajs.offlinewebsearch
- - https://play.google.com/apps/testing/io.github.rumcajs.offlinewebsearch
-
 # Permissions
 
  - The app requires minimal permissions and does not rely on remote services for searching.
