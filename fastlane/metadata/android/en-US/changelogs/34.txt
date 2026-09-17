@@ -1,0 +1,1 @@
+Correct handling of threads. Sources list have indicators.
