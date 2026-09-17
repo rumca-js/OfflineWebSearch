@@ -1,6 +1,5 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -201,7 +200,7 @@ fun DatabasePreselectedListScreen(
                         items(filteredList, key = { it }) { dbUrl ->
                             val dbState = remember(dbUrl) { DatabaseState.fromUrl(dbUrl) }
                             val isConfigured = config.databases.containsKey(dbUrl)
-                            val isActive = config.activeDatabase == dbUrl
+                            val isActive = config.activeDatabaseUrl == dbUrl
 
                             PreselectedDatabasePillItem(
                                 url = dbUrl,

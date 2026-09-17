@@ -15,13 +15,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Test
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import java.io.ByteArrayOutputStream
-import java.nio.charset.StandardCharsets
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 
 class AppConfigManagerTest {
@@ -120,11 +114,11 @@ class AppConfigManagerTest {
             AppConfigManager.addDatabase(url)
             AppConfigManager.setActiveDatabase(url)
             var config = AppConfigManager.config.first()
-            assertEquals(url, config.activeDatabase)
+            assertEquals(url, config.activeDatabaseUrl)
 
             AppConfigManager.removeDatabase(url)
             config = AppConfigManager.config.first()
-            assertNull(config.activeDatabase)
+            assertNull(config.activeDatabaseUrl)
             assertEquals("Default (Assets)", config.activeDatabaseDisplayName)
         }
 
@@ -136,7 +130,7 @@ class AppConfigManagerTest {
                     "http://example.com/db1" to DatabaseState.fromUrl("http://example.com/db1"),
                     "http://example.com/db2" to DatabaseState.fromUrl("http://example.com/db2")
                 ),
-                activeDatabase = "http://example.com/db1",
+                activeDatabaseUrl = "http://example.com/db1",
                 userAge = 25,
                 defaultDbConfig = DatabaseConfiguration(
                     directLinks = true,
@@ -159,7 +153,7 @@ class AppConfigManagerTest {
             val decodedConfig = Json.decodeFromString<AppConfiguration>(jsonString)
 
             assertEquals(originalConfig.databases, decodedConfig.databases)
-            assertEquals(originalConfig.activeDatabase, decodedConfig.activeDatabase)
+            assertEquals(originalConfig.activeDatabaseUrl, decodedConfig.activeDatabaseUrl)
             assertEquals(originalConfig.userAge, decodedConfig.userAge)
             assertEquals(originalConfig.defaultDbConfig.directLinks, decodedConfig.defaultDbConfig.directLinks)
             assertEquals(originalConfig.defaultDbConfig.showIcons, decodedConfig.defaultDbConfig.showIcons)
@@ -170,7 +164,7 @@ class AppConfigManagerTest {
             assertEquals(ViewStyle.STANDARD, decodedConfig.dbconfig.viewStyle)
 
             // Assert that when active database is changed or cleared, dbconfig falls back to default
-            val configWithNoActive = decodedConfig.copy(activeDatabase = null)
+            val configWithNoActive = decodedConfig.copy(activeDatabaseUrl = null)
             assertEquals(true, configWithNoActive.dbconfig.directLinks)
             assertEquals(OrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
             assertEquals(ViewStyle.GALLERY, configWithNoActive.dbconfig.viewStyle)

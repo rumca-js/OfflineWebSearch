@@ -109,12 +109,12 @@ class SearchViewModel : ViewModel() {
         viewModelScope.launch {
             AppConfigManager.config.collect { config ->
                 val activeLinksPerPage = config.dbconfig.effectiveLinksPerPage
-                val dbChanged = config.activeDatabase != currentActiveDatabase
+                val dbChanged = config.activeDatabaseUrl != currentActiveDatabase
                 val orderChanged = config.dbconfig.orderBy != currentOrderBy
                 val linksPerPageChanged = activeLinksPerPage != currentLinksPerPage
 
                 if (dbChanged || orderChanged || linksPerPageChanged) {
-                    currentActiveDatabase = config.activeDatabase
+                    currentActiveDatabase = config.activeDatabaseUrl
                     currentOrderBy = config.dbconfig.orderBy
                     currentLinksPerPage = activeLinksPerPage
                     pageSize = activeLinksPerPage

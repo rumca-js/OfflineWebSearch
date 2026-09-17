@@ -102,7 +102,7 @@ object SourceRefreshWorker {
                     return
                 }
 
-                if (config.activeDatabase != task.dbState.url)
+                if (config.activeDatabaseUrl != task.dbState.url)
                 {
                     task.onFinished?.invoke(true, "")
                     return
@@ -127,7 +127,7 @@ object SourceRefreshWorker {
                     _progress.update { it.copy(currentItem = src.title) }
 
                     val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
-                    if (config.activeDatabase != task.dbState.url)
+                    if (config.activeDatabaseUrl != task.dbState.url)
                     {
                         continue
                     }
@@ -162,7 +162,7 @@ object SourceRefreshWorker {
                     _progress.update { it.copy(currentItem = src.title) }
 
                     val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
-                    if (config.activeDatabase != task.dbState.url)
+                    if (config.activeDatabaseUrl != task.dbState.url)
                     {
                         continue
                     }

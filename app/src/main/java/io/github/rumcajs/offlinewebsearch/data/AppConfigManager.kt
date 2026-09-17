@@ -95,7 +95,7 @@ object AppConfigManager {
                 urls.forEach { url ->
                     DatabaseUpdateWorker.enqueueDatabase(context, url)
                 }
-                if (config.value.activeDatabase == null) {
+                if (config.value.activeDatabaseUrl == null) {
                     setActiveDatabase(urls.first())
                 }
                 setInitialized(true)
@@ -263,7 +263,7 @@ object AppConfigManager {
             it.copy(
                 databases = newDatabases,
                 dbConfigs = newDbConfigs,
-                activeDatabase = if (it.activeDatabase == url) null else it.activeDatabase
+                activeDatabaseUrl = if (it.activeDatabaseUrl == url) null else it.activeDatabaseUrl
             )
         }
     }
@@ -297,7 +297,7 @@ object AppConfigManager {
             config.copy(
                 databases = newDatabases,
                 dbConfigs = newDbConfigs,
-                activeDatabase = if (config.activeDatabase == oldUrl) newUrl else config.activeDatabase
+                activeDatabaseUrl = if (config.activeDatabaseUrl == oldUrl) newUrl else config.activeDatabaseUrl
             )
         }
     }
@@ -423,7 +423,7 @@ object AppConfigManager {
                 config.copy(
                     databases = newDatabases,
                     dbConfigs = newDbConfigs,
-                    activeDatabase = if (config.activeDatabase == oldUrl) url else config.activeDatabase
+                    activeDatabaseUrl = if (config.activeDatabaseUrl == oldUrl) url else config.activeDatabaseUrl
                 )
             }
         } catch (e: Exception) {
@@ -697,7 +697,7 @@ object AppConfigManager {
                 config.copy(
                     databases = newDatabases,
                     dbConfigs = newDbConfigs,
-                    activeDatabase = if (config.activeDatabase == oldUrl) url else config.activeDatabase
+                    activeDatabaseUrl = if (config.activeDatabaseUrl == oldUrl) url else config.activeDatabaseUrl
                 )
             }
         } catch (e: Exception) {
@@ -744,7 +744,7 @@ object AppConfigManager {
     }
 
     fun setActiveDatabase(url: String?) {
-        updateConfig { it.copy(activeDatabase = url) }
+        updateConfig { it.copy(activeDatabaseUrl = url) }
     }
 
     /**

@@ -26,7 +26,7 @@ data class AppConfiguration(
 
     // main things
     val databases: Map<String, DatabaseState> = emptyMap(),
-    val activeDatabase: String? = null,
+    val activeDatabaseUrl: String? = null, // relates to DatabaseState.url
     val supportedDatabasesExtensions: List<String> = listOf(".db",
         ".json",
         ".zip",      // contains json files
@@ -38,20 +38,20 @@ data class AppConfiguration(
     }
 
     val dbconfig: DatabaseConfiguration
-        get() = activeDatabase?.let { dbConfigs[it] } ?: defaultDbConfig
+        get() = activeDatabaseUrl?.let { dbConfigs[it] } ?: defaultDbConfig
 
     /**
      * Gets the state (downloading, unpacking, ready, etc.) of the currently active database.
      * Returns null if there is no active database or if it hasn't been registered in the map.
      */
     val activeDatabaseState: DatabaseState?
-        get() = activeDatabase?.let { databases[it] }
+        get() = activeDatabaseUrl?.let { databases[it] }
 
     val activeDatabaseDisplayName: String
-        get() = activeDatabaseState?.displayName ?: "Default (Assets)"
+        get() = activeDatabaseState?.displayName ?: DEFAULT_DATABASE_NAME
 
     fun updateActiveDbConfig(update: (DatabaseConfiguration) -> DatabaseConfiguration): AppConfiguration {
-        val activeDb = activeDatabase
+        val activeDb = activeDatabaseUrl
         return if (activeDb != null) {
             val currentDbConfig = dbConfigs[activeDb] ?: DatabaseConfiguration()
             val newDbConfig = update(currentDbConfig)

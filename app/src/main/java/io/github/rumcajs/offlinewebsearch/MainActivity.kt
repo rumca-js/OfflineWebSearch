@@ -26,7 +26,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.widget.Toast
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
@@ -101,7 +100,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
                 var hasOutdatedSources by remember { mutableStateOf(false) }
 
-                LaunchedEffect(config.activeDatabase, config.networkConfig.disabled, sourceRefreshProgress.isRunning) {
+                LaunchedEffect(config.activeDatabaseUrl, config.networkConfig.disabled, sourceRefreshProgress.isRunning) {
                     if (!sourceRefreshProgress.isRunning) {
                         hasOutdatedSources = SourceRepository.hasOutdatedSources(context, config.activeDatabaseState)
                     } else {
@@ -274,7 +273,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             }
                             if (state != null) {
                                 val dbConfig = if (url == null) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
-                                val isActive = if (url == null) config.activeDatabase == null else config.activeDatabase == url
+                                val isActive = if (url == null) config.activeDatabaseUrl == null else config.activeDatabaseUrl == url
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseScreen(
                                     url = url,
                                     state = state,

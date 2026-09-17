@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
@@ -112,7 +111,7 @@ fun SourcesListScreen(
         }
     }
 
-    LaunchedEffect(config.activeDatabase) {
+    LaunchedEffect(config.activeDatabaseUrl) {
         loadSources()
     }
 
@@ -133,7 +132,7 @@ fun SourcesListScreen(
     }
     isRefreshingAll = sourceRefreshProgress.isRunning
 
-    LaunchedEffect(config.activeDatabase, config.networkConfig.disabled, sourceRefreshProgress.isRunning, sources) {
+    LaunchedEffect(config.activeDatabaseUrl, config.networkConfig.disabled, sourceRefreshProgress.isRunning, sources) {
         if (!sourceRefreshProgress.isRunning) {
             hasOutdatedSources = SourceRepository.hasOutdatedSources(context, activeDbState)
         }
