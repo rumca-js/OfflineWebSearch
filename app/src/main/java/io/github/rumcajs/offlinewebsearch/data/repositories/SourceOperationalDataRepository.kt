@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
@@ -127,6 +128,50 @@ object SourceOperationalDataRepository : RepositoryInterface {
     }
 
     /**
+     * Reads the current cursor row and constructs a [SourceOperationalData] from it.
+     *
+     * @param cursor SQLite cursor positioned at the target row.
+     * @param prefix Optional column prefix (e.g., "sod_").
+     * @return [SourceOperationalData] instance populated with cursor values.
+     */
+    fun cursorToOperationalData(cursor: Cursor, prefix: String = ""): SourceOperationalData {
+        val idIdx = cursor.getColumnIndex(prefix + "id")
+        val id = if (idIdx != -1 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else null
+
+        val dateFetchedIdx = cursor.getColumnIndex(prefix + "date_fetched")
+        val dateFetched = if (dateFetchedIdx != -1 && !cursor.isNull(dateFetchedIdx)) cursor.getString(dateFetchedIdx) else null
+
+        val sourceIdIdx = cursor.getColumnIndex(prefix + "source_id")
+        val sourceId = if (sourceIdIdx != -1 && !cursor.isNull(sourceIdIdx)) cursor.getLong(sourceIdIdx) else null
+
+        val importSecIdx = cursor.getColumnIndex(prefix + "import_seconds")
+        val importSeconds = if (importSecIdx != -1 && !cursor.isNull(importSecIdx)) cursor.getInt(importSecIdx) else null
+
+        val numEntriesIdx = cursor.getColumnIndex(prefix + "number_of_entries")
+        val numberOfEntries = if (numEntriesIdx != -1 && !cursor.isNull(numEntriesIdx)) cursor.getInt(numEntriesIdx) else null
+
+        val pageHashIdx = cursor.getColumnIndex(prefix + "page_hash")
+        val pageHash = if (pageHashIdx != -1 && !cursor.isNull(pageHashIdx)) cursor.getBlob(pageHashIdx) else null
+
+        val bodyHashIdx = cursor.getColumnIndex(prefix + "body_hash")
+        val bodyHash = if (bodyHashIdx != -1 && !cursor.isNull(bodyHashIdx)) cursor.getBlob(bodyHashIdx) else null
+
+        val consErrorsIdx = cursor.getColumnIndex(prefix + "consecutive_errors")
+        val consecutiveErrors = if (consErrorsIdx != -1 && !cursor.isNull(consErrorsIdx)) cursor.getInt(consErrorsIdx) else null
+
+        return SourceOperationalData(
+            id = id,
+            date_fetched = dateFetched,
+            source_id = sourceId,
+            import_seconds = importSeconds,
+            number_of_entries = numberOfEntries,
+            page_hash = pageHash,
+            body_hash = bodyHash,
+            consecutive_errors = consecutiveErrors
+        )
+    }
+
+    /**
      * Loads the [SourceOperationalData] record associated with [sourceObjId].
      */
     suspend fun getOperationalDataBySourceId(
@@ -149,24 +194,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
             val cursor = db.rawQuery(sqlText, arrayOf(sourceObjId.toString()))
             cursor.use { c ->
                 if (c.moveToFirst()) {
-                    val id = if (c.isNull(c.getColumnIndexOrThrow("id"))) null else c.getLong(c.getColumnIndexOrThrow("id"))
-                    val dateFetched = c.getString(c.getColumnIndexOrThrow("date_fetched"))
-                    val sourceId = if (c.isNull(c.getColumnIndexOrThrow("source_id"))) null else c.getLong(c.getColumnIndexOrThrow("source_id"))
-                    val importSeconds = if (c.isNull(c.getColumnIndexOrThrow("import_seconds"))) null else c.getInt(c.getColumnIndexOrThrow("import_seconds"))
-                    val numberOfEntries = if (c.isNull(c.getColumnIndexOrThrow("number_of_entries"))) null else c.getInt(c.getColumnIndexOrThrow("number_of_entries"))
-                    val pageHash = if (c.isNull(c.getColumnIndexOrThrow("page_hash"))) null else c.getBlob(c.getColumnIndexOrThrow("page_hash"))
-                    val bodyHash = if (c.isNull(c.getColumnIndexOrThrow("body_hash"))) null else c.getBlob(c.getColumnIndexOrThrow("body_hash"))
-                    val consecutiveErrors = if (c.isNull(c.getColumnIndexOrThrow("consecutive_errors"))) null else c.getInt(c.getColumnIndexOrThrow("consecutive_errors"))
-                    result = SourceOperationalData(
-                        id = id,
-                        date_fetched = dateFetched,
-                        source_id = sourceId,
-                        import_seconds = importSeconds,
-                        number_of_entries = numberOfEntries,
-                        page_hash = pageHash,
-                        body_hash = bodyHash,
-                        consecutive_errors = consecutiveErrors
-                    )
+                    result = cursorToOperationalData(c)
                 }
             }
             db.close()

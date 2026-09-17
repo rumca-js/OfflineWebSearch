@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceWithOperationalData
 import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceListItem
@@ -96,7 +97,7 @@ fun SourcesListScreen(
     // The query that was last submitted via the Search button.
     var activeSearchQuery by remember { mutableStateOf("") }
     var sourceOrder by remember { mutableStateOf(SourceOrder.ByUrl) }
-    var sources by remember { mutableStateOf<List<Source>>(emptyList()) }
+    var sourceItems by remember { mutableStateOf<List<SourceWithOperationalData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isRefreshingAll by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -106,7 +107,7 @@ fun SourcesListScreen(
     val loadSources: () -> Unit = {
         scope.launch {
             isLoading = true
-            sources = SourceRepository.getAllSources(context, activeDbState)
+            sourceItems = SourceRepository.getAllSourcesWithOperationalData(context, activeDbState)
             isLoading = false
         }
     }
@@ -132,7 +133,7 @@ fun SourcesListScreen(
     }
     isRefreshingAll = sourceRefreshProgress.isRunning
 
-    LaunchedEffect(config.activeDatabaseUrl, config.networkConfig.disabled, sourceRefreshProgress.isRunning, sources) {
+    LaunchedEffect(config.activeDatabaseUrl, config.networkConfig.disabled, sourceRefreshProgress.isRunning, sourceItems) {
         if (!sourceRefreshProgress.isRunning) {
             hasOutdatedSources = SourceRepository.hasOutdatedSources(context, activeDbState)
         }
@@ -143,7 +144,7 @@ fun SourcesListScreen(
             Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
         } else if (activeDbState == null || activeDbState.isReadOnly || !activeDbState.isSQLite) {
             Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
-        } else if (sources.isEmpty()) {
+        } else if (sourceItems.isEmpty()) {
             Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
         } else {
             isRefreshingAll = true
@@ -165,24 +166,26 @@ fun SourcesListScreen(
     }
 
     /**
-     * Applies [activeSearchQuery] and [sourceOrder] to [sources] to produce the
+     * Applies [activeSearchQuery] and [sourceOrder] to [sourceItems] to produce the
      * displayed list.
      */
-    val filteredSources = remember(sources, activeSearchQuery, sourceOrder) {
+    val filteredSources = remember(sourceItems, activeSearchQuery, sourceOrder) {
         val base = if (activeSearchQuery.isBlank()) {
-            sources
+            sourceItems
         } else {
             val query = activeSearchQuery.trim().lowercase()
-            sources.filter { source ->
-                source.title.lowercase().contains(query) ||
-                    source.url.lowercase().contains(query)
+            sourceItems.filter { item ->
+                item.source.title.lowercase().contains(query) ||
+                    item.source.url.lowercase().contains(query)
             }
         }
         when (sourceOrder) {
-            SourceOrder.ByUrl -> base.sortedWith(compareBy<Source> { it.url.lowercase() }.thenBy { it.title.lowercase() })
-            SourceOrder.ByTitle -> base.sortedWith(compareBy<Source> { it.title.lowercase() }.thenBy { it.url.lowercase() })
-            // Fetch time is stored in a separate table; sort by id as an insertion-order proxy.
-            SourceOrder.ByFetchTime -> base.sortedBy { it.id ?: Long.MAX_VALUE }
+            SourceOrder.ByUrl -> base.sortedWith(compareBy<SourceWithOperationalData> { it.source.url.lowercase() }.thenBy { it.source.title.lowercase() })
+            SourceOrder.ByTitle -> base.sortedWith(compareBy<SourceWithOperationalData> { it.source.title.lowercase() }.thenBy { it.source.url.lowercase() })
+            SourceOrder.ByFetchTime -> base.sortedWith(
+                compareBy<SourceWithOperationalData> { it.operationalData?.date_fetched ?: "" }
+                    .thenBy { it.source.url.lowercase() }
+            )
         }
     }
 
@@ -258,7 +261,7 @@ fun SourcesListScreen(
                                 )
                                 if (success) {
                                     Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
-                                    sources = SourceRepository.getAllSources(context, activeDbState)
+                                    sourceItems = SourceRepository.getAllSourcesWithOperationalData(context, activeDbState)
                                 } else {
                                     val msg = err ?: "Failed to delete source"
                                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -347,7 +350,7 @@ fun SourcesListScreen(
                 }
 
                 when {
-                    isLoading && sources.isEmpty() -> {
+                    isLoading && sourceItems.isEmpty() -> {
                         item {
                             Box(
                                 modifier = Modifier
@@ -359,7 +362,7 @@ fun SourcesListScreen(
                             }
                         }
                     }
-                    sources.isEmpty() -> {
+                    sourceItems.isEmpty() -> {
                         item {
                             Text(
                                 text = getSourcesEmptyText(),
@@ -384,14 +387,15 @@ fun SourcesListScreen(
                         }
                     }
                     else -> {
-                        items(filteredSources, key = { it.id ?: it.url }) { source ->
+                        items(filteredSources, key = { it.source.id ?: it.source.url }) { item ->
                             SourceListItem(
-                                source = source,
+                                source = item.source,
+                                operationalData = item.operationalData,
                                 activeDbState = activeDbState,
                                 isEditable = isEditable,
-                                onClick = { onNavigateToSource(source) },
-                                onEditClick = { onNavigateToEditSource(source) },
-                                onDeleteClick = { sourceToDelete = source },
+                                onClick = { onNavigateToSource(item.source) },
+                                onEditClick = { onNavigateToEditSource(item.source) },
+                                onDeleteClick = { sourceToDelete = item.source },
                                 config = config,
                                 isRefreshing = isRefreshingAll
                             )

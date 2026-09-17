@@ -25,6 +25,7 @@ import coil.request.ImageRequest
 import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalData
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 
@@ -40,6 +41,7 @@ private const val DEFAULT_DEAD_ALPHA = 0.6f
  * @param source The [Source] to display.
  * @param activeDbState Current active [DatabaseState].
  * @param isEditable Whether the active database is writable.
+ * @param operationalData Optional [SourceOperationalData] metadata for the source to avoid redundant queries.
  * @param onClick Callback when the item is tapped.
  * @param onEditClick Callback when edit is requested.
  * @param onDeleteClick Callback when delete is requested.
@@ -53,6 +55,7 @@ fun SourceListItem(
     source: Source,
     activeDbState: DatabaseState?,
     isEditable: Boolean = false,
+    operationalData: SourceOperationalData? = null,
     onClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
@@ -65,11 +68,27 @@ fun SourceListItem(
     val deadAlpha = config?.dbconfig?.entriesDeadAlpha ?: DEFAULT_DEAD_ALPHA
     val itemAlpha = if (!source.enabled) deadAlpha else 1f
 
-    var isFetchRequired by remember(source.id, activeDbState) { mutableStateOf(false) }
-    var consecutiveErrors by remember(source.id, activeDbState) { mutableStateOf(0) }
+    var isFetchRequired by remember(source.id, activeDbState, operationalData) {
+        mutableStateOf(
+            if (operationalData != null) {
+                if (!source.enabled || source.url.isBlank()) false
+                else SourceOperationalDataRepository.isFetchOutdated(operationalData.date_fetched)
+            } else false
+        )
+    }
+    var consecutiveErrors by remember(source.id, activeDbState, operationalData) {
+        mutableStateOf(operationalData?.consecutive_errors ?: 0)
+    }
 
-    LaunchedEffect(source, activeDbState, isRefreshing) {
-        if (source.id != null) {
+    LaunchedEffect(source, activeDbState, operationalData, isRefreshing) {
+        if (operationalData != null) {
+            consecutiveErrors = operationalData.consecutive_errors ?: 0
+            isFetchRequired = if (!source.enabled || source.url.isBlank()) {
+                false
+            } else {
+                SourceOperationalDataRepository.isFetchOutdated(operationalData.date_fetched)
+            }
+        } else if (source.id != null) {
             val opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, source.id)
             consecutiveErrors = opData?.consecutive_errors ?: 0
             isFetchRequired = if (!source.enabled || source.url.isBlank()) {

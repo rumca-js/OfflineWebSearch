@@ -29,6 +29,16 @@ data class Source(
     val language: String = ""
 )
 
+/**
+ * Data class representing a [Source] paired with its optional [SourceOperationalData]
+ * obtained from an outer join between `sourcedatamodel` and `sourceoperationaldata`.
+ */
+@Serializable
+data class SourceWithOperationalData(
+    val source: Source,
+    val operationalData: SourceOperationalData? = null
+)
+
 object SourceRepository : RepositoryInterface {
     val SOURCE_TYPE_RSS = "RSS"
     val SOURCE_TYPE_PARSE = "Parse"
@@ -38,20 +48,26 @@ object SourceRepository : RepositoryInterface {
 
     /**
      * Reads the current cursor row and constructs a [Source] from it.
-     * Assumes columns: id, enabled, url, title, favicon, source_type, age, auto_tag, language.
+     * Assumes columns: id, enabled, url, title, favicon, source_type, age, auto_tag, language (optionally prefixed).
      */
-    private fun cursorToSource(cursor: Cursor): Source {
-        val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
-        val enabledVal = cursor.getInt(cursor.getColumnIndexOrThrow("enabled"))
-        val url = cursor.getString(cursor.getColumnIndexOrThrow("url")) ?: ""
-        val title = cursor.getString(cursor.getColumnIndexOrThrow("title")) ?: ""
-        val favicon = cursor.getString(cursor.getColumnIndexOrThrow("favicon")) ?: ""
-        val sourceType = cursor.getString(cursor.getColumnIndexOrThrow("source_type"))
-        val ageIdx = cursor.getColumnIndex("age")
+    fun cursorToSource(cursor: Cursor, prefix: String = ""): Source {
+        val idIdx = cursor.getColumnIndex(prefix + "id")
+        val id = if (idIdx != -1 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else null
+        val enabledIdx = cursor.getColumnIndex(prefix + "enabled")
+        val enabledVal = if (enabledIdx != -1 && !cursor.isNull(enabledIdx)) cursor.getInt(enabledIdx) else 1
+        val urlIdx = cursor.getColumnIndex(prefix + "url")
+        val url = if (urlIdx != -1 && !cursor.isNull(urlIdx)) cursor.getString(urlIdx) ?: "" else ""
+        val titleIdx = cursor.getColumnIndex(prefix + "title")
+        val title = if (titleIdx != -1 && !cursor.isNull(titleIdx)) cursor.getString(titleIdx) ?: "" else ""
+        val faviconIdx = cursor.getColumnIndex(prefix + "favicon")
+        val favicon = if (faviconIdx != -1 && !cursor.isNull(faviconIdx)) cursor.getString(faviconIdx) ?: "" else ""
+        val sourceTypeIdx = cursor.getColumnIndex(prefix + "source_type")
+        val sourceType = if (sourceTypeIdx != -1 && !cursor.isNull(sourceTypeIdx)) cursor.getString(sourceTypeIdx) else null
+        val ageIdx = cursor.getColumnIndex(prefix + "age")
         val age = if (ageIdx != -1 && !cursor.isNull(ageIdx)) cursor.getInt(ageIdx) else 0
-        val autoTagIdx = cursor.getColumnIndex("auto_tag")
-        val autoTag = if (autoTagIdx != -1 && !cursor.isNull(autoTagIdx)) cursor.getString(autoTagIdx) else ""
-        val languageIdx = cursor.getColumnIndex("language")
+        val autoTagIdx = cursor.getColumnIndex(prefix + "auto_tag")
+        val autoTag = if (autoTagIdx != -1 && !cursor.isNull(autoTagIdx)) cursor.getString(autoTagIdx) ?: "" else ""
+        val languageIdx = cursor.getColumnIndex(prefix + "language")
         val language = if (languageIdx != -1 && !cursor.isNull(languageIdx)) cursor.getString(languageIdx) else ""
         return Source(
             id = id,
@@ -96,6 +112,63 @@ object SourceRepository : RepositoryInterface {
         }
 
         sources
+    }
+
+    /**
+     * Retrieves all sources from `sourcedatamodel` joined with their operational metadata
+     * from `sourceoperationaldata` via an outer join (LEFT JOIN).
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @return List of [SourceWithOperationalData] containing each source and its operational data (if present).
+     */
+    suspend fun getAllSourcesWithOperationalData(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): List<SourceWithOperationalData> = withContext(Dispatchers.IO) {
+        val results = mutableListOf<SourceWithOperationalData>()
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
+            return@withContext results
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext results
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            SourceOperationalDataRepository.ensureTableExists(db)
+            val sqlText = "SELECT s.id AS s_id, s.enabled AS s_enabled, s.url AS s_url, s.title AS s_title, " +
+                    "s.favicon AS s_favicon, s.source_type AS s_source_type, s.age AS s_age, " +
+                    "s.auto_tag AS s_auto_tag, s.language AS s_language, " +
+                    "sod.id AS sod_id, sod.date_fetched AS sod_date_fetched, sod.source_id AS sod_source_id, " +
+                    "sod.import_seconds AS sod_import_seconds, sod.number_of_entries AS sod_number_of_entries, " +
+                    "sod.page_hash AS sod_page_hash, sod.body_hash AS sod_body_hash, " +
+                    "sod.consecutive_errors AS sod_consecutive_errors " +
+                    "FROM ${getTableName()} AS s " +
+                    "LEFT JOIN ${SourceOperationalDataRepository.getTableName()} AS sod ON s.id = sod.source_id " +
+                    "ORDER BY s.url, s.title"
+            val cursor = db.rawQuery(sqlText, null)
+            cursor.use { c ->
+                while (c.moveToNext()) {
+                    val source = cursorToSource(c, prefix = "s_")
+                    val sodIdIdx = c.getColumnIndex("sod_id")
+                    val operationalData = if (sodIdIdx != -1 && !c.isNull(sodIdIdx)) {
+                        SourceOperationalDataRepository.cursorToOperationalData(c, prefix = "sod_")
+                    } else {
+                        null
+                    }
+                    results.add(SourceWithOperationalData(source = source, operationalData = operationalData))
+                }
+            }
+            db.close()
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting all sources with operational data in $functionName")
+
+            e.printStackTrace()
+        }
+
+        results
     }
 
     /**

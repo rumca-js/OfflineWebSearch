@@ -979,6 +979,99 @@ class SourceRepositoryTest {
         val hasOutdated = SourceRepository.hasOutdatedSources(context, readOnlyState)
         assertFalse(hasOutdated)
     }
+
+    // ── getAllSourcesWithOperationalData ──────────────────────────────────────
+
+    @Test
+    fun `getAllSourcesWithOperationalData returns sources with null operationalData when no operational record exists`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://no-op-data.com/feed.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "No Op Data", url, enabled = true)
+        assertTrue(ok)
+
+        val results = SourceRepository.getAllSourcesWithOperationalData(context, dbState)
+        assertEquals(1, results.size)
+        assertEquals(url, results[0].source.url)
+        assertEquals("No Op Data", results[0].source.title)
+        assertNull(results[0].operationalData)
+    }
+
+    @Test
+    fun `getAllSourcesWithOperationalData returns sources with populated operationalData when operational record exists`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://with-op-data.com/feed.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "With Op Data", url, enabled = true)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        val fetchTime = "2026-09-17T20:00:00Z"
+        val pageHash = byteArrayOf(10, 20, 30)
+        val bodyHash = byteArrayOf(40, 50, 60)
+        SourceOperationalDataRepository.setSourceFetch(
+            context = context,
+            activeDatabaseState = dbState,
+            sourceObjId = source.id!!,
+            fetchTime = fetchTime,
+            numberOfEntries = 42,
+            pageHash = pageHash,
+            bodyHash = bodyHash,
+            isError = false
+        )
+
+        val results = SourceRepository.getAllSourcesWithOperationalData(context, dbState)
+        assertEquals(1, results.size)
+        assertEquals(url, results[0].source.url)
+        assertEquals("With Op Data", results[0].source.title)
+        assertNotNull(results[0].operationalData)
+        assertEquals(fetchTime, results[0].operationalData!!.date_fetched)
+        assertEquals(source.id, results[0].operationalData!!.source_id)
+        assertEquals(42, results[0].operationalData!!.number_of_entries)
+        assertArrayEquals(pageHash, results[0].operationalData!!.page_hash)
+        assertArrayEquals(bodyHash, results[0].operationalData!!.body_hash)
+        assertEquals(0, results[0].operationalData!!.consecutive_errors)
+    }
+
+    @Test
+    fun `getAllSourcesWithOperationalData handles multiple sources with mixed operational data`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url1 = "https://a-source.com/feed.xml"
+        val url2 = "https://b-source.com/feed.xml"
+        SourceRepository.insertSource(context, dbState, "Source A", url1, enabled = true)
+        SourceRepository.insertSource(context, dbState, "Source B", url2, enabled = true)
+        val sourceA = SourceRepository.getSourceByUrl(context, dbState, url1)!!
+
+        SourceOperationalDataRepository.setSourceFetch(
+            context = context,
+            activeDatabaseState = dbState,
+            sourceObjId = sourceA.id!!,
+            fetchTime = "2026-09-17T12:00:00Z",
+            numberOfEntries = 15,
+            isError = false
+        )
+
+        val results = SourceRepository.getAllSourcesWithOperationalData(context, dbState)
+        assertEquals(2, results.size)
+
+        val itemA = results.find { it.source.url == url1 }
+        val itemB = results.find { it.source.url == url2 }
+
+        assertNotNull(itemA)
+        assertNotNull(itemA!!.operationalData)
+        assertEquals(15, itemA.operationalData!!.number_of_entries)
+
+        assertNotNull(itemB)
+        assertNull(itemB!!.operationalData)
+    }
+
+    @Test
+    fun `getAllSourcesWithOperationalData returns empty list on null or invalid dbState`() = runBlocking {
+        val nullResult = SourceRepository.getAllSourcesWithOperationalData(context, null)
+        assertTrue(nullResult.isEmpty())
+
+        val nonSqlite = dbState.copy(localFileName = "test.json")
+        val jsonResult = SourceRepository.getAllSourcesWithOperationalData(context, nonSqlite)
+        assertTrue(jsonResult.isEmpty())
+    }
 }
 
 
