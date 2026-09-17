@@ -72,7 +72,7 @@ Possible database states include:
 # Views
 App contains bottom selection of main views (buttons):
  - Browse
- - Sources - should be spinning if sources are being fetched/checked
+ - Sources - should be spinning if sources are being fetched/checked, displays badge if sources require refresh
  - Options
 
 Screens:
@@ -214,7 +214,7 @@ The screen displays, where available:
 
 ## SourcesListScreen
  - Provides floating buttons on right bottom: add, fetch, navigate to top
- - Selecting source opens SourceScreen.
+ - Selecting source opens SourceDetailScreen.
  - Provides search widget, similar to EntryListScreen, it should be scrollable together with the results
  - Similarly to EntryListScreen should contain "Search" button with a button to apply filter (order by title, or fetch time)
  - Filters should be by Url, Title, Fetch time. By default by Url filter should be applied. A filter always need to be applied
@@ -223,6 +223,13 @@ The screen displays, where available:
  - If possible fetch/refresh button should spin if sources are being refreshed
  - just as EntryListScreen, pull to refresh sources
  - search widget should, just as EntryListScreen support LIKE syntax
+
+### SourceListItem - row in SourcesListScreen
+ - Displays source thumbnail or favicon
+ - Displays source title and URL
+ - Displays a red dot badge on thumbnail when the source requires refresh (outdated fetch)
+ - Displays an error badge when consecutive errors occurred on fetch
+ - Disabled sources apply configurable dead alpha
 
 ## SourceDetailScreen
  - Displays information about a source.
