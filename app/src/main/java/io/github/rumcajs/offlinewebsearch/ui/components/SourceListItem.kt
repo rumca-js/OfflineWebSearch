@@ -83,37 +83,38 @@ fun SourceListItem(
         }
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .alpha(itemAlpha)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = {
-                    if (source.url.isNotBlank()) {
-                        clipboardManager.setText(AnnotatedString(source.url))
-                        Toast.makeText(context, "Source URL copied to clipboard", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+    BadgedBox(
+        badge = {
+            if (isFetchRequired) {
+                Badge()
+            }
+        },
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            // Thumbnail / favicon with red dot badge when refresh is needed
-            BadgedBox(
-                badge = {
-                    if (isFetchRequired) {
-                        Badge()
+                .alpha(itemAlpha)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = {
+                        if (source.url.isNotBlank()) {
+                            clipboardManager.setText(AnnotatedString(source.url))
+                            Toast.makeText(context, "Source URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
+                ),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.Top
             ) {
+                // Thumbnail / favicon
                 Box(
                     modifier = Modifier.size(56.dp),
                     contentAlignment = Alignment.Center
@@ -139,7 +140,6 @@ fun SourceListItem(
                         )
                     }
                 }
-            }
 
             Spacer(modifier = Modifier.width(12.dp))
 

@@ -228,7 +228,7 @@ The screen displays, where available:
 ### SourceListItem - row in SourcesListScreen
  - Displays source thumbnail or favicon
  - Displays source title and URL
- - Displays a red dot badge on thumbnail when the source requires refresh (outdated fetch)
+ - Displays a red dot badge on the item (top right) when the source requires refresh (outdated fetch)
  - Displays an error badge when consecutive errors occurred on fetch
  - Disabled sources apply configurable dead alpha
 
