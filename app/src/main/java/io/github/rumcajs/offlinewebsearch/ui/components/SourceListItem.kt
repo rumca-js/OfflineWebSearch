@@ -100,7 +100,11 @@ fun SourceListItem(
                     onLongClick = {
                         if (source.url.isNotBlank()) {
                             clipboardManager.setText(AnnotatedString(source.url))
-                            Toast.makeText(context, "Source URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Source URL copied to clipboard",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 ),
@@ -141,32 +145,33 @@ fun SourceListItem(
                     }
                 }
 
-            Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                // Title & error badge (if errors occurred)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = source.title.ifBlank { "Untitled Source" },
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
+                Column(modifier = Modifier.weight(1f)) {
+                    // Title & error badge (if errors occurred)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = source.title.ifBlank { "Untitled Source" },
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
 
-                    if (consecutiveErrors > 0) {
-                        SourceErrorBadge(consecutiveErrors = consecutiveErrors)
+                        if (consecutiveErrors > 0) {
+                            SourceErrorBadge(consecutiveErrors = consecutiveErrors)
+                        }
                     }
-                }
 
-                // URL
-                if (source.url.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LinkText(text = source.url)
+                    // URL
+                    if (source.url.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LinkText(text = source.url)
+                    }
                 }
             }
         }
