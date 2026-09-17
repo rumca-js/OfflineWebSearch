@@ -32,7 +32,6 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.StartupWizardDialog
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -74,18 +73,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         val cfg = AppConfigManager.config.value
                         val activeState = cfg.activeDatabaseState
                         if (activeState != null && !activeState.isReadOnly && activeState.extension == ".db" && !cfg.networkConfig.disabled) {
-                            SourceRefreshWorker.enqueueOutdatedSources(context, activeState) { count ->
-                                if (count > 0) {
-                                    kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
-                                        searchViewModel.refreshPage(context)
-                                        Toast.makeText(
-                                            context,
-                                            "Refreshed $count source(s)",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            }
+                            // Enqueue outdated sources for background refresh.
+                            // Completion (entries list refresh, toast) is handled by
+                            // SourcesListScreen via the onRefreshSuccess callback.
+                            SourceRefreshWorker.enqueueOutdatedSources(context, activeState)
                         }
                     }
                 }
@@ -195,6 +186,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 },
                                 onNavigateToAddSource = {
                                     navController.navigate(Screen.SourceUrlEditPreview.route)
+                                },
+                                onRefreshSuccess = {
+                                    searchViewModel.refreshPage(context)
                                 }
                             )
                         }

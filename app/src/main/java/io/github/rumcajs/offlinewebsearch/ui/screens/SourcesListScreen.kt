@@ -98,7 +98,9 @@ fun SourcesListScreen(
     onNavigateToSource: (Source) -> Unit,
     onNavigateToEditSource: (Source) -> Unit,
     onNavigateToAddSource: (() -> Unit)? = null,
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    /** Called when a source refresh worker run finishes with at least one fetched source. */
+    onRefreshSuccess: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -127,6 +129,40 @@ fun SourcesListScreen(
 
     LaunchedEffect(config.activeDatabase) {
         loadSources()
+    }
+
+    // Observe the worker's progress to reload the source list once a refresh finishes.
+    // This handles both auto-refresh (triggered from MainActivity on resume) and
+    // explicit user-triggered refresh (performRefreshAll below) consistently.
+    val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
+    LaunchedEffect(sourceRefreshProgress.isRunning) {
+        if (!sourceRefreshProgress.isRunning && isRefreshingAll) {
+            isRefreshingAll = false
+            val count = sourceRefreshProgress.done
+            if (count > 0) {
+                Toast.makeText(context, "Refreshed $count source(s)", Toast.LENGTH_SHORT).show()
+                onRefreshSuccess?.invoke()
+            }
+        }
+    }
+    isRefreshingAll = sourceRefreshProgress.isRunning
+
+    val performRefreshAll: () -> Unit = {
+        if (config.networkConfig.disabled) {
+            Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
+        } else if (activeDbState == null || activeDbState.isReadOnly || !activeDbState.isSQLite) {
+            Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
+        } else if (sources.isEmpty()) {
+            Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
+        } else {
+            isRefreshingAll = true
+            scope.launch {
+                SourceRefreshWorker.enqueueOutdatedSources(
+                    context = context,
+                    dbState = activeDbState,
+                )
+            }
+        }
     }
 
     fun getSourcesEmptyText() : String
@@ -178,33 +214,6 @@ fun SourcesListScreen(
             FILTER_KEY_BY_FETCH_TIME ->
                 if (sourceOrder == SourceOrder.ByFetchTime) SourceOrder.ByUrl else SourceOrder.ByFetchTime
             else -> SourceOrder.ByUrl
-        }
-    }
-
-    val performRefreshAll: () -> Unit = {
-        if (config.networkConfig.disabled) {
-            Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
-        } else if (activeDbState == null || activeDbState.isReadOnly || !activeDbState.isSQLite) {
-            Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
-        } else if (sources.isEmpty()) {
-            Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
-        } else {
-            isRefreshingAll = true
-            scope.launch {
-                val orderedSources = SourceRepository.getSourcesByFetchTime(context, activeDbState)
-                SourceRefreshWorker.enqueueSources(
-                    context = context,
-                    dbState = activeDbState,
-                    sources = orderedSources,
-                    onFinished = { fetchedCount ->
-                        scope.launch {
-                            sources = SourceRepository.getSourcesByFetchTime(context, activeDbState)
-                            isRefreshingAll = false
-                            Toast.makeText(context, "Refreshed $fetchedCount source(s)", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                )
-            }
         }
     }
 

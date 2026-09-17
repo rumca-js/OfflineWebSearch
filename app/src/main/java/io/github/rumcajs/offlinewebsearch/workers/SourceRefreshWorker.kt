@@ -96,17 +96,42 @@ object SourceRefreshWorker {
     private suspend fun processTask(task: RefreshTask) {
         when (task) {
             is RefreshTask.SingleSource -> {
+                val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                if (config.networkConfig.disabled || task.dbState.isReadOnly || !task.dbState.isSQLite) {
+                    task.onFinished?.invoke(true, "")
+                    return
+                }
+
+                if (config.activeDatabase != task.dbState.url)
+                {
+                    task.onFinished?.invoke(true, "")
+                    return
+                }
+
                 _progress.value = WorkerProgress(total = 1, done = 0, isRunning = true, currentItem = task.source.title)
                 val (success, msg) = SourceRepository.updateSourceMetaAndEntries(task.context, task.dbState, task.source)
                 _progress.value = WorkerProgress(total = 1, done = 1, isRunning = false, currentItem = null)
                 task.onFinished?.invoke(success, msg)
             }
             is RefreshTask.BatchSources -> {
+                val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                if (config.networkConfig.disabled || task.dbState.isReadOnly || !task.dbState.isSQLite) {
+                    task.onFinished?.invoke(0)
+                    return
+                }
+
                 val total = task.sources.size
                 _progress.value = WorkerProgress(total = total, done = 0, isRunning = true)
                 var fetchedCount = 0
                 for (src in task.sources) {
                     _progress.update { it.copy(currentItem = src.title) }
+
+                    val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                    if (config.activeDatabase != task.dbState.url)
+                    {
+                        continue
+                    }
+
                     val (success, _) = SourceRepository.updateSourceMetaAndEntries(
                         context = task.context,
                         activeDatabaseState = task.dbState,
@@ -135,6 +160,13 @@ object SourceRefreshWorker {
                 var fetchedCount = 0
                 for (src in sources) {
                     _progress.update { it.copy(currentItem = src.title) }
+
+                    val config = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
+                    if (config.activeDatabase != task.dbState.url)
+                    {
+                        continue
+                    }
+
                     val (success, _) = SourceRepository.updateSourceMetaAndEntries(
                         context = task.context,
                         activeDatabaseState = task.dbState,
