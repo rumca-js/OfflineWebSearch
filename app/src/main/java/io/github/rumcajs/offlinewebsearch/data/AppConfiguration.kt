@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 const val DATABASES_LIST: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt"
 const val DATABASES_LIST_INIT: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases_init.txt"
 const val DEFAULT_DATABASE_NAME: String = "Default (Assets)"
+const val ASSET_EMPTY_TABLE: String = "table.db"
 
 @Serializable
 data class NetworkConfig(

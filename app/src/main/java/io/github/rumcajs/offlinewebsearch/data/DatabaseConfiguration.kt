@@ -21,6 +21,7 @@ enum class DatabaseStatus {
     INIT,
     DOWNLOADING,
     UNPACKING,
+    POPULATING_TABLE,
     READY,
     FAILED
 }

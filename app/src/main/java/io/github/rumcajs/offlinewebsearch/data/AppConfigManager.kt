@@ -444,6 +444,7 @@ object AppConfigManager {
                 get(url)?.let { state ->
                     val calculatedProgress = progress ?: when (status) {
                         DatabaseStatus.READY -> 1.0f
+                        DatabaseStatus.POPULATING_TABLE -> 0.85f
                         DatabaseStatus.UNPACKING -> 0.75f
                         DatabaseStatus.DOWNLOADING -> 0.25f
                         DatabaseStatus.INIT -> 0.0f
@@ -515,7 +516,7 @@ object AppConfigManager {
      */
     suspend fun createDatabaseFromAsset(
         context: Context,
-        assetFileName: String = "table.db",
+        assetFileName: String = ASSET_EMPTY_TABLE,
         customName: String? = null
     ) {
         val fileName = customName?.takeIf { it.isNotBlank() } ?: "new_database.db"
@@ -726,20 +727,6 @@ object AppConfigManager {
                 }
             }
             throw NoSuchElementException("ZIP archive parsed successfully, but no file ending in '.db' was found inside.")
-        }
-    }
-
-    @Throws(IOException::class, NoSuchElementException::class)
-    internal fun unzipDatabaseBytes(zipBytes: ByteArray, cacheDir: File): ByteArray {
-        val tempZipFile = File.createTempFile("temp_db", ".zip", cacheDir)
-        val tempDbFile = File.createTempFile("unpacked_db", ".db", cacheDir)
-        try {
-            tempZipFile.writeBytes(zipBytes)
-            unzipDatabaseToFile(tempZipFile, tempDbFile)
-            return tempDbFile.readBytes()
-        } finally {
-            tempZipFile.delete()
-            tempDbFile.delete()
         }
     }
 
