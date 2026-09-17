@@ -91,3 +91,25 @@ fun SourceRefreshBadge(
         )
     }
 }
+
+@Composable
+fun SourceErrorBadge(
+    consecutiveErrors: Int,
+    modifier: Modifier = Modifier
+) {
+    val label = if (consecutiveErrors > 1) "ERROR ($consecutiveErrors)" else "ERROR"
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(Color(0xFFFFEBEE))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFFC62828),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}

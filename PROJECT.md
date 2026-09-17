@@ -99,6 +99,7 @@ Screens:
 ## EntriesListScreen
  - Entries screen is scrollable (search widget, entry results, pagination controls are in one scrollable container)
  - Provides search widget with full width text input
+ - Provides floating buttons: to add new entry, to navigate to top
  - Search widget is followed with "Search" button and a button to select "filters" for search results.
  Filters are read from SQLite table, but if it nos available by default by Date published filter should be used. Always some filter need to be applied
    -- "Visited" filter - entry results should visited entries
@@ -212,7 +213,7 @@ The screen displays, where available:
  - The button updates the stored entry metadata.
 
 ## SourcesListScreen
- - Provides floating buttons on right bottom: add, fetch
+ - Provides floating buttons on right bottom: add, fetch, navigate to top
  - Selecting source opens SourceScreen.
  - Provides search widget, similar to EntryListScreen, it should be scrollable together with the results
  - Similarly to EntryListScreen should contain "Search" button with a button to apply filter (order by title, or fetch time)
@@ -328,6 +329,7 @@ Database refresh should make database refresh buttons to be spinning, if possibl
  - should use order of sources by last fetched (or that never have been fetched)
  - should change date\_fetch, but only after attempt to read source has been made
  - if database is change, the worker should not process any older data for previous database
+ - SourceOperationalDataRepository stores the amount of source entries, consecutive_errors contain the amount of consecutive errors. Is cleared when valid response is received.
 
 ## Database update
  - it would be best if it could accept new databases to fetch
