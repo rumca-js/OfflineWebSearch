@@ -1,6 +1,8 @@
 package io.github.rumcajs.offlinewebsearch.ui.components
 
-import androidx.compose.foundation.clickable
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,7 +16,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,13 +30,14 @@ import io.github.rumcajs.offlinewebsearch.util.EntryUtils
 
 /**
  * Common card wrapper for entry list items handling alpha calculation,
- * direct link opening, and item elevation.
+ * direct link opening, copying link to clipboard on long click, and item elevation.
  *
  * @param entry The database entry being displayed.
  * @param onClick Callback triggered when item is tapped in non-direct link mode.
  * @param modifier Optional modifier for styling.
  * @param content Composable column content of the card.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EntryItemCard(
     entry: Entry,
@@ -39,6 +45,8 @@ fun EntryItemCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val config by AppConfigManager.config.collectAsState()
     val isDead = EntryUtils.isDead(entry)
@@ -59,13 +67,22 @@ fun EntryItemCard(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .alpha(itemAlpha)
-            .clickable(enabled = entry.link != null || !config.dbconfig.directLinks) {
-                if (config.dbconfig.directLinks) {
-                    entry.link?.let { uriHandler.openUri(it) }
-                } else {
-                    onClick(entry)
+            .combinedClickable(
+                enabled = entry.link != null || !config.dbconfig.directLinks,
+                onClick = {
+                    if (config.dbconfig.directLinks) {
+                        entry.link?.let { uriHandler.openUri(it) }
+                    } else {
+                        onClick(entry)
+                    }
+                },
+                onLongClick = {
+                    if (!entry.link.isNullOrBlank()) {
+                        clipboardManager.setText(AnnotatedString(entry.link))
+                        Toast.makeText(context, "Link copied to clipboard", Toast.LENGTH_SHORT).show()
+                    }
                 }
-            },
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         content = content
     )

@@ -140,6 +140,7 @@ There are several list styles:
  - Visited entries apply configurable visit alpha.
  - Dead entries apply configurable dead alpha.
  - Bookmarked entries, or entries with votes do not apply alpha (remain fully opaque).
+ - Long press copies entry link to clipboard.
 
 ## Search
  - Search is performed against the selected database.
