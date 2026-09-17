@@ -905,5 +905,80 @@ class SourceRepositoryTest {
         val required = SourceRepository.isFetchRequired(context, dbState, source)
         assertTrue(required)
     }
+
+    // ── hasOutdatedSources ───────────────────────────────────────────────────
+
+    @Test
+    fun `hasOutdatedSources returns false when there are no sources`() = runBlocking {
+        // Clear all sources first
+        SourceRepository.clear(context, dbState)
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, dbState)
+        assertFalse(hasOutdated)
+    }
+
+    @Test
+    fun `hasOutdatedSources returns true when an enabled source was never fetched`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://never-fetched-test.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Never Fetched", url, enabled = true)
+        assertTrue(ok)
+
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, dbState)
+        assertTrue(hasOutdated)
+    }
+
+    @Test
+    fun `hasOutdatedSources returns true when an enabled source has outdated fetch timestamp`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://outdated-fetch-test.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Outdated Fetch", url, enabled = true)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        val oldIso = "2020-01-01T00:00:00Z"
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = oldIso)
+
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, dbState)
+        assertTrue(hasOutdated)
+    }
+
+    @Test
+    fun `hasOutdatedSources returns false when all enabled sources were fetched recently`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://fresh-source-test.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Fresh Source", url, enabled = true)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        val nowIso = SourceOperationalDataRepository.getCurrentIsoTimestamp()
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = nowIso)
+
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, dbState)
+        assertFalse(hasOutdated)
+    }
+
+    @Test
+    fun `hasOutdatedSources returns false when outdated source is disabled`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://disabled-outdated.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Disabled Outdated", url, enabled = false)
+        assertTrue(ok)
+
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, dbState)
+        assertFalse(hasOutdated)
+    }
+
+    @Test
+    fun `hasOutdatedSources returns false when database is read-only`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://readonly-test.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "ReadOnly Source", url, enabled = true)
+        assertTrue(ok)
+
+        val readOnlyState = dbState.copy(isReadOnly = true)
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, readOnlyState)
+        assertFalse(hasOutdated)
+    }
 }
+
 

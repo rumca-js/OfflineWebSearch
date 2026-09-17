@@ -102,6 +102,7 @@ fun SourcesListScreen(
     var isRefreshingAll by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     var sourceToDelete by remember { mutableStateOf<Source?>(null) }
+    var hasOutdatedSources by remember { mutableStateOf(false) }
 
     val loadSources: () -> Unit = {
         scope.launch {
@@ -127,9 +128,16 @@ fun SourcesListScreen(
                 Toast.makeText(context, "Refreshed $count source(s)", Toast.LENGTH_SHORT).show()
                 onRefreshSuccess?.invoke()
             }
+            loadSources()
         }
     }
     isRefreshingAll = sourceRefreshProgress.isRunning
+
+    LaunchedEffect(config.activeDatabase, config.networkConfig.disabled, sourceRefreshProgress.isRunning, sources) {
+        if (!sourceRefreshProgress.isRunning) {
+            hasOutdatedSources = SourceRepository.hasOutdatedSources(context, activeDbState)
+        }
+    }
 
     val performRefreshAll: () -> Unit = {
         if (config.networkConfig.disabled) {
@@ -408,8 +416,8 @@ fun SourcesListScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Refresh FAB — shown above the Add FAB when refresh is available
-                if (isEditable && !config.networkConfig.disabled && sources.isNotEmpty()) {
+                // Refresh FAB — shown above the Add FAB when refresh is available (has outdated sources or currently refreshing)
+                if (hasOutdatedSources || isRefreshingAll) {
                     FloatingActionButton(
                         onClick = { if (!isRefreshingAll) performRefreshAll() },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
