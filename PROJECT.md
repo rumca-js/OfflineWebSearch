@@ -70,9 +70,9 @@ Possible database states include:
  - FAILED
 
 # Views
-App should contain on bottom selection of main views:
- - Search
- - Sources
+App contains bottom selection of main views (buttons):
+ - Browse
+ - Sources - should be spinning if sources are being fetched/checked
  - Options
 
 Screens:
@@ -81,10 +81,10 @@ Screens:
  - EntryEditScreen - Adds or edits an entry.
  - EntryStatusScreen - Checks the HTTP status of an entry URL.
  - EntryPreviewScreen - Fetches and displays the current web page data.
- - SourceScreen - Shows information and actions for a source.
+ - SourcesListScreen - Shows the list of configured sources.
+ - SourceDetailScreen - Shows information and actions for a source.
  - SourceEditScreen - Adds or edits a source.
  - SourceUrlEditPreviewScreen - Preview screen shown when adding a source by URL. Fetches RSS feed data to pre-populate fields.
- - SourcesScreen - Shows the list of configured sources.
  - OptionsScreen - Configures databases and application settings.
  - DatabaseScreen - Shows information and actions for a database.
  - AboutScreen - Shows information about the application.
@@ -212,9 +212,9 @@ The screen displays, where available:
  - The button updates the stored entry metadata.
 
 ## SourcesListScreen
- - Provides bar on top with buttons: add, fetch
+ - Provides floating buttons on right bottom: add, fetch
  - Selecting source opens SourceScreen.
- - Provides search widget, similar to EntryListScreen, it should be scrollable
+ - Provides search widget, similar to EntryListScreen, it should be scrollable together with the results
  - Similarly to EntryListScreen should contain "Search" button with a button to apply filter (order by title, or fetch time)
  - Filters should be by Url, Title, Fetch time. By default by Url filter should be applied. A filter always need to be applied
  - Probably it would have to be a different search widget implementation from EntryListScreen. These can share same base class though
@@ -324,9 +324,10 @@ Database refresh should make database refresh buttons to be spinning, if possibl
  - there is a background task that can refresh sources
  - It would be best if it could accept new sources to refresh
  - disabled sources should be skipped
- - sources that were fetched eariler than hour since source.date\_fetch should be skipped
+ - sources that were fetched earlier than hour since source.date\_fetch should be skipped
  - should use order of sources by last fetched (or that never have been fetched)
  - should change date\_fetch, but only after attempt to read source has been made
+ - if database is change, the worker should not process any older data for previous database
 
 ## Database update
  - it would be best if it could accept new databases to fetch
