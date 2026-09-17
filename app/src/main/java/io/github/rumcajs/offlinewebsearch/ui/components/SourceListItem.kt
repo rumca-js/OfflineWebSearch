@@ -106,37 +106,45 @@ fun SourceListItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Thumbnail / favicon
-            Box(
-                modifier = Modifier.size(56.dp),
-                contentAlignment = Alignment.Center
+            // Thumbnail / favicon with red dot badge when refresh is needed
+            BadgedBox(
+                badge = {
+                    if (isFetchRequired) {
+                        Badge()
+                    }
+                }
             ) {
-                if (source.favicon.isNotBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(source.favicon)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Thumbnail for ${source.title}",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp))
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                        modifier = Modifier.size(56.dp)
-                    )
+                Box(
+                    modifier = Modifier.size(56.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (source.favicon.isNotBlank()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(source.favicon)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Thumbnail for ${source.title}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.size(56.dp)
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // Title & indicator badges
+                // Title & error badge (if errors occurred)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -150,16 +158,8 @@ fun SourceListItem(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (consecutiveErrors > 0) {
-                            SourceErrorBadge(consecutiveErrors = consecutiveErrors)
-                        }
-                        if (isFetchRequired) {
-                            SourceRefreshBadge()
-                        }
+                    if (consecutiveErrors > 0) {
+                        SourceErrorBadge(consecutiveErrors = consecutiveErrors)
                     }
                 }
 
