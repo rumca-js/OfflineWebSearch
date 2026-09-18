@@ -1064,6 +1064,35 @@ class SourceRepositoryTest {
     }
 
     @Test
+    fun `getAllSourcesWithOperationalData respects orderBy argument`() = runBlocking {
+        val url1 = "https://bbb.com/feed.xml"
+        val url2 = "https://aaa.com/feed.xml"
+        SourceRepository.insertSource(context, dbState, title = "Zebra Title", url = url1, enabled = true)
+        SourceRepository.insertSource(context, dbState, title = "Alpha Title", url = url2, enabled = true)
+
+        val src1 = SourceRepository.getSourceByUrl(context, dbState, url1)!!
+        val src2 = SourceRepository.getSourceByUrl(context, dbState, url2)!!
+
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, src1.id!!, "2026-09-01T10:00:00Z")
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, src2.id!!, "2026-09-02T10:00:00Z")
+
+        // Order by Url: aaa before bbb
+        val byUrl = SourceRepository.getAllSourcesWithOperationalData(context, dbState, io.github.rumcajs.offlinewebsearch.data.repositories.SourceOrder.ByUrl)
+        assertEquals(url2, byUrl[0].source.url)
+        assertEquals(url1, byUrl[1].source.url)
+
+        // Order by Title: Alpha before Zebra
+        val byTitle = SourceRepository.getAllSourcesWithOperationalData(context, dbState, io.github.rumcajs.offlinewebsearch.data.repositories.SourceOrder.ByTitle)
+        assertEquals("Alpha Title", byTitle[0].source.title)
+        assertEquals("Zebra Title", byTitle[1].source.title)
+
+        // Order by FetchTime: 2026-09-01 before 2026-09-02
+        val byFetch = SourceRepository.getAllSourcesWithOperationalData(context, dbState, io.github.rumcajs.offlinewebsearch.data.repositories.SourceOrder.ByFetchTime)
+        assertEquals(src1.id, byFetch[0].source.id)
+        assertEquals(src2.id, byFetch[1].source.id)
+    }
+
+    @Test
     fun `getAllSourcesWithOperationalData returns empty list on null or invalid dbState`() = runBlocking {
         val nullResult = SourceRepository.getAllSourcesWithOperationalData(context, null)
         assertTrue(nullResult.isEmpty())

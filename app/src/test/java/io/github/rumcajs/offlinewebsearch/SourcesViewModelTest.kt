@@ -1,7 +1,7 @@
 package io.github.rumcajs.offlinewebsearch
 
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOrder
 import io.github.rumcajs.offlinewebsearch.ui.SOURCE_FILTER_OPTIONS
-import io.github.rumcajs.offlinewebsearch.ui.SourceOrder
 import io.github.rumcajs.offlinewebsearch.ui.SourcesViewModel
 import org.junit.Assert.*
 import org.junit.Test

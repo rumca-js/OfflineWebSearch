@@ -30,6 +30,12 @@ data class Source(
 )
 
 /**
+ * Sort mode applied to source queries in [SourceRepository].
+ */
+@Serializable
+enum class SourceOrder { ByUrl, ByTitle, ByFetchTime }
+
+/**
  * Data class representing a [Source] paired with its optional [SourceOperationalData]
  * obtained from an outer join between `sourcedatamodel` and `sourceoperationaldata`.
  */
@@ -82,18 +88,19 @@ object SourceRepository : RepositoryInterface {
         )
     }
 
-
     /**
      * Retrieves all sources from `sourcedatamodel` joined with their operational metadata
      * from `sourceoperationaldata` via an outer join (LEFT JOIN).
      *
      * @param context Application context.
      * @param activeDatabaseState Current database state.
+     * @param orderBy Sort order applied to the query ([SourceOrder.ByUrl], [SourceOrder.ByTitle], or [SourceOrder.ByFetchTime]).
      * @return List of [SourceWithOperationalData] containing each source and its operational data (if present).
      */
     suspend fun getAllSourcesWithOperationalData(
         context: Context,
-        activeDatabaseState: DatabaseState?
+        activeDatabaseState: DatabaseState?,
+        orderBy: SourceOrder = SourceOrder.ByUrl
     ): List<SourceWithOperationalData> = withContext(Dispatchers.IO) {
         val results = mutableListOf<SourceWithOperationalData>()
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
@@ -106,6 +113,11 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             SourceOperationalDataRepository.ensureTableExists(db)
+            val orderByClause = when (orderBy) {
+                SourceOrder.ByUrl -> "s.url ASC, s.title ASC"
+                SourceOrder.ByTitle -> "s.title ASC, s.url ASC"
+                SourceOrder.ByFetchTime -> "sod.date_fetched ASC, s.url ASC"
+            }
             val sqlText = "SELECT s.id AS s_id, s.enabled AS s_enabled, s.url AS s_url, s.title AS s_title, " +
                     "s.favicon AS s_favicon, s.source_type AS s_source_type, s.age AS s_age, " +
                     "s.auto_tag AS s_auto_tag, s.language AS s_language, " +
@@ -115,7 +127,7 @@ object SourceRepository : RepositoryInterface {
                     "sod.consecutive_errors AS sod_consecutive_errors " +
                     "FROM ${getTableName()} AS s " +
                     "LEFT JOIN ${SourceOperationalDataRepository.getTableName()} AS sod ON s.id = sod.source_id " +
-                    "ORDER BY s.url, s.title"
+                    "ORDER BY $orderByClause"
             val cursor = db.rawQuery(sqlText, null)
             cursor.use { c ->
                 while (c.moveToNext()) {

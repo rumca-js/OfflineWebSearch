@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOrder
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceWithOperationalData
 import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
@@ -24,9 +25,6 @@ import kotlinx.coroutines.launch
 const val SOURCE_FILTER_KEY_BY_URL = "by_url"
 const val SOURCE_FILTER_KEY_BY_TITLE = "by_title"
 const val SOURCE_FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
-
-/** Sort mode applied to the in-memory source list. */
-enum class SourceOrder { ByUrl, ByTitle, ByFetchTime }
 
 val SOURCE_FILTER_OPTIONS = listOf(
     FilterOption(
@@ -133,7 +131,7 @@ class SourcesViewModel : ViewModel() {
             isLoading = true
             val config = AppConfigManager.config.first()
             val activeDbState = config.activeDatabaseState
-            sourceItems = SourceRepository.getAllSourcesWithOperationalData(context, activeDbState)
+            sourceItems = SourceRepository.getAllSourcesWithOperationalData(context, activeDbState, sourceOrder)
             hasOutdatedSources = if (!SourceRefreshWorker.progress.value.isRunning) {
                 SourceRepository.hasOutdatedSources(context, activeDbState)
             } else {
