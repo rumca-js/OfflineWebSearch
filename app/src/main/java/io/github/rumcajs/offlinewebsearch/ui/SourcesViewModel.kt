@@ -147,7 +147,6 @@ class SourcesViewModel : ViewModel() {
 
     fun clearSearch() {
         searchQuery = ""
-        activeSearchQuery = ""
     }
 
     fun setFilter(option: FilterOption) {
