@@ -24,6 +24,7 @@ fun StatusBadge(
         DatabaseStatus.READY -> Triple(Color(0xFFE8F5E9), Color(0xFF2E7D32), "READY")
         DatabaseStatus.FAILED -> Triple(Color(0xFFFFEBEE), Color(0xFFC62828), "FAILED")
         DatabaseStatus.DOWNLOADING -> Triple(Color(0xFFE3F2FD), Color(0xFF1565C0), "DOWNLOADING")
+        DatabaseStatus.POPULATING_TABLE -> Triple(Color(0xFFE3F2FD), Color(0xFF1565C0), "POPULATING")
         DatabaseStatus.UNPACKING -> Triple(Color(0xFFFFF3E0), Color(0xFFEF6C00), "UNPACKING")
         DatabaseStatus.INIT -> Triple(Color(0xFFF5F5F5), Color(0xFF616161), "INIT")
     }
