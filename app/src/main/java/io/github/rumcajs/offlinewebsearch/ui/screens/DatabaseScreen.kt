@@ -92,16 +92,41 @@ fun DatabaseScreen(
         }
     }
 
-    if (showRefreshDialog && !state.isLocal && url != null) {
+    var isRefreshing by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableStateOf(0L) }
+
+    val refreshDatabaseInfo: () -> Unit = {
+        scope.launch {
+            isRefreshing = true
+            AppConfigManager.reloadConfig(context)
+            refreshTrigger = System.currentTimeMillis()
+            isRefreshing = false
+            Toast.makeText(context, "Database information refreshed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (showRefreshDialog && (url == null || !state.isLocal)) {
         io.github.rumcajs.offlinewebsearch.ui.components.RefreshConfirmationDialog(
-            url = url,
+            url = url ?: "",
             state = state,
             onDismiss = { showRefreshDialog = false },
             onConfirm = { targetUrl, _ ->
                 showRefreshDialog = false
-                val started = AppConfigManager.refreshDatabaseInBackground(context, targetUrl)
-                if (started) {
-                    Toast.makeText(context, "Database refresh started", Toast.LENGTH_SHORT).show()
+                if (url == null) {
+                    scope.launch {
+                        try {
+                            AppConfigManager.rebuildDefaultDatabase(context)
+                            refreshTrigger = System.currentTimeMillis()
+                            Toast.makeText(context, "Default database rebuilt", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Failed to rebuild database: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } else {
+                    val started = AppConfigManager.refreshDatabaseInBackground(context, targetUrl)
+                    if (started) {
+                        Toast.makeText(context, "Database refresh started", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         )
@@ -132,19 +157,6 @@ fun DatabaseScreen(
         )
     }
 
-    var isRefreshing by remember { mutableStateOf(false) }
-    var refreshTrigger by remember { mutableStateOf(0L) }
-
-    val refreshDatabaseInfo: () -> Unit = {
-        scope.launch {
-            isRefreshing = true
-            AppConfigManager.reloadConfig(context)
-            refreshTrigger = System.currentTimeMillis()
-            isRefreshing = false
-            Toast.makeText(context, "Database information refreshed", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -156,12 +168,12 @@ fun DatabaseScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        val fileNameToExport = if (state.localFileName.isNotBlank()) state.localFileName else "places_0.json"
+                        val fileNameToExport = if (state.localFileName.isNotBlank()) state.localFileName else "default.db"
                         exportLauncher.launch(fileNameToExport)
                     }) {
                         Icon(Icons.Default.Share, contentDescription = "Export Database")
                     }
-                    if (!state.isLocal && url != null) {
+                    if (url == null || !state.isLocal) {
                         IconButton(onClick = { showRefreshDialog = true }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh Database")
                         }

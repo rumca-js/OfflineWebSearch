@@ -209,7 +209,18 @@ fun DatabasesContainer(
                 onDismiss = { refreshingDb = null },
                 onConfirm = { targetUrl, targetState ->
                     refreshingDb = null
-                    refreshDatabase(targetUrl, targetState)
+                    if (targetUrl.isBlank()) {
+                        scope.launch {
+                            try {
+                                AppConfigManager.rebuildDefaultDatabase(context)
+                                Toast.makeText(context, "Default database rebuilt", Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Failed to rebuild default database: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        refreshDatabase(targetUrl, targetState)
+                    }
                 }
             )
         }
@@ -313,7 +324,7 @@ fun DatabaseList(
     onUpdate: (String, DatabaseState) -> Unit
 ) {
     // The "Default (Assets)" database is always available even though it has no
-    // entry in the databases map. Show it as a permanent, read-only first item.
+    // entry in the databases map. Show it as a permanent first item.
     val defaultState = DatabaseState(
         url = "",
         localFileName = "default.db",
@@ -332,7 +343,8 @@ fun DatabaseList(
             onItemClick = if (onItemClick != null) {
                 { onItemClick(null, defaultState) }
             } else null,
-            onSetActive = { onSetActive(null) }
+            onSetActive = { onSetActive(null) },
+            onUpdate = { onUpdate("", defaultState) }
         )
 
         databases.forEach { (url, state) ->
@@ -354,18 +366,20 @@ fun DatabaseList(
  *
  * This database is always present (backed by default.db created from bundled asset files),
  * so it is shown permanently at the top of the list regardless of the user-added database map.
- * It cannot be deleted or refreshed from internet.
+ * It can be rebuilt/refreshed from bundled assets.
  *
  * @param isActive Whether this database is currently active.
  * @param onItemClick Optional callback to navigate to the database detail screen on long press.
  * @param onSetActive Optional callback to make this database active on single tap.
+ * @param onUpdate Optional callback to rebuild the default database.
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DefaultDatabaseItem(
     isActive: Boolean = false,
     onItemClick: (() -> Unit)? = null,
-    onSetActive: () -> Unit
+    onSetActive: () -> Unit,
+    onUpdate: () -> Unit
 ) {
     val shape = RoundedCornerShape(24.dp)
     val borderStroke = if (isActive) {
@@ -389,7 +403,7 @@ private fun DefaultDatabaseItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
@@ -408,6 +422,10 @@ private fun DefaultDatabaseItem(
                     StatusBadge(io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY)
                     ReadOnlyBadge(isReadOnly = false)
                 }
+            }
+
+            IconButton(onClick = onUpdate) {
+                Icon(Icons.Default.Refresh, contentDescription = "Rebuild Default Database")
             }
         }
     }

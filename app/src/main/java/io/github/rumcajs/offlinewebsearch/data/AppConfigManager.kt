@@ -76,6 +76,14 @@ object AppConfigManager {
     }
 
     /**
+     * Rebuilds the default database (`default.db`) from bundled assets.
+     */
+    suspend fun rebuildDefaultDatabase(context: Context): DatabaseState {
+        val builder = DefaultDatabaseBuilder(context, forceRebuild = true)
+        return builder.build()
+    }
+
+    /**
      * Updates the initialization state of the application.
      *
      * @param initialized True if initial setup/wizard has been completed, false otherwise.
