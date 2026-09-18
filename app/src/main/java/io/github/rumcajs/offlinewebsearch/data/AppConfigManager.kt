@@ -57,10 +57,30 @@ object AppConfigManager {
         loadPersistedConfigSync(applicationContext)
         loadNetworkConfigSync(applicationContext)
 
-        // Ensure default SQLite database exists in internal storage
+        // Ensure default SQLite database exists and migrate legacy JSON databases
         configScope.launch {
             try {
                 ensureDefaultDatabase(applicationContext)
+
+                // Check for legacy JSON databases and convert them to SQLite (.db)
+                val currentDatabases = config.value.databases
+                currentDatabases.forEach { (url, state) ->
+                    if (state.localFileName.endsWith(".json")) {
+                        val legacyJsonFile = File(applicationContext.filesDir, state.localFileName)
+                        if (legacyJsonFile.exists()) {
+                            val newLocalName = DatabaseState.deriveLocalFileName(url)
+                            val newDbFile = File(applicationContext.filesDir, newLocalName)
+                            if (!newDbFile.exists()) {
+                                LocalDatabaseBuilder.fromBytes(
+                                    applicationContext,
+                                    url = url,
+                                    content = legacyJsonFile.readBytes(),
+                                    oldUrl = url
+                                ).build()
+                            }
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
