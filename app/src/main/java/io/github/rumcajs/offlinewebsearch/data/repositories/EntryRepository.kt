@@ -92,13 +92,10 @@ abstract class EntryRepository : RepositoryInterface {
 
         /**
          * Resolves the appropriate repository implementation based on [activeDatabaseState].
+         * All databases are backed by SQLite.
          */
         fun getRepository(activeDatabaseState: DatabaseState?): EntryRepository {
-            return if (activeDatabaseState != null && activeDatabaseState.isSQLite) {
-                EntrySqliteRepository
-            } else {
-                EntryJsonRepository
-            }
+            return EntrySqliteRepository
         }
 
         // ──────────────────────────────────────────────────────────────────────────

@@ -316,10 +316,10 @@ fun DatabaseList(
     // entry in the databases map. Show it as a permanent, read-only first item.
     val defaultState = DatabaseState(
         url = "",
-        localFileName = "",
+        localFileName = "default.db",
         status = io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY,
         progress = 1f,
-        isReadOnly = true
+        isReadOnly = false
     )
     val isDefaultActive = activeDatabaseUrl == null
 
@@ -352,9 +352,9 @@ fun DatabaseList(
 /**
  * A fixed row representing the built-in "Default (Assets)" database.
  *
- * This database is always present (backed by bundled asset files), so it is shown
- * permanently at the top of the list regardless of the user-added database map.
- * It cannot be edited, deleted, or refreshed.
+ * This database is always present (backed by default.db created from bundled asset files),
+ * so it is shown permanently at the top of the list regardless of the user-added database map.
+ * It cannot be deleted or refreshed from internet.
  *
  * @param isActive Whether this database is currently active.
  * @param onItemClick Optional callback to navigate to the database detail screen on long press.
@@ -406,7 +406,7 @@ private fun DefaultDatabaseItem(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     StatusBadge(io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY)
-                    ReadOnlyBadge(isReadOnly = true)
+                    ReadOnlyBadge(isReadOnly = false)
                 }
             }
         }

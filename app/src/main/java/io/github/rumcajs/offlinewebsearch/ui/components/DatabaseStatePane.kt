@@ -54,7 +54,7 @@ fun DatabaseStatePane(
         )
         DatabasePropertyRow(
             label = "Local File",
-            value = if (state.localFileName.isBlank()) "places_0.json (Assets)" else state.localFileName
+            value = if (state.localFileName.isBlank()) "default.db" else state.localFileName
         )
         if (isSql) {
             for (repo in RepositoryList.repositories) {

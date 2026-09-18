@@ -125,6 +125,24 @@ object EntrySqliteRepository : EntryRepository() {
 
     override fun getTableName(): String = "linkdatamodel"
 
+    private fun resolveEffectiveState(context: Context, state: DatabaseState?): DatabaseState {
+        val resolved = state ?: DatabaseState(
+            url = "",
+            localFileName = io.github.rumcajs.offlinewebsearch.data.builders.DefaultDatabaseBuilder.DEFAULT_DATABASE_FILE,
+            isReadOnly = false
+        )
+        if (resolved.url.isBlank()) {
+            val fileName = resolved.localFileName.ifBlank { io.github.rumcajs.offlinewebsearch.data.builders.DefaultDatabaseBuilder.DEFAULT_DATABASE_FILE }
+            val file = File(context.filesDir, fileName)
+            if (!file.exists()) {
+                kotlinx.coroutines.runBlocking {
+                    io.github.rumcajs.offlinewebsearch.data.builders.DefaultDatabaseBuilder(context).build()
+                }
+            }
+        }
+        return resolved
+    }
+
     override suspend fun countEntries(
         context: Context,
         activeDatabaseState: DatabaseState?,
@@ -133,8 +151,8 @@ object EntrySqliteRepository : EntryRepository() {
         filterByVisited: Boolean,
         filterByReadLater: Boolean
     ): Int = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext 0
-        countEntriesSql(context, activeDatabaseState, searchQuery, filterByVisited, filterByReadLater)
+        val state = resolveEffectiveState(context, activeDatabaseState)
+        countEntriesSql(context, state, searchQuery, filterByVisited, filterByReadLater)
     }
 
     override suspend fun getEntriesPage(
@@ -147,8 +165,8 @@ object EntrySqliteRepository : EntryRepository() {
         filterByVisited: Boolean,
         filterByReadLater: Boolean
     ): List<Entry> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext emptyList()
-        getPageFromSql(context, activeDatabaseState, searchQuery, orderBy, offset, pageSize, filterByVisited, filterByReadLater)
+        val state = resolveEffectiveState(context, activeDatabaseState)
+        getPageFromSql(context, state, searchQuery, orderBy, offset, pageSize, filterByVisited, filterByReadLater)
     }
 
     /**
@@ -285,11 +303,11 @@ object EntrySqliteRepository : EntryRepository() {
         id: Long?,
         vote: Int
     ): Pair<Boolean, Int?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || id == null) return@withContext Pair(false, null)
-        if (activeDatabaseState.extension != ".db") return@withContext Pair(false, null)
-        if (activeDatabaseState.isReadOnly) return@withContext Pair(false, null)
+        if (id == null) return@withContext Pair(false, null)
+        val state = resolveEffectiveState(context, activeDatabaseState)
+        if (state.isReadOnly) return@withContext Pair(false, null)
 
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return@withContext Pair(false, null)
 
         try {
@@ -303,7 +321,7 @@ object EntrySqliteRepository : EntryRepository() {
             if (rows > 0) Pair(true, newVotes) else Pair(false, null)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} Setting vote in $functionName", e.message)
+            AppLoggingRepository.error(context, state, "Entry:${id} Setting vote in $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, null)
@@ -319,11 +337,10 @@ object EntrySqliteRepository : EntryRepository() {
         id: Long?,
         link: String?
     ): Boolean = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null) return@withContext false
-        if (activeDatabaseState.extension != ".db") return@withContext false
-        if (activeDatabaseState.isReadOnly) return@withContext false
+        val state = resolveEffectiveState(context, activeDatabaseState)
+        if (state.isReadOnly) return@withContext false
 
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return@withContext false
 
         try {
@@ -337,7 +354,7 @@ object EntrySqliteRepository : EntryRepository() {
             true
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} incrementing visits in $functionName", e.message)
+            AppLoggingRepository.error(context, state, "Entry:${id} incrementing visits in $functionName", e.message)
 
             e.printStackTrace()
             false
@@ -353,11 +370,12 @@ object EntrySqliteRepository : EntryRepository() {
         activeDatabaseState: DatabaseState?,
         id: Long
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+        val state = resolveEffectiveState(context, activeDatabaseState)
+        if (state.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return@withContext Pair(false, "Database file not found")
 
         try {
@@ -373,7 +391,7 @@ object EntrySqliteRepository : EntryRepository() {
             }
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Entry:${id} deleting entry in $functionName", e.message)
+            AppLoggingRepository.error(context, state, "Entry:${id} deleting entry in $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
@@ -622,11 +640,12 @@ object EntrySqliteRepository : EntryRepository() {
         context: Context,
         activeDatabaseState: DatabaseState?
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+        val state = resolveEffectiveState(context, activeDatabaseState)
+        if (state.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
         }
 
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        val file = File(context.filesDir, state.localFileName)
         if (!file.exists()) return@withContext Pair(false, "Database file not found")
 
         try {
@@ -636,7 +655,7 @@ object EntrySqliteRepository : EntryRepository() {
             Pair(true, null)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Clearing $functionName", e.message)
+            AppLoggingRepository.error(context, state, "Clearing $functionName", e.message)
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")

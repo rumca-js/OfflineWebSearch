@@ -2,8 +2,11 @@ package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
 import android.net.Uri
-import io.github.rumcajs.offlinewebsearch.data.repositories.ConfigurationEntry
-import io.github.rumcajs.offlinewebsearch.data.repositories.SearchViewRepository
+import io.github.rumcajs.offlinewebsearch.data.builders.DefaultDatabaseBuilder
+import io.github.rumcajs.offlinewebsearch.data.builders.InternetDatabaseBuilder
+import io.github.rumcajs.offlinewebsearch.data.builders.LocalDatabaseBuilder
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.workers.DatabaseUpdateWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,15 +20,13 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
-import java.util.zip.ZipFile
-import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
-import io.github.rumcajs.offlinewebsearch.util.DateUtils
-import io.github.rumcajs.offlinewebsearch.workers.DatabaseUpdateWorker
-
 
 /**
- * Singleton to manage app configuration.
- * Can be updated from various sources.
+ * Singleton managing the application configuration, preference states,
+ * and database registrations.
+ *
+ * Database creation, downloading, unpacking, and table population are
+ * delegated to specialized [io.github.rumcajs.offlinewebsearch.data.builders.DatabaseBuilder] implementations.
  */
 object AppConfigManager {
     private const val APP_CONFIG_FILE_NAME = "app_config.json"
@@ -44,6 +45,10 @@ object AppConfigManager {
     private val _config = MutableStateFlow(AppConfiguration())
     val config: StateFlow<AppConfiguration> = _config.asStateFlow()
 
+    /**
+     * Initializes configuration from local persisted storage and bundled network config.
+     * Also ensures the built-in default database (`default.db`) is populated on first launch.
+     */
     fun initialize(context: Context) {
         val applicationContext = context.applicationContext
         appContext = applicationContext
@@ -51,6 +56,23 @@ object AppConfigManager {
         // Load configurations synchronously so state is populated before first UI frame
         loadPersistedConfigSync(applicationContext)
         loadNetworkConfigSync(applicationContext)
+
+        // Ensure default SQLite database exists in internal storage
+        configScope.launch {
+            try {
+                ensureDefaultDatabase(applicationContext)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * Ensures that the default database file (`default.db`) is built and ready in application storage.
+     */
+    suspend fun ensureDefaultDatabase(context: Context): DatabaseState {
+        val builder = DefaultDatabaseBuilder(context)
+        return builder.build()
     }
 
     /**
@@ -60,7 +82,7 @@ object AppConfigManager {
      */
     fun setInitialized(initialized: Boolean = true) {
         updateConfig { it.copy(isInitialized = initialized) }
-        setActiveDatabase(null);
+        setActiveDatabase(null)
     }
 
     /**
@@ -108,7 +130,7 @@ object AppConfigManager {
 
     fun updateConfig(update: (AppConfiguration) -> AppConfiguration) {
         _config.update(update)
-        saveConfigAsync() // Offloaded to background thread
+        saveConfigAsync()
     }
 
     suspend fun reloadConfig(context: Context) = withContext(Dispatchers.IO) {
@@ -283,7 +305,6 @@ object AppConfigManager {
         updateConfig { config ->
             val newDatabases = config.databases.toMutableMap().apply {
                 remove(oldUrl)?.let { state ->
-                    // Corrected: Update the copy's internal url property too!
                     put(newUrl, state.copy(url = newUrl, localFileName = DatabaseState.fromUrl(newUrl).localFileName))
                 }
             }
@@ -331,106 +352,16 @@ object AppConfigManager {
     }
 
     /**
-     * Safely saves database content (either from a local byte array or a remote download)
-     * and updates the AppConfiguration maps.
+     * Safely saves database content and updates the AppConfiguration maps using [LocalDatabaseBuilder].
      */
     suspend fun saveDatabaseSource(
         context: Context,
         url: String,
         content: ByteArray,
         oldUrl: String? = null
-    ) = withContext(Dispatchers.IO) {
-        val now = DateUtils.getCurrentIsoTimestamp()
-        val newState = DatabaseState.fromUrl(url).copy(
-            status = DatabaseStatus.READY,
-            progress = 1.0f,
-            dateCreated = now,
-            dateLastRefresh = now
-        )
-
-        try {
-            // Remove old/existing files and sidecars for this local database
-            removeDatabaseFiles(context, newState.localFileName)
-
-            // 1. Write the new file
-            context.openFileOutput(newState.localFileName, Context.MODE_PRIVATE).use { output ->
-                output.write(content)
-            }
-
-            // 2. Inspect database for configurationentry & searchview tables using domain models
-            val dbFile = if (newState.extension == ".db") File(context.filesDir, newState.localFileName) else null
-            val configEntry = if (dbFile != null) ConfigurationEntry.readFromDatabase(dbFile) else null
-            val searchViewEntry = if (dbFile != null) SearchViewRepository.readDefaultFromDatabase(dbFile) else null
-
-            // 3. Perform old file cleanup and configuration state transition
-            updateConfig { config ->
-                // Clean up old file if the URL actually changed
-                if (oldUrl != null && oldUrl != url) {
-                    val oldState = DatabaseState.fromUrl(oldUrl)
-                    removeDatabaseFiles(context, oldState.localFileName)
-                }
-
-                // Prepare updated maps
-                val newDatabases = config.databases.toMutableMap().apply {
-                    if (oldUrl != null) {
-                        remove(oldUrl)?.let { state ->
-                            put(url, state.copy(
-                                url = url,
-                                localFileName = newState.localFileName,
-                                status = DatabaseStatus.READY,
-                                progress = 1.0f,
-                                errorMessage = null,
-                                dateCreated = state.dateCreated ?: now,
-                                dateLastRefresh = now
-                            ))
-                        }
-                    } else {
-                        put(url, newState)
-                    }
-                }
-
-                val newDbConfigs = config.dbConfigs.toMutableMap().apply {
-                    val existingConfig = if (oldUrl != null) remove(oldUrl) else get(url)
-                    var updatedConfig = existingConfig ?: config.defaultDbConfig
-                    if (configEntry?.showIcons != null) {
-                        updatedConfig = updatedConfig.copy(showIcons = configEntry.showIcons)
-                    }
-                    if (configEntry?.viewStyle != null) {
-                        updatedConfig = updatedConfig.copy(viewStyle = configEntry.viewStyle!!)
-                    }
-                    if (configEntry?.linksPerPage != null) {
-                        val links = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, configEntry.linksPerPage)
-                        updatedConfig = updatedConfig.copy(linksPerPage = links)
-                    }
-                    if (configEntry?.trackUserSearches != null) {
-                        updatedConfig = updatedConfig.copy(trackUserSearches = configEntry.trackUserSearches)
-                    }
-                    if (configEntry?.trackUserNavigation != null) {
-                        updatedConfig = updatedConfig.copy(trackUserNavigation = configEntry.trackUserNavigation)
-                    }
-                    if (configEntry?.entriesVisitAlpha != null) {
-                        updatedConfig = updatedConfig.copy(entriesVisitAlpha = configEntry.entriesVisitAlpha)
-                    }
-                    if (configEntry?.entriesDeadAlpha != null) {
-                        updatedConfig = updatedConfig.copy(entriesDeadAlpha = configEntry.entriesDeadAlpha)
-                    }
-                    if (searchViewEntry?.orderBy != null) {
-                        updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
-                    }
-                    put(url, updatedConfig)
-                }
-
-                config.copy(
-                    databases = newDatabases,
-                    dbConfigs = newDbConfigs,
-                    activeDatabaseUrl = if (config.activeDatabaseUrl == oldUrl) url else config.activeDatabaseUrl
-                )
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
-            throw e
-        }
+    ) {
+        val builder = LocalDatabaseBuilder.fromBytes(context, url, content, oldUrl)
+        builder.build()
     }
 
     fun updateDatabaseStatus(
@@ -465,7 +396,7 @@ object AppConfigManager {
     }
 
     /**
-     * Reads database bytes from a local URI and saves them as a database source.
+     * Reads database bytes from a local URI and saves them as an SQLite database using [LocalDatabaseBuilder].
      */
     suspend fun saveDatabaseLocal(
         context: Context,
@@ -473,68 +404,29 @@ object AppConfigManager {
         uri: Uri,
         oldUrl: String? = null
     ) {
-        if (oldUrl == null) {
-            addDatabase(url)
-        } else {
-            updateDatabase(oldUrl, url)
-        }
-
-        try {
-            val content = withContext(Dispatchers.IO) {
-                try {
-                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        inputStream.readBytes()
-                    }
-                } catch (e: Exception) {
-                    null
-                }
-            } ?: throw IOException("Failed to read file")
-
-            if (url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)) {
-                updateDatabaseStatus(url, DatabaseStatus.UNPACKING)
-                val tempZipFile = File.createTempFile("local_temp_db", ".zip", context.cacheDir)
-                val tempDbFile = File.createTempFile("local_unpacked_db", ".db", context.cacheDir)
-                try {
-                    tempZipFile.writeBytes(content)
-                    unzipDatabaseToFile(tempZipFile, tempDbFile)
-                    saveDatabaseSource(context, url, tempDbFile.readBytes(), oldUrl)
-                } finally {
-                    tempZipFile.delete()
-                    tempDbFile.delete()
-                }
-            } else {
-                saveDatabaseSource(context, url, content, oldUrl)
-            }
-        } catch (e: Exception) {
-            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
-            throw e
-        }
+        val builder = LocalDatabaseBuilder(
+            context = context,
+            url = url,
+            uri = uri,
+            oldUrl = oldUrl
+        )
+        builder.build()
     }
 
     /**
-     * Creates a new database initialized from table.db asset.
+     * Creates a new database initialized from table.db asset using [LocalDatabaseBuilder].
      */
     suspend fun createDatabaseFromAsset(
         context: Context,
         assetFileName: String = ASSET_EMPTY_TABLE,
         customName: String? = null
     ) {
-        val fileName = customName?.takeIf { it.isNotBlank() } ?: "new_database.db"
-        val formattedFileName = if (fileName.endsWith(".db", ignoreCase = true)) fileName else "$fileName.db"
-        val url = DatabaseState.toLocalUrl(formattedFileName)
-
-        addDatabase(url)
-        try {
-            val content = withContext(Dispatchers.IO) {
-                context.assets.open(assetFileName).use { inputStream ->
-                    inputStream.readBytes()
-                }
-            }
-            saveDatabaseSource(context, url, content)
-        } catch (e: Exception) {
-            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
-            throw e
-        }
+        val builder = LocalDatabaseBuilder.fromAsset(
+            context = context,
+            customName = customName,
+            assetFileName = assetFileName
+        )
+        builder.build()
     }
 
     /**
@@ -543,191 +435,24 @@ object AppConfigManager {
      * Returns false if this database is already queued or downloading.
      */
     fun refreshDatabaseInBackground(context: Context, url: String): Boolean {
-        return io.github.rumcajs.offlinewebsearch.workers.DatabaseUpdateWorker.enqueueDatabase(context, url)
+        return DatabaseUpdateWorker.enqueueDatabase(context, url)
     }
 
     /**
-     * Downloads a database from the internet, unzips it if needed, and saves it as a local database source.
+     * Downloads a database from the internet, unzips/populates it if needed,
+     * and saves it as a local SQLite database using [InternetDatabaseBuilder].
      */
     suspend fun saveDatabaseFromInternet(
         context: Context,
         url: String,
         oldUrl: String? = null
     ) {
-        val state = DatabaseState.fromUrl(url)
-        val isZip = url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)
-
-        if (state.extension != ".json" && state.extension != ".db" && !isZip) {
-            throw IllegalArgumentException("URL must end with .json, .db, .zip, or .db.zip")
-        }
-
-        if (oldUrl == null) {
-            addDatabase(url)
-        } else {
-            updateDatabase(oldUrl, url)
-        }
-
-        // Set status to DOWNLOADING
-        updateDatabaseStatus(url, DatabaseStatus.DOWNLOADING)
-
-        try {
-            if (!NetworkUtils.verifyUrl(url)) {
-                throw IOException("Invalid URL or server unreachable")
-            }
-
-            val response = NetworkUtils.executeRequestBinary(url)
-            val content = if (response.isValid) response.bytes else null
-
-            if (content == null) {
-                throw IOException("Failed to download database files")
-            }
-
-            if (isZip) {
-                updateDatabaseStatus(url, DatabaseStatus.UNPACKING)
-                val tempZipFile =
-                    withContext(Dispatchers.IO) {
-                        File.createTempFile("temp_db", ".zip", context.cacheDir)
-                    }
-                val tempDbFile = withContext(Dispatchers.IO) {
-                    File.createTempFile("unpacked_db", ".db", context.cacheDir)
-                }
-                try {
-                    tempZipFile.writeBytes(content)
-                    unzipDatabaseToFile(tempZipFile, tempDbFile)
-                    saveDatabaseSourceFromFile(context, url, tempDbFile, oldUrl)
-                } catch (e: Exception) {
-                    val errorDescription = "${e.javaClass.simpleName}: ${e.localizedMessage ?: "Unknown error"}"
-                    throw IOException("Failed to extract .db from zip file ($errorDescription)", e)
-                } finally {
-                    tempZipFile.delete()
-                    tempDbFile.delete()
-                }
-            } else {
-                saveDatabaseSource(context, url, content, oldUrl)
-            }
-        } catch (e: Exception) {
-            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
-            throw e
-        }
-    }
-
-    private suspend fun saveDatabaseSourceFromFile(
-        context: Context,
-        url: String,
-        sourceFile: File,
-        oldUrl: String? = null
-    ) = withContext(Dispatchers.IO) {
-        val now = DateUtils.getCurrentIsoTimestamp()
-        val newState = DatabaseState.fromUrl(url).copy(
-            status = DatabaseStatus.READY,
-            progress = 1.0f,
-            dateCreated = now,
-            dateLastRefresh = now
+        val builder = InternetDatabaseBuilder(
+            context = context,
+            url = url,
+            oldUrl = oldUrl
         )
-
-        try {
-            // Remove old/existing files and sidecars for this local database
-            removeDatabaseFiles(context, newState.localFileName)
-
-            context.openFileOutput(newState.localFileName, Context.MODE_PRIVATE).use { output ->
-                sourceFile.inputStream().use { input ->
-                    input.copyTo(output)
-                }
-            }
-
-            // Inspect unpacked database for configurationentry & searchview tables using domain models
-            val dbFile = if (newState.extension == ".db") File(context.filesDir, newState.localFileName) else null
-            val configEntry = if (dbFile != null) ConfigurationEntry.readFromDatabase(dbFile) else null
-            val searchViewEntry = if (dbFile != null) SearchViewRepository.readDefaultFromDatabase(dbFile) else null
-
-            updateConfig { config ->
-                if (oldUrl != null && oldUrl != url) {
-                    val oldState = DatabaseState.fromUrl(oldUrl)
-                    removeDatabaseFiles(context, oldState.localFileName)
-                }
-
-                val newDatabases = config.databases.toMutableMap().apply {
-                    if (oldUrl != null) {
-                        remove(oldUrl)?.let { state ->
-                            put(url, state.copy(
-                                url = url,
-                                localFileName = newState.localFileName,
-                                status = DatabaseStatus.READY,
-                                progress = 1.0f,
-                                errorMessage = null,
-                                dateCreated = state.dateCreated ?: now,
-                                dateLastRefresh = now
-                            ))
-                        }
-                    } else {
-                        put(url, newState)
-                    }
-                }
-
-                val newDbConfigs = config.dbConfigs.toMutableMap().apply {
-                    val existingConfig = if (oldUrl != null) remove(oldUrl) else get(url)
-                    var updatedConfig = existingConfig ?: config.defaultDbConfig
-                    if (configEntry?.showIcons != null) {
-                        updatedConfig = updatedConfig.copy(showIcons = configEntry.showIcons)
-                    }
-                    if (configEntry?.viewStyle != null) {
-                        updatedConfig = updatedConfig.copy(viewStyle = configEntry.viewStyle!!)
-                    }
-                    if (configEntry?.linksPerPage != null) {
-                        val links = kotlin.math.max(DatabaseConfiguration.MIN_LINKS_PER_PAGE, configEntry.linksPerPage)
-                        updatedConfig = updatedConfig.copy(linksPerPage = links)
-                    }
-                    if (configEntry?.trackUserSearches != null) {
-                        updatedConfig = updatedConfig.copy(trackUserSearches = configEntry.trackUserSearches)
-                    }
-                    if (configEntry?.trackUserNavigation != null) {
-                        updatedConfig = updatedConfig.copy(trackUserNavigation = configEntry.trackUserNavigation)
-                    }
-                    if (configEntry?.entriesVisitAlpha != null) {
-                        updatedConfig = updatedConfig.copy(entriesVisitAlpha = configEntry.entriesVisitAlpha)
-                    }
-                    if (configEntry?.entriesDeadAlpha != null) {
-                        updatedConfig = updatedConfig.copy(entriesDeadAlpha = configEntry.entriesDeadAlpha)
-                    }
-                    if (searchViewEntry?.orderBy != null) {
-                        updatedConfig = updatedConfig.copy(orderBy = searchViewEntry.orderBy!!)
-                    }
-                    put(url, updatedConfig)
-                }
-
-                config.copy(
-                    databases = newDatabases,
-                    dbConfigs = newDbConfigs,
-                    activeDatabaseUrl = if (config.activeDatabaseUrl == oldUrl) url else config.activeDatabaseUrl
-                )
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            updateDatabaseStatus(url, DatabaseStatus.FAILED, e.message)
-            throw e
-        }
-    }
-
-    /**
-     * Unpacks a ZIP archive provided as a File and extracts the first database (.db) file found into [outputFile].
-     */
-    @Throws(IOException::class, NoSuchElementException::class)
-    internal fun unzipDatabaseToFile(zipFile: File, outputFile: File) {
-        ZipFile(zipFile).use { zip ->
-            val entries = zip.entries()
-            while (entries.hasMoreElements()) {
-                val entry = entries.nextElement()
-                if (!entry.isDirectory && entry.name.endsWith(".db", ignoreCase = true)) {
-                    zip.getInputStream(entry).use { inputStream ->
-                        outputFile.outputStream().use { outputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                        return
-                    }
-                }
-            }
-            throw NoSuchElementException("ZIP archive parsed successfully, but no file ending in '.db' was found inside.")
-        }
+        builder.build()
     }
 
     fun setActiveDatabase(url: String?) {
@@ -735,65 +460,12 @@ object AppConfigManager {
     }
 
     /**
-     * Creates a copy of the specified database and its configuration.
-     * Generates a new local:// URL with "Copy" in its display name/URL.
+     * Creates a copy of the specified database and its configuration using [LocalDatabaseBuilder].
      */
     suspend fun duplicateDatabase(context: Context, state: DatabaseState): Boolean = withContext(Dispatchers.IO) {
         try {
-            val baseName = if (state.displayName.isNotBlank()) state.displayName else "Database"
-            var copyIndex = 1
-            var newUrl: String
-            var newLocalFileName: String
-
-            val ext = state.extension
-            val timestamp = System.currentTimeMillis()
-
-            do {
-                val candidateName = if (copyIndex == 1) "$baseName Copy" else "$baseName Copy $copyIndex"
-                newUrl = DatabaseState.toLocalUrl("$candidateName$ext")
-                newLocalFileName = "db_${timestamp}_$copyIndex$ext"
-                copyIndex++
-            } while (config.value.databases.containsKey(newUrl))
-
-            // Copy physical file if present
-            if (state.localFileName.isNotBlank()) {
-                val sourceFile = File(context.filesDir, state.localFileName)
-                if (sourceFile.exists()) {
-                    val destFile = File(context.filesDir, newLocalFileName)
-                    sourceFile.copyTo(destFile, overwrite = true)
-                }
-            } else {
-                // If it's a bundled asset like places_0.json
-                val destFile = File(context.filesDir, newLocalFileName)
-                context.assets.open("places_0.json").use { input ->
-                    destFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-            }
-
-            val destFile = File(context.filesDir, newLocalFileName)
-            val newSize = if (destFile.exists()) destFile.length() else 0L
-
-            val copyState = DatabaseState(
-                url = newUrl,
-                localFileName = newLocalFileName,
-                status = DatabaseStatus.READY,
-                progress = 1.0f,
-                errorMessage = null,
-                sizeInBytes = newSize,
-                isReadOnly = !newLocalFileName.endsWith(".db"),
-                dateCreated = DateUtils.getCurrentIsoTimestamp(),
-                dateLastRefresh = DateUtils.getCurrentIsoTimestamp()
-            )
-
-            updateConfig { currentConfig ->
-                val existingDbConfig = currentConfig.dbConfigs[state.url] ?: currentConfig.defaultDbConfig
-                currentConfig.copy(
-                    databases = currentConfig.databases + (newUrl to copyState),
-                    dbConfigs = currentConfig.dbConfigs + (newUrl to existingDbConfig)
-                )
-            }
+            val builder = LocalDatabaseBuilder.duplicate(context, state)
+            builder.build()
             true
         } catch (e: Exception) {
             e.printStackTrace()

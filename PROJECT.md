@@ -41,7 +41,8 @@ Users can provide databases from:
 # Database handling
  - any internet database is downloaded to application storage, and used from there
  - any archived database is unpacked, and used from unpacked file
- - local files can be used without copying them when Android permissions allow direct access.
+ - any JSON database or bundled default asset files are read into an empty SQLite database (table.db template), so all databases are writable SQLite databases
+ - local files can be used without copying them when Android permissions allow direct access (or converted/copied when importing JSON/archives).
  - Downloaded databases can be downloaded again.
  - Re-fetching a database replaces the current local copy.
  - The user is notified before a local database is replaced.
@@ -64,8 +65,10 @@ It contains:
  - Date of last database refresh/update
 
 Possible database states include:
+ - INIT
  - DOWNLOADING
  - UNPACKING
+ - POPULATING_TABLE
  - READY
  - FAILED
 

@@ -265,10 +265,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val state = if (url == null) {
                                 entriesViewModel.selectedDatabaseState ?: _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseState(
                                     url = "",
-                                    localFileName = "places_0.json",
+                                    localFileName = "default.db",
                                     status = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY,
                                     progress = 1.0f,
-                                    isReadOnly = true
+                                    isReadOnly = false
                                 )
                             } else {
                                 config.databases[url] ?: entriesViewModel.selectedDatabaseState

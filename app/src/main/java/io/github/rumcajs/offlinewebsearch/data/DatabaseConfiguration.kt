@@ -37,21 +37,21 @@ data class DatabaseState(
     val progress: Float = 0f,
     val errorMessage: String? = null,
     val sizeInBytes: Long = 0L,
-    val isReadOnly: Boolean = true,
+    val isReadOnly: Boolean = false,
     /** ISO-8601 timestamp of when the database was first added. Null if unknown. */
     val dateCreated: String? = null,
     /** ISO-8601 timestamp of the most recent successful fetch or refresh. Null if never refreshed. */
     val dateLastRefresh: String? = null
 ) {
-    /** The storage extension of the local file: ".db" or ".json" */
+    /** The storage extension of the local file: ".db" */
     val extension: String
-        get() = if (localFileName.endsWith(".db")) ".db" else ".json"
+        get() = ".db"
 
     val isLocal: Boolean
         get() = url.startsWith(LOCAL_PREFIX)
 
     val isSQLite: Boolean
-        get() = extension == ".db"
+        get() = true
 
     val displayName: String
         get() = when {
@@ -73,15 +73,11 @@ data class DatabaseState(
 
         /**
          * Derives the local file name from a source URL.
-         * .db.zip URLs are stored as .db after unpacking.
+         * All databases are stored as SQLite (.db) files.
          */
-        private fun deriveLocalFileName(url: String): String {
-            val ext = when {
-                url.endsWith(".db.zip", ignoreCase = true) -> ".db"
-                url.endsWith(".db", ignoreCase = true) -> ".db"
-                else -> ".json"
-            }
-            return "db_${url.hashCode()}$ext"
+        fun deriveLocalFileName(url: String): String {
+            val hash = kotlin.math.abs(url.hashCode())
+            return "db_$hash.db"
         }
 
         /** Creates a DatabaseState with a localFileName derived from the URL */
@@ -90,7 +86,7 @@ data class DatabaseState(
             return DatabaseState(
                 url = url,
                 localFileName = localName,
-                isReadOnly = !localName.endsWith(".db")
+                isReadOnly = false
             )
         }
     }
