@@ -420,21 +420,13 @@ fun SourcesListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Refresh FAB — shown above the Add FAB when refresh is available (has outdated sources or currently refreshing)
-                if (hasOutdatedSources || isRefreshingAll) {
+                if (hasOutdatedSources && !isRefreshingAll) {
                     FloatingActionButton(
                         onClick = { if (!isRefreshingAll) performRefreshAll() },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     ) {
-                        if (isRefreshingAll) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Fetch all sources")
-                        }
+                        Icon(Icons.Default.Refresh, contentDescription = "Fetch all sources")
                     }
                 }
 

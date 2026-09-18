@@ -214,7 +214,10 @@ The screen displays, where available:
  - The button updates the stored entry metadata.
 
 ## SourcesListScreen
- - Provides floating buttons on right bottom: add, fetch, navigate to top
+ - Provides floating buttons on right bottom:
+    - add
+    - fetch - visible when any sources is outdated and can be refreshed
+    - navigate to top - available when user scrolls
  - Selecting source opens SourceDetailScreen.
  - Provides search widget, similar to EntryListScreen, it should be scrollable together with the results
  - Similarly to EntryListScreen should contain "Search" button with a button to apply filter (order by title, or fetch time)
