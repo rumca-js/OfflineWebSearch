@@ -7,6 +7,20 @@ const val DATABASES_LIST_INIT: String = "https://raw.githubusercontent.com/rumca
 const val DEFAULT_DATABASE_NAME: String = "Default (Assets)"
 const val ASSET_EMPTY_TABLE: String = "table.db"
 
+const val defaultAssets = listOf(
+    "places_0.json",
+    "places_1.json",
+    "places_2.json",
+    "places_3.json",
+    "places_4.json",
+    "places_5.json",
+    "places_6.json",
+    "places_7.json",
+    "places_8.json",
+    "places_9.json",
+    "places_10.json",
+)
+
 @Serializable
 data class NetworkConfig(
     val connectTimeout: Int = 10000,

@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.data.repositories
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.defaultAssets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -18,20 +19,6 @@ object EntryJsonRepository : EntryRepository() {
         ignoreUnknownKeys = true
         coerceInputValues = true
     }
-
-    val defaultAssets = listOf(
-        "places_0.json",
-        "places_1.json",
-        "places_2.json",
-        "places_3.json",
-        "places_4.json",
-        "places_5.json",
-        "places_6.json",
-        "places_7.json",
-        "places_8.json",
-        "places_9.json",
-        "places_10.json",
-    )
 
     override suspend fun countEntries(
         context: Context,
