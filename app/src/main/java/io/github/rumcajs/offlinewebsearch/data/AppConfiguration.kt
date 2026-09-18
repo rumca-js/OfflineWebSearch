@@ -7,7 +7,7 @@ const val DATABASES_LIST_INIT: String = "https://raw.githubusercontent.com/rumca
 const val DEFAULT_DATABASE_NAME: String = "Default (Assets)"
 const val ASSET_EMPTY_TABLE: String = "table.db"
 
-const val defaultAssets = listOf(
+val defaultAssets = listOf(
     "places_0.json",
     "places_1.json",
     "places_2.json",
