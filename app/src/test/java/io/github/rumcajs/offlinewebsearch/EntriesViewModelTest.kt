@@ -1,15 +1,15 @@
 package io.github.rumcajs.offlinewebsearch
 
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
-import io.github.rumcajs.offlinewebsearch.ui.SearchViewModel
+import io.github.rumcajs.offlinewebsearch.ui.EntriesViewModel
 import org.junit.Assert.*
 import org.junit.Test
 
-class SearchViewModelTest {
+class EntriesViewModelTest {
 
     @Test
     fun testSuggestionsVisibility() {
-        val viewModel = _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.SearchViewModel()
+        val viewModel = EntriesViewModel()
         
         // Initial state
         assertTrue(viewModel.suggestions.isEmpty())
@@ -42,7 +42,7 @@ class SearchViewModelTest {
 
     @Test
     fun testSearchButtonState() {
-        val viewModel = _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.SearchViewModel()
+        val viewModel = EntriesViewModel()
         
         // Initial state: disabled because searchQuery == activeSearchQuery == ""
         assertFalse(viewModel.isSearchButtonEnabled)
@@ -76,7 +76,7 @@ class SearchViewModelTest {
 
     @Test
     fun testFilterOptionsMutualExclusivity() {
-        val viewModel = SearchViewModel()
+        val viewModel = EntriesViewModel()
 
         // Initial state: None
         assertEquals(io.github.rumcajs.offlinewebsearch.ui.SearchFilter.None, viewModel.activeFilter)

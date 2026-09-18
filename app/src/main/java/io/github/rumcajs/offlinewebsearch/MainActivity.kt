@@ -62,7 +62,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
         AppConfigManager.initialize(this)
         enableEdgeToEdge()
         setContent {
-            val searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel()
+            val entriesViewModel: io.github.rumcajs.offlinewebsearch.ui.EntriesViewModel = viewModel()
+            val sourcesViewModel: io.github.rumcajs.offlinewebsearch.ui.SourcesViewModel = viewModel()
             val context = androidx.compose.ui.platform.LocalContext.current
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
@@ -157,9 +158,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                     ) {
                         composable(Screen.Home.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntriesListScreen(
-                                viewModel = searchViewModel,
+                                viewModel = entriesViewModel,
                                 onNavigateToDetail = { entry ->
-                                    searchViewModel.selectedEntry = entry
+                                    entriesViewModel.selectedEntry = entry
                                     navController.navigate(Screen.Detail.route)
                                 },
                                 onNavigateToAddEntry = {
@@ -175,19 +176,20 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.Sources.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourcesListScreen(
+                                viewModel = sourcesViewModel,
                                 onNavigateToSource = { source ->
-                                    searchViewModel.selectedSource = source
+                                    sourcesViewModel.selectedSource = source
                                     navController.navigate(Screen.SourceDetail.route)
                                 },
                                 onNavigateToEditSource = { source ->
-                                    searchViewModel.selectedSource = source
+                                    sourcesViewModel.selectedSource = source
                                     navController.navigate(Screen.SourceEdit.route)
                                 },
                                 onNavigateToAddSource = {
                                     navController.navigate(Screen.SourceUrlEditPreview.route)
                                 },
                                 onRefreshSuccess = {
-                                    searchViewModel.refreshPage(context)
+                                    entriesViewModel.refreshPage(context)
                                 }
                             )
                         }
@@ -195,7 +197,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             val context = androidx.compose.ui.platform.LocalContext.current
                             val scope = rememberCoroutineScope()
                             val config by AppConfigManager.config.collectAsState()
-                            searchViewModel.selectedSource?.let { source ->
+                            sourcesViewModel.selectedSource?.let { source ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceDetailScreen(
                                     source = source,
                                     onNavigateToEdit = {
@@ -222,26 +224,26 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     },
                                     onBrowseEntries = { src ->
                                         val queryVal = if (src.id != null && src.id != 0L) "source_id = '${src.id}'" else "source_url = '${src.url}'"
-                                        searchViewModel.searchQuery = queryVal
-                                        searchViewModel.performSearch(context)
+                                        entriesViewModel.searchQuery = queryVal
+                                        entriesViewModel.performSearch(context)
                                         navController.popBackStack(Screen.Home.route, false)
                                     },
                                     onRefreshSuccess = {
-                                        searchViewModel.refreshPage(context)
+                                        entriesViewModel.refreshPage(context)
                                     },
                                     onSourceUpdated = { updated ->
-                                        searchViewModel.selectedSource = updated
+                                        sourcesViewModel.selectedSource = updated
                                     },
                                     onBack = { navController.popBackStack() }
                                 )
                             }
                         }
                         composable(Screen.SourceEdit.route) {
-                            searchViewModel.selectedSource?.let { source ->
+                            sourcesViewModel.selectedSource?.let { source ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceEditScreen(
                                     source = source,
                                     onSourceUpdated = { updatedSource ->
-                                        searchViewModel.selectedSource = updatedSource
+                                        sourcesViewModel.selectedSource = updatedSource
                                         navController.popBackStack()
                                     },
                                     onBack = { navController.popBackStack() }
@@ -251,17 +253,17 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         composable(Screen.SourceUrlEditPreview.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceUrlEditPreviewScreen(
                                 onSourceAdded = { addedSource ->
-                                    searchViewModel.selectedSource = addedSource
+                                    sourcesViewModel.selectedSource = addedSource
                                     navController.popBackStack()
                                 },
                                 onBack = { navController.popBackStack() }
                             )
                         }
                         composable(Screen.DatabaseDetail.route) {
-                            val url = searchViewModel.selectedDatabaseUrl
+                            val url = entriesViewModel.selectedDatabaseUrl
                             val config = AppConfigManager.config.collectAsState().value
                             val state = if (url == null) {
-                                searchViewModel.selectedDatabaseState ?: _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseState(
+                                entriesViewModel.selectedDatabaseState ?: _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseState(
                                     url = "",
                                     localFileName = "places_0.json",
                                     status = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY,
@@ -269,7 +271,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     isReadOnly = true
                                 )
                             } else {
-                                config.databases[url] ?: searchViewModel.selectedDatabaseState
+                                config.databases[url] ?: entriesViewModel.selectedDatabaseState
                             }
                             if (state != null) {
                                 val dbConfig = if (url == null) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
@@ -280,7 +282,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     dbConfig = dbConfig,
                                     isActive = isActive,
                                     onBack = { navController.popBackStack() },
-                                    onSetActive = { handleDatabaseChange(url, searchViewModel, navController) }
+                                    onSetActive = { handleDatabaseChange(url, entriesViewModel, navController) }
                                 )
                             }
                         }
@@ -291,8 +293,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     navController.navigate(Screen.Databases.route)
                                 },
                                 onNavigateToDatabaseDetail = { url, state ->
-                                    searchViewModel.selectedDatabaseUrl = url
-                                    searchViewModel.selectedDatabaseState = state
+                                    entriesViewModel.selectedDatabaseUrl = url
+                                    entriesViewModel.selectedDatabaseState = state
                                     navController.navigate(Screen.DatabaseDetail.route)
                                 },
                                 onNavigateToPreselectedList = {
@@ -311,7 +313,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     navController.navigate(Screen.LinkChecker.route)
                                 },
                                 onSetActive = { url ->
-                                    handleDatabaseChange(url, searchViewModel, navController)
+                                    handleDatabaseChange(url, entriesViewModel, navController)
                                 }
                             )
                         }
@@ -337,58 +339,58 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.Detail.route) {
                             val context = androidx.compose.ui.platform.LocalContext.current
-                            searchViewModel.selectedEntry?.let { place ->
+                            entriesViewModel.selectedEntry?.let { place ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryDetailScreen(
-                                    entry = searchViewModel.selectedEntry ?: place,
+                                    entry = entriesViewModel.selectedEntry ?: place,
                                     onNavigateToLinkPreview = { url ->
-                                        searchViewModel.previewUrl = url
+                                        entriesViewModel.previewUrl = url
                                         navController.navigate(Screen.LinkPreview.route)
                                     },
                                     onNavigateToEdit = {
                                         navController.navigate(Screen.Edit.route)
                                     },
                                     onDelete = {
-                                        searchViewModel.deleteEntry(context, place) { success ->
+                                        entriesViewModel.deleteEntry(context, place) { success ->
                                             if (success) {
-                                                searchViewModel.selectedEntry = null
+                                                entriesViewModel.selectedEntry = null
                                                 navController.popBackStack()
                                             }
                                         }
                                     },
                                     onTagClick = { tag ->
-                                        searchViewModel.searchQuery = "tag LIKE '%$tag%'"
-                                        searchViewModel.performSearch(context)
+                                        entriesViewModel.searchQuery = "tag LIKE '%$tag%'"
+                                        entriesViewModel.performSearch(context)
                                         navController.popBackStack(Screen.Home.route, false)
                                     },
                                     onVisit = {
-                                        searchViewModel.recordVisit(context, place)
+                                        entriesViewModel.recordVisit(context, place)
                                     },
                                     onSelectEntry = { targetEntry ->
-                                        searchViewModel.selectedEntry = targetEntry
+                                        entriesViewModel.selectedEntry = targetEntry
                                     },
                                     onSelectSource = { source ->
-                                        searchViewModel.selectedSource = source
+                                        sourcesViewModel.selectedSource = source
                                         navController.navigate(Screen.SourceDetail.route)
                                     },
                                     onReadLaterChanged = { isNowBookmarked ->
                                          // Keep the in-memory list in sync so the bookmark icon
                                          // and alpha are correct immediately on back navigation.
-                                         searchViewModel.selectedEntry?.let { entry ->
-                                             searchViewModel.updateEntryBookmarked(entry, isNowBookmarked)
+                                         entriesViewModel.selectedEntry?.let { entry ->
+                                             entriesViewModel.updateEntryBookmarked(entry, isNowBookmarked)
                                          }
                                          // Refresh list so that removing/adding a Read Later
                                          // entry is reflected immediately when the filter is active.
-                                         if (searchViewModel.isFilterReadLater) {
-                                             searchViewModel.refreshPage(context)
+                                         if (entriesViewModel.isFilterReadLater) {
+                                             entriesViewModel.refreshPage(context)
                                          }
                                      },
                                      onBack = {
                                          val cfg = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
-                                         val isSortingByVisits = searchViewModel.isFilterVisits ||
-                                             (searchViewModel.activeFilter == _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.SearchFilter.None &&
+                                         val isSortingByVisits = entriesViewModel.isFilterVisits ||
+                                             (entriesViewModel.activeFilter == _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.SearchFilter.None &&
                                                  cfg.dbconfig.orderBy == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VISITS_DESC)
                                          if (isSortingByVisits) {
-                                             searchViewModel.refreshPage(context)
+                                             entriesViewModel.refreshPage(context)
                                          }
                                          navController.popBackStack()
                                      }
@@ -397,12 +399,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.Edit.route) {
                             val context = androidx.compose.ui.platform.LocalContext.current
-                            searchViewModel.selectedEntry?.let { place ->
+                            entriesViewModel.selectedEntry?.let { place ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryEditScreen(
                                     entry = place,
                                     onEntryUpdated = { updatedEntry ->
-                                        searchViewModel.selectedEntry = updatedEntry
-                                        searchViewModel.refreshPage(context)
+                                        entriesViewModel.selectedEntry = updatedEntry
+                                        entriesViewModel.refreshPage(context)
                                         navController.popBackStack()
                                     },
                                     onBack = { navController.popBackStack() }
@@ -414,18 +416,18 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryEditScreen(
                                 entry = Entry(),
                                 onEntryUpdated = { newEntry ->
-                                    searchViewModel.refreshPage(context)
+                                    entriesViewModel.refreshPage(context)
                                     navController.popBackStack()
                                 },
                                 onBack = { navController.popBackStack() }
                             )
                         }
                         composable(Screen.LinkPreview.route) {
-                            searchViewModel.previewUrl?.let { url ->
+                            entriesViewModel.previewUrl?.let { url ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.UrlStatusScreen(
                                     url = url,
                                     onNavigateToLinkData = {
-                                        searchViewModel.previewUrl = url
+                                        entriesViewModel.previewUrl = url
                                         navController.navigate(Screen.LinkData.route)
                                     },
                                     onBack = { navController.popBackStack() }
@@ -433,12 +435,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             }
                         }
                         composable(Screen.LinkData.route) {
-                            searchViewModel.previewUrl?.let { url ->
+                            entriesViewModel.previewUrl?.let { url ->
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.UrlPreviewScreen(
                                     url = url,
                                     onBack = { navController.popBackStack() },
                                     onNavigateToDetail = { entry ->
-                                        searchViewModel.selectedEntry = entry
+                                        entriesViewModel.selectedEntry = entry
                                         navController.navigate(Screen.Detail.route)
                                     }
                                 )
@@ -449,7 +451,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 url = "",
                                 onBack = { navController.popBackStack() },
                                 onNavigateToDetail = { entry ->
-                                    searchViewModel.selectedEntry = entry
+                                    entriesViewModel.selectedEntry = entry
                                     navController.navigate(Screen.Detail.route)
                                 }
                             )
@@ -464,16 +466,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
      * Handles changing (activating) the selected database and resets screens to defaults.
      *
      * @param databaseUrl The URL/key of the database to activate, or null for default (Assets).
-     * @param searchViewModel The ViewModel to reset screen defaults on.
+     * @param entriesViewModel The ViewModel to reset screen defaults on.
      * @param navController The NavController to reset backstack and routes back to defaults.
      */
     fun handleDatabaseChange(
         databaseUrl: String?,
-        searchViewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel,
+        entriesViewModel: io.github.rumcajs.offlinewebsearch.ui.EntriesViewModel,
         navController: androidx.navigation.NavController? = null
     ) {
         AppConfigManager.setActiveDatabase(databaseUrl)
-        searchViewModel.resetToDefaults()
+        entriesViewModel.resetToDefaults()
 
         // If the user changed the database from DatabaseDetail (or another sub-screen),
         // pop back to OptionsScreen so OptionsScreen remains the current screen.

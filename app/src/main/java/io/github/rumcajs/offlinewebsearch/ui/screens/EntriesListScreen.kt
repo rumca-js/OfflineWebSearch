@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntriesListScreen(
-    viewModel: io.github.rumcajs.offlinewebsearch.ui.SearchViewModel = viewModel(),
+    viewModel: io.github.rumcajs.offlinewebsearch.ui.EntriesViewModel = viewModel(),
     onNavigateToDetail: (Entry) -> Unit = {},
     onNavigateToAddEntry: (() -> Unit)? = null,
     onNavigateToVisited: (() -> Unit)? = null,

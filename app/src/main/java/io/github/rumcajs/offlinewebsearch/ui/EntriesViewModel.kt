@@ -16,11 +16,14 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.OrderBy
 import io.github.rumcajs.offlinewebsearch.data.repositories.SearchHistoryRepository
-import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class SearchViewModel : ViewModel() {
+/**
+ * ViewModel managing Entries state, search querying, filtering, pagination, and visit history.
+ */
+class EntriesViewModel : ViewModel() {
     var searchQuery by mutableStateOf("")
     var showSuggestions by mutableStateOf(false)
     var activeSearchQuery by mutableStateOf("")
@@ -73,7 +76,6 @@ class SearchViewModel : ViewModel() {
     var previewUrl by mutableStateOf<String?>(null)
     var selectedDatabaseUrl by mutableStateOf<String?>(null)
     var selectedDatabaseState by mutableStateOf<DatabaseState?>(null)
-    var selectedSource by mutableStateOf<Source?>(null)
 
     var currentPage by mutableIntStateOf(0)
     var pageSize by mutableIntStateOf(DatabaseConfiguration.MIN_LINKS_PER_PAGE)
@@ -97,12 +99,26 @@ class SearchViewModel : ViewModel() {
     private var currentOrderBy: OrderBy? = null
     private var currentLinksPerPage: Int? = null
     private var isObservingConfig = false
+    private var isObservingWorker = false
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Config watcher – reload when database, order, or linksPerPage changes
+    // Config & Worker watcher – reload when database, config, or source refresh changes
     // ──────────────────────────────────────────────────────────────────────────
 
     fun loadDataIfNeeded(context: Context) {
+        if (!isObservingWorker) {
+            isObservingWorker = true
+            viewModelScope.launch {
+                var wasRunning = false
+                SourceRefreshWorker.progress.collect { progress ->
+                    if (wasRunning && !progress.isRunning && progress.done > 0) {
+                        refreshCurrentPage(context)
+                    }
+                    wasRunning = progress.isRunning
+                }
+            }
+        }
+
         if (isObservingConfig) return
         isObservingConfig = true
 
@@ -175,24 +191,6 @@ class SearchViewModel : ViewModel() {
         showSuggestions = false
         activeFilter = SearchFilter.None
         currentPage = 0
-
-        /* TODO this does not work
-        searchQuery = ""
-        activeSearchQuery = ""
-        showSuggestions = false
-        activeFilter = SearchFilter.None
-        currentPage = 0
-        selectedEntry = null
-        previewUrl = null
-        selectedDatabaseUrl = null
-        selectedDatabaseState = null
-        selectedSource = null
-        viewModelScope.launch {
-            try {
-                listState.scrollToItem(0)
-            } catch (_: Exception) {}
-        }
-         */
     }
 
     // ──────────────────────────────────────────────────────────────────────────

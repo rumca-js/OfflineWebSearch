@@ -8,13 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -22,42 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
-import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
-import io.github.rumcajs.offlinewebsearch.data.repositories.SourceWithOperationalData
-import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
+import io.github.rumcajs.offlinewebsearch.ui.SOURCE_FILTER_OPTIONS
+import io.github.rumcajs.offlinewebsearch.ui.SourcesViewModel
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceListItem
-import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
-
-/** Key constants for [SourcesListScreen] filter dropdown options. */
-private const val FILTER_KEY_BY_URL = "by_url"
-private const val FILTER_KEY_BY_TITLE = "by_title"
-private const val FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
-
-/** Sort mode applied to the in-memory source list. */
-private enum class SourceOrder { ByUrl, ByTitle, ByFetchTime }
-
-/** [FilterOption] list shown in the [SearchContainer] dropdown for [SourcesListScreen]. */
-private val SOURCE_FILTER_OPTIONS = listOf(
-    FilterOption(
-        key = FILTER_KEY_BY_URL,
-        label = "By Url",
-        icon = Icons.Default.SortByAlpha
-    ),
-    FilterOption(
-        key = FILTER_KEY_BY_TITLE,
-        label = "By Title",
-        icon = Icons.Default.SortByAlpha
-    ),
-    FilterOption(
-        key = FILTER_KEY_BY_FETCH_TIME,
-        label = "By Fetch Time",
-        icon = Icons.Default.DateRange
-    )
-)
 
 /**
  * Screen displaying the list of RSS/feed sources from `sourcedatamodel`.
@@ -69,16 +38,13 @@ private val SOURCE_FILTER_OPTIONS = listOf(
  *
  * The widget uses the shared [SearchContainer] component:
  *  - Full-width text field
- *  - "Search" button that applies the current query (in-memory filter)
+ *  - "Search" button that applies the current query
  *  - Filter icon button opening a dropdown with "By Url", "By Title", and "By Fetch Time"
- *
- * By default, "By Url" filter is applied. A filter is always applied.
- * Selecting a filter immediately re-sorts the list; no "Search" press is needed.
- * Selecting an active non-default filter resets back to "By Url".
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SourcesListScreen(
+    viewModel: SourcesViewModel = viewModel(),
     onNavigateToSource: (Source) -> Unit,
     onNavigateToEditSource: (Source) -> Unit,
     onNavigateToAddSource: (() -> Unit)? = null,
@@ -92,126 +58,20 @@ fun SourcesListScreen(
     val activeDbState = config.activeDatabaseState
     val isEditable = activeDbState != null && !activeDbState.isReadOnly
 
-    // Raw search input (typing in the text field).
-    var searchQuery by remember { mutableStateOf("") }
-    // The query that was last submitted via the Search button.
-    var activeSearchQuery by remember { mutableStateOf("") }
-    var sourceOrder by remember { mutableStateOf(SourceOrder.ByUrl) }
-    var sourceItems by remember { mutableStateOf<List<SourceWithOperationalData>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var isRefreshingAll by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
+    val listState = viewModel.listState
     var sourceToDelete by remember { mutableStateOf<Source?>(null) }
-    var hasOutdatedSources by remember { mutableStateOf(false) }
+    var deleteEntriesWithSource by remember { mutableStateOf(false) }
 
-    val loadSources: () -> Unit = {
-        scope.launch {
-            isLoading = true
-            sourceItems = SourceRepository.getAllSourcesWithOperationalData(context, activeDbState)
-            isLoading = false
-        }
+    LaunchedEffect(Unit) {
+        viewModel.loadDataIfNeeded(context)
     }
 
-    LaunchedEffect(config.activeDatabaseUrl) {
-        loadSources()
-    }
-
-    // Observe the worker's progress to reload the source list once a refresh finishes.
-    // This handles both auto-refresh (triggered from MainActivity on resume) and
-    // explicit user-triggered refresh (performRefreshAll below) consistently.
-    val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
-    LaunchedEffect(sourceRefreshProgress.isRunning) {
-        if (!sourceRefreshProgress.isRunning && isRefreshingAll) {
-            isRefreshingAll = false
-            val count = sourceRefreshProgress.done
-            if (count > 0) {
-                Toast.makeText(context, "Refreshed $count source(s)", Toast.LENGTH_SHORT).show()
-                onRefreshSuccess?.invoke()
-            }
-            loadSources()
-        }
-    }
-    isRefreshingAll = sourceRefreshProgress.isRunning
-
-    LaunchedEffect(config.activeDatabaseUrl, config.networkConfig.disabled, sourceRefreshProgress.isRunning, sourceItems) {
-        if (!sourceRefreshProgress.isRunning) {
-            hasOutdatedSources = SourceRepository.hasOutdatedSources(context, activeDbState)
-        }
-    }
-
-    val performRefreshAll: () -> Unit = {
-        if (config.networkConfig.disabled) {
-            Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
-        } else if (activeDbState == null || activeDbState.isReadOnly || !activeDbState.isSQLite) {
-            Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
-        } else if (sourceItems.isEmpty()) {
-            Toast.makeText(context, "No sources to fetch", Toast.LENGTH_SHORT).show()
-        } else {
-            isRefreshingAll = true
-            scope.launch {
-                SourceRefreshWorker.enqueueOutdatedSources(
-                    context = context,
-                    dbState = activeDbState,
-                )
-            }
-        }
-    }
-
-    fun getSourcesEmptyText() : String
-    {
+    fun getSourcesEmptyText(): String {
         if (isEditable) {
             return "No sources available in current database. Feeds and RSS sources can be added via the add button."
         }
         return "Database is read-only. Cannot edit sources"
     }
-
-    /**
-     * Applies [activeSearchQuery] and [sourceOrder] to [sourceItems] to produce the
-     * displayed list.
-     */
-    val filteredSources = remember(sourceItems, activeSearchQuery, sourceOrder) {
-        val base = if (activeSearchQuery.isBlank()) {
-            sourceItems
-        } else {
-            val query = activeSearchQuery.trim().lowercase()
-            sourceItems.filter { item ->
-                item.source.title.lowercase().contains(query) ||
-                    item.source.url.lowercase().contains(query)
-            }
-        }
-        when (sourceOrder) {
-            SourceOrder.ByUrl -> base.sortedWith(compareBy<SourceWithOperationalData> { it.source.url.lowercase() }.thenBy { it.source.title.lowercase() })
-            SourceOrder.ByTitle -> base.sortedWith(compareBy<SourceWithOperationalData> { it.source.title.lowercase() }.thenBy { it.source.url.lowercase() })
-            SourceOrder.ByFetchTime -> base.sortedWith(
-                compareBy<SourceWithOperationalData> { it.operationalData?.date_fetched ?: "" }
-                    .thenBy { it.source.url.lowercase() }
-            )
-        }
-    }
-
-    /** Whether the Search button should be enabled (query differs from active query). */
-    val isSearchButtonEnabled = searchQuery != activeSearchQuery
-
-    /** Key of the currently active filter option. */
-    val activeFilterKey: String? = when (sourceOrder) {
-        SourceOrder.ByUrl -> FILTER_KEY_BY_URL
-        SourceOrder.ByTitle -> FILTER_KEY_BY_TITLE
-        SourceOrder.ByFetchTime -> FILTER_KEY_BY_FETCH_TIME
-    }
-
-    /** Called when the user selects an option from the filter dropdown. */
-    val onFilterSelected: (FilterOption) -> Unit = { option ->
-        sourceOrder = when (option.key) {
-            FILTER_KEY_BY_URL -> SourceOrder.ByUrl
-            FILTER_KEY_BY_TITLE ->
-                if (sourceOrder == SourceOrder.ByTitle) SourceOrder.ByUrl else SourceOrder.ByTitle
-            FILTER_KEY_BY_FETCH_TIME ->
-                if (sourceOrder == SourceOrder.ByFetchTime) SourceOrder.ByUrl else SourceOrder.ByFetchTime
-            else -> SourceOrder.ByUrl
-        }
-    }
-
-    var deleteEntriesWithSource by remember { mutableStateOf(false) }
 
     if (sourceToDelete != null) {
         val source = sourceToDelete!!
@@ -252,16 +112,9 @@ fun SourcesListScreen(
                         sourceToDelete = null
                         deleteEntriesWithSource = false
                         if (target?.id != null) {
-                            scope.launch {
-                                val (success, err) = SourceRepository.deleteSource(
-                                    context,
-                                    activeDbState,
-                                    target.id,
-                                    deleteEntries = shouldDeleteEntries
-                                )
+                            viewModel.deleteSource(context, target.id, shouldDeleteEntries) { success, err ->
                                 if (success) {
                                     Toast.makeText(context, "Source deleted", Toast.LENGTH_SHORT).show()
-                                    sourceItems = SourceRepository.getAllSourcesWithOperationalData(context, activeDbState)
                                 } else {
                                     val msg = err ?: "Failed to delete source"
                                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -289,14 +142,12 @@ fun SourcesListScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         PullToRefreshBox(
-            isRefreshing = isLoading,
-            onRefresh = loadSources,
+            isRefreshing = viewModel.isLoading,
+            onRefresh = { viewModel.loadSources(context) },
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            // The search widget is the first item in the LazyColumn so it scrolls
-            // together with the source list — consistent with EntryListScreen.
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -307,23 +158,22 @@ fun SourcesListScreen(
                 if (isEditable) {
                     item(key = "search_widget") {
                         SearchContainer(
-                            searchQuery = searchQuery,
-                            onSearchQueryChange = { searchQuery = it },
+                            searchQuery = viewModel.searchQuery,
+                            onSearchQueryChange = { viewModel.searchQuery = it },
                             onClearSearch = {
-                                searchQuery = ""
-                                activeSearchQuery = ""
+                                viewModel.clearSearch()
                             },
                             onPerformSearch = {
-                                activeSearchQuery = searchQuery
+                                viewModel.performSearch()
                                 scope.launch {
                                     listState.scrollToItem(0)
                                 }
                             },
-                            isSearchButtonEnabled = isSearchButtonEnabled,
+                            isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
                             filterOptions = SOURCE_FILTER_OPTIONS,
-                            activeFilterKey = activeFilterKey,
+                            activeFilterKey = viewModel.activeFilterKey,
                             onFilterSelected = { option ->
-                                onFilterSelected(option)
+                                viewModel.setFilter(option)
                                 scope.launch {
                                     listState.scrollToItem(0)
                                 }
@@ -350,7 +200,7 @@ fun SourcesListScreen(
                 }
 
                 when {
-                    isLoading && sourceItems.isEmpty() -> {
+                    viewModel.isLoading && viewModel.sourceItems.isEmpty() -> {
                         item {
                             Box(
                                 modifier = Modifier
@@ -362,7 +212,7 @@ fun SourcesListScreen(
                             }
                         }
                     }
-                    sourceItems.isEmpty() -> {
+                    viewModel.sourceItems.isEmpty() -> {
                         item {
                             Text(
                                 text = getSourcesEmptyText(),
@@ -374,7 +224,7 @@ fun SourcesListScreen(
                             )
                         }
                     }
-                    filteredSources.isEmpty() -> {
+                    viewModel.filteredSources.isEmpty() -> {
                         item {
                             Text(
                                 text = "No matching sources found.",
@@ -387,7 +237,7 @@ fun SourcesListScreen(
                         }
                     }
                     else -> {
-                        items(filteredSources, key = { it.source.id ?: it.source.url }) { item ->
+                        items(viewModel.filteredSources, key = { it.source.id ?: it.source.url }) { item ->
                             SourceListItem(
                                 source = item.source,
                                 operationalData = item.operationalData,
@@ -397,7 +247,7 @@ fun SourcesListScreen(
                                 onEditClick = { onNavigateToEditSource(item.source) },
                                 onDeleteClick = { sourceToDelete = item.source },
                                 config = config,
-                                isRefreshing = isRefreshingAll
+                                isRefreshing = viewModel.isRefreshingAll
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -419,10 +269,15 @@ fun SourcesListScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Refresh FAB — shown above the Add FAB when refresh is available (has outdated sources or currently refreshing)
-                if (hasOutdatedSources && !isRefreshingAll) {
+                if (viewModel.hasOutdatedSources && !viewModel.isRefreshingAll) {
                     FloatingActionButton(
-                        onClick = { if (!isRefreshingAll) performRefreshAll() },
+                        onClick = {
+                            if (!viewModel.isRefreshingAll) {
+                                viewModel.refreshAll(context) { msg ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     ) {
