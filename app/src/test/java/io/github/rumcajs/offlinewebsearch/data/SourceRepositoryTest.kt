@@ -100,11 +100,11 @@ class SourceRepositoryTest {
 
     @Test
     fun `insertSource increments row count`() = runBlocking {
-        val countBefore = SourceRepository.getAllSources(context, dbState).size
+        val countBefore = SourceRepository.count(context, dbState)
 
         SourceRepository.insertSource(context, dbState, "Counter Test", "https://counter.test/rss", true)
 
-        val countAfter = SourceRepository.getAllSources(context, dbState).size
+        val countAfter = SourceRepository.count(context, dbState)
         assertEquals("Row count should increase by 1", countBefore + 1, countAfter)
     }
 

@@ -82,37 +82,6 @@ object SourceRepository : RepositoryInterface {
         )
     }
 
-    /**
-     * This function return all sources
-     */
-    suspend fun getAllSources(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
-        val sources = mutableListOf<Source>()
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
-            return@withContext sources
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext sources
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} ORDER BY url, title"
-            val cursor = db.rawQuery(sqlText, null)
-            cursor.use {
-                while (it.moveToNext()) {
-                    sources.add(cursorToSource(it))
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting all sources in $functionName")
-
-            e.printStackTrace()
-        }
-
-        sources
-    }
 
     /**
      * Retrieves all sources from `sourcedatamodel` joined with their operational metadata

@@ -89,4 +89,29 @@ interface RepositoryInterface {
             null
         }
     }
+
+    /**
+     * Counts the total number of records in the table managed by this repository.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @return Total count of rows, or 0 on error.
+     */
+    suspend fun count(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Long = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext 0L
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext 0L
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val rowCount = db.use { getRowCount(it) ?: 0L }
+            rowCount
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Table: ${getTableName()} Exception in $functionName", e.message)
+            0L
+        }
+    }
 }
