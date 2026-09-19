@@ -61,25 +61,21 @@ class DefaultDatabaseBuilder(
         // No-op: bundled assets are plain JSON
     }
 
-    override suspend fun onPopulatingTable() = withContext(Dispatchers.IO) {
+    override suspend fun onPopulatingTable(): Unit = withContext(Dispatchers.IO) {
         if (_currentStatus == DatabaseStatus.READY && !forceRebuild) return@withContext
 
         updateStatus(DatabaseStatus.POPULATING_TABLE, 0.5f)
         copyAssetTableDb(tempWorkingFile!!, ASSET_EMPTY_TABLE)
 
         val totalAssets = assetList.size
-        assetList.forEachIndexed { index, fileName ->
-            try {
-                context.assets.open(fileName).bufferedReader().use { reader ->
-                    val jsonString = reader.readText()
-                    val entries: List<Entry> = json.decodeFromString(jsonString)
-                    populateEntriesToDatabase(entries, tempWorkingFile!!)
-                }
-                val progress = 0.5f + ((index + 1).toFloat() / totalAssets) * 0.45f
-                updateStatus(DatabaseStatus.POPULATING_TABLE, progress)
-            } catch (e: Exception) {
-                e.printStackTrace()
+        for ((index, fileName) in assetList.withIndex()) {
+            context.assets.open(fileName).bufferedReader().use { reader ->
+                val jsonString = reader.readText()
+                val entries: List<Entry> = json.decodeFromString(jsonString)
+                populateEntriesToDatabase(entries, tempWorkingFile!!)
             }
+            val progress = 0.5f + ((index + 1).toFloat() / totalAssets) * 0.45f
+            updateStatus(DatabaseStatus.POPULATING_TABLE, progress)
         }
     }
 
@@ -111,6 +107,11 @@ class DefaultDatabaseBuilder(
     }
 
     override suspend fun onFailed(error: Throwable): DatabaseState = withContext(Dispatchers.IO) {
+        val destFile = File(context.filesDir, DEFAULT_DATABASE_FILE)
+        if (tempWorkingFile != null && tempWorkingFile!!.exists()) {
+            AppConfigManager.removeDatabaseFiles(context, DEFAULT_DATABASE_FILE)
+            tempWorkingFile!!.copyTo(destFile, overwrite = true)
+        }
         cleanup()
         super.onFailed(error)
     }

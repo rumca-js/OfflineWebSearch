@@ -192,23 +192,24 @@ object AppLoggingRepository : RepositoryInterface {
      * @param date Optional custom timestamp; defaults to current ISO 8601 UTC timestamp.
      * @return Pair where first is true on success, and second contains an optional error message on failure.
      */
-    suspend fun insertLog(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
+    /**
+     * Inserts a new log entry directly into the given [SQLiteDatabase] instance and prunes old logs.
+     *
+     * @param db SQLiteDatabase instance to insert into.
+     * @param infoText Summary text of the log event.
+     * @param detailText Optional detailed text or stack trace.
+     * @param level Log level integer (e.g., 0 = INFO, 1 = WARN, 2 = ERROR).
+     * @param date Optional custom timestamp; defaults to current ISO 8601 UTC timestamp.
+     * @return Pair where first is true on success, and second contains an optional error message on failure.
+     */
+    fun insertLogDirect(
+        db: SQLiteDatabase,
         infoText: String,
         detailText: String? = null,
         level: Int = 0,
         date: String? = null
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+    ): Pair<Boolean, String?> {
+        return try {
             ensureTableExists(db)
 
             val now = date ?: getCurrentIsoTimestamp()
@@ -230,9 +231,44 @@ object AppLoggingRepository : RepositoryInterface {
                 )
             """.trimIndent()
             db.execSQL(pruneSql)
-
-            db.close()
             Pair(true, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Inserts a new log entry into the `applogging` table and prunes old logs beyond [MAX_LOG_ENTRIES].
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param infoText Summary text of the log event.
+     * @param detailText Optional detailed text or stack trace.
+     * @param level Log level integer (e.g., 0 = INFO, 1 = WARN, 2 = ERROR).
+     * @param date Optional custom timestamp; defaults to current ISO 8601 UTC timestamp.
+     * @return Pair where first is true on success, and second contains an optional error message on failure.
+     */
+    suspend fun insertLog(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        infoText: String,
+        detailText: String? = null,
+        level: Int = 0,
+        date: String? = null
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val result = insertLogDirect(db, infoText, detailText, level, date)
+            db.close()
+            result
         } catch (e: Exception) {
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")

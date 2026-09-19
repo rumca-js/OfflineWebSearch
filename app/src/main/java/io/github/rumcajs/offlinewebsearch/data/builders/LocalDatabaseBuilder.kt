@@ -91,7 +91,7 @@ class LocalDatabaseBuilder(
         }
     }
 
-    override suspend fun onPopulatingTable() = withContext(Dispatchers.IO) {
+    override suspend fun onPopulatingTable(): Unit = withContext(Dispatchers.IO) {
         if (isJsonInput && contentBytes != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
@@ -123,6 +123,11 @@ class LocalDatabaseBuilder(
     }
 
     override suspend fun onFailed(error: Throwable): DatabaseState = withContext(Dispatchers.IO) {
+        val destinationFile = File(context.filesDir, targetLocalFileName)
+        if (tempWorkingFile != null && tempWorkingFile!!.exists()) {
+            AppConfigManager.removeDatabaseFiles(context, targetLocalFileName)
+            tempWorkingFile!!.copyTo(destinationFile, overwrite = true)
+        }
         cleanup()
         super.onFailed(error)
     }

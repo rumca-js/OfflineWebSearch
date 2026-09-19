@@ -250,6 +250,147 @@ object EntrySqliteRepository : EntryRepository() {
     }
 
     /**
+     * Populates a list of [Entry] records into the specified [SQLiteDatabase] (`linkdatamodel`, `entrycompactedtags`, `socialdata`).
+     * If an insertion fails, logs an error to [AppLoggingRepository], rolls back the transaction, and throws the exception.
+     *
+     * @param db SQLiteDatabase instance to populate.
+     * @param entries List of [Entry] records to insert.
+     * @return The number of rows successfully inserted.
+     * @throws Exception If an insertion fails.
+     */
+    fun populateEntries(db: SQLiteDatabase, entries: List<Entry>): Int {
+        if (entries.isEmpty()) return 0
+
+        val insertSql = """
+            INSERT INTO linkdatamodel (
+                id, link, title, description, author, album, language,
+                page_rating_votes, page_rating_visits, page_rating, thumbnail,
+                date_created, date_published, date_dead_since, age,
+                status_code, manual_status_code, bookmarked, source_id, source_url,
+                permanent, contents_type, page_rating_contents
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent()
+
+        val insertTagSql = "INSERT INTO entrycompactedtags (entry_id, tag) VALUES (?, ?)"
+        val insertSocialSql = """
+            INSERT INTO socialdata (
+                entry_id, thumbs_up, thumbs_down, view_count, rating,
+                upvote_ratio, upvote_diff, upvote_view_ratio, stars, followers_count, date_updated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent()
+
+        val stmt = db.compileStatement(insertSql)
+        val tagStmt = db.compileStatement(insertTagSql)
+        val socialStmt = db.compileStatement(insertSocialSql)
+
+        var insertedCount = 0
+        var insertError: Exception? = null
+        var failedEntryIdentifier: String? = null
+
+        db.beginTransaction()
+        try {
+            for (entry in entries) {
+                try {
+                    stmt.clearBindings()
+                    if (entry.id != null) stmt.bindLong(1, entry.id) else stmt.bindNull(1)
+                    stmt.bindString(2, entry.link ?: "")
+                    if (entry.title != null) stmt.bindString(3, entry.title) else stmt.bindNull(3)
+                    if (entry.description != null) stmt.bindString(4, entry.description) else stmt.bindNull(4)
+                    if (entry.author != null) stmt.bindString(5, entry.author) else stmt.bindNull(5)
+                    if (entry.album != null) stmt.bindString(6, entry.album) else stmt.bindNull(6)
+                    if (entry.language != null) stmt.bindString(7, entry.language) else stmt.bindNull(7)
+                    stmt.bindLong(8, (entry.page_rating_votes ?: 0).toLong())
+                    stmt.bindLong(9, (entry.page_rating_visits ?: 0).toLong())
+                    stmt.bindLong(10, (entry.page_rating ?: 0).toLong())
+                    if (entry.thumbnail != null) stmt.bindString(11, entry.thumbnail) else stmt.bindNull(11)
+                    if (entry.date_created != null) stmt.bindString(12, entry.date_created) else stmt.bindNull(12)
+                    if (entry.date_published != null) stmt.bindString(13, entry.date_published) else stmt.bindNull(13)
+                    if (entry.date_dead_since != null) stmt.bindString(14, entry.date_dead_since) else stmt.bindNull(14)
+                    stmt.bindLong(15, (entry.age ?: 0).toLong())
+                    stmt.bindLong(16, (entry.status_code ?: 0).toLong())
+                    stmt.bindLong(17, (entry.manual_status_code ?: 0).toLong())
+                    stmt.bindLong(18, if (entry.bookmarked == true) 1L else 0L)
+                    if (entry.source_id != null) stmt.bindLong(19, entry.source_id) else stmt.bindNull(19)
+                    stmt.bindString(20, entry.source_url ?: "")
+                    stmt.bindLong(21, 0L)
+                    stmt.bindLong(22, 0L)
+                    stmt.bindLong(23, 0L)
+
+                    val rowId = stmt.executeInsert()
+                    if (rowId >= 0) insertedCount++
+                    val entryId = entry.id ?: rowId
+
+                    if (!entry.tags.isNullOrEmpty()) {
+                        for (tag in entry.tags) {
+                            tagStmt.clearBindings()
+                            tagStmt.bindLong(1, entryId)
+                            tagStmt.bindString(2, tag)
+                            tagStmt.executeInsert()
+                        }
+                    }
+
+                    if (entry.socialData != null) {
+                        socialStmt.clearBindings()
+                        socialStmt.bindLong(1, entryId)
+                        if (entry.socialData.thumbsUp != null) socialStmt.bindLong(2, entry.socialData.thumbsUp.toLong()) else socialStmt.bindNull(2)
+                        if (entry.socialData.thumbsDown != null) socialStmt.bindLong(3, entry.socialData.thumbsDown.toLong()) else socialStmt.bindNull(3)
+                        if (entry.socialData.viewCount != null) socialStmt.bindLong(4, entry.socialData.viewCount.toLong()) else socialStmt.bindNull(4)
+                        if (entry.socialData.rating != null) socialStmt.bindLong(5, entry.socialData.rating.toLong()) else socialStmt.bindNull(5)
+                        if (entry.socialData.upvoteRatio != null) socialStmt.bindLong(6, entry.socialData.upvoteRatio.toLong()) else socialStmt.bindNull(6)
+                        if (entry.socialData.upvoteDiff != null) socialStmt.bindLong(7, entry.socialData.upvoteDiff.toLong()) else socialStmt.bindNull(7)
+                        if (entry.socialData.upvoteViewRatio != null) socialStmt.bindLong(8, entry.socialData.upvoteViewRatio.toLong()) else socialStmt.bindNull(8)
+                        if (entry.socialData.stars != null) socialStmt.bindLong(9, entry.socialData.stars.toLong()) else socialStmt.bindNull(9)
+                        if (entry.socialData.followersCount != null) socialStmt.bindLong(10, entry.socialData.followersCount.toLong()) else socialStmt.bindNull(10)
+                        if (entry.socialData.dateUpdated != null) socialStmt.bindString(11, entry.socialData.dateUpdated) else socialStmt.bindNull(11)
+                        socialStmt.executeInsert()
+                    }
+                } catch (e: Exception) {
+                    insertError = e
+                    failedEntryIdentifier = entry.link?.ifBlank { null } ?: entry.title ?: "ID: ${entry.id}"
+                    break
+                }
+            }
+            if (insertError == null) {
+                db.setTransactionSuccessful()
+            }
+        } finally {
+            db.endTransaction()
+            stmt.close()
+            tagStmt.close()
+            socialStmt.close()
+        }
+
+        if (insertError != null) {
+            AppLoggingRepository.insertLogDirect(
+                db = db,
+                infoText = "Failed to insert entry: $failedEntryIdentifier",
+                detailText = insertError.stackTraceToString(),
+                level = AppLoggingRepository.LEVEL_ERROR
+            )
+            throw insertError
+        }
+
+        return insertedCount
+    }
+
+    /**
+     * Populates a list of [Entry] records into the SQLite database file.
+     *
+     * @param dbFile SQLite database file.
+     * @param entries List of [Entry] records to insert.
+     * @return The number of rows successfully inserted.
+     * @throws Exception If an insertion fails.
+     */
+    fun populateEntries(dbFile: File, entries: List<Entry>): Int {
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        return try {
+            populateEntries(db, entries)
+        } finally {
+            db.close()
+        }
+    }
+
+    /**
      * Updates an existing entry's title and description in the database.
      * Entry is identified by its primary key [id] (or [originalLink] if [id] is null).
      */
