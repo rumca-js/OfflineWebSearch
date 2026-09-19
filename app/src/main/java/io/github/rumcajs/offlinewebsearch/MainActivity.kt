@@ -262,20 +262,18 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         composable(Screen.DatabaseDetail.route) {
                             val url = entriesViewModel.selectedDatabaseUrl
                             val config = AppConfigManager.config.collectAsState().value
-                            val state = if (url == null) {
-                                entriesViewModel.selectedDatabaseState ?: _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseState(
-                                    url = "",
-                                    localFileName = "default.db",
-                                    status = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY,
-                                    progress = 1.0f,
-                                    isReadOnly = false
-                                )
-                            } else {
+                            // All databases including the default ("") are stored in config.databases.
+                            // Fall back to selectedDatabaseState (snapshot passed at navigation time)
+                            // in case the entry is not yet registered in the map.
+                            val state = if (url != null) {
                                 config.databases[url] ?: entriesViewModel.selectedDatabaseState
+                            } else {
+                                entriesViewModel.selectedDatabaseState
                             }
                             if (state != null) {
-                                val dbConfig = if (url == null) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
-                                val isActive = if (url == null) config.activeDatabaseUrl == null else config.activeDatabaseUrl == url
+                                val isDefault = url == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
+                                val dbConfig = if (isDefault) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
+                                val isActive = config.activeDatabaseUrl == url
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseScreen(
                                     url = url,
                                     state = state,
@@ -293,7 +291,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                     navController.navigate(Screen.Databases.route)
                                 },
                                 onNavigateToDatabaseDetail = { url, state ->
-                                    entriesViewModel.selectedDatabaseUrl = url
+                                    entriesViewModel.selectedDatabaseUrl = url ?: _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
                                     entriesViewModel.selectedDatabaseState = state
                                     navController.navigate(Screen.DatabaseDetail.route)
                                 },
@@ -465,7 +463,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
     /**
      * Handles changing (activating) the selected database and resets screens to defaults.
      *
-     * @param databaseUrl The URL/key of the database to activate, or null for default (Assets).
+     * @param databaseUrl The URL/key of the database to activate.
+     *   Pass [io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL] ("") for the built-in default (Assets) database.
      * @param entriesViewModel The ViewModel to reset screen defaults on.
      * @param navController The NavController to reset backstack and routes back to defaults.
      */

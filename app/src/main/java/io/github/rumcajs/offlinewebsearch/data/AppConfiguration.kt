@@ -8,6 +8,12 @@ const val DEFAULT_DATABASE_NAME: String = "Default (Assets)"
 const val DEFAULT_DATABASE_FILE: String = "default.db"
 const val ASSET_EMPTY_TABLE: String = "table.db"
 
+/**
+ * The URL key used for the built-in default database in [AppConfiguration.databases].
+ * An empty string is used so that it can never collide with a real HTTP/local URL.
+ */
+const val DEFAULT_DATABASE_URL: String = ""
+
 val defaultAssets = listOf(
     "places_0.json",
     "places_1.json",
@@ -58,21 +64,11 @@ data class AppConfiguration(
 
     /**
      * Gets the state (downloading, unpacking, ready, etc.) of the currently active database.
-     * When [activeDatabaseUrl] is null, returns the state of the default database.
+     * The default database ([DEFAULT_DATABASE_URL]) is always present in [databases] after
+     * [io.github.rumcajs.offlinewebsearch.data.AppConfigManager.ensureDefaultDatabase] runs.
      */
     val activeDatabaseState: DatabaseState?
-        get() = if (activeDatabaseUrl != null) {
-            databases[activeDatabaseUrl]
-        } else {
-            databases[""] ?: DatabaseState(
-                url = "",
-                localFileName = DEFAULT_DATABASE_FILE,
-                displayNameField = DEFAULT_DATABASE_NAME,
-                status = DatabaseStatus.READY,
-                progress = 1.0f,
-                isReadOnly = false
-            )
-        }
+        get() = databases[activeDatabaseUrl ?: DEFAULT_DATABASE_URL]
 
     val activeDatabaseDisplayName: String
         get() = activeDatabaseState?.displayName ?: DEFAULT_DATABASE_NAME

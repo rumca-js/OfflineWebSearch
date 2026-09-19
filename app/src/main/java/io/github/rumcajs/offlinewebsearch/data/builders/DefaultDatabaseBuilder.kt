@@ -34,6 +34,16 @@ class DefaultDatabaseBuilder(
     private var tempWorkingFile: File? = null
 
     override suspend fun onInit() = withContext(Dispatchers.IO) {
+        // Register the default database entry (url = "") in config.databases so that
+        // subsequent updateDatabaseStatus("") calls can find it by key and propagate
+        // intermediate states (INIT, POPULATING_TABLE, …) to the UI.
+        // The base-class onInit() does this for regular databases, but DefaultDatabaseBuilder
+        // overrides it entirely, so we must ensure it happens here before any updateStatus call.
+        // Only add when absent to avoid overwriting preserved fields (displayName, dateCreated).
+        if (!AppConfigManager.config.value.databases.containsKey(url)) {
+            AppConfigManager.addDatabase(url)
+        }
+
         updateStatus(DatabaseStatus.INIT, 0.0f)
         val destFile = File(context.filesDir, DEFAULT_DATABASE_FILE)
         if (destFile.exists() && !forceRebuild) {

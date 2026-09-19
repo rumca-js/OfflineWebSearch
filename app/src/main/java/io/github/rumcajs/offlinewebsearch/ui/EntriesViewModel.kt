@@ -9,6 +9,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
@@ -74,7 +75,8 @@ class EntriesViewModel : ViewModel() {
 
     var selectedEntry by mutableStateOf<Entry?>(null)
     var previewUrl by mutableStateOf<String?>(null)
-    var selectedDatabaseUrl by mutableStateOf<String?>(null)
+    /** URL key of the database currently being viewed in DatabaseScreen. Defaults to [DEFAULT_DATABASE_URL]. */
+    var selectedDatabaseUrl by mutableStateOf(DEFAULT_DATABASE_URL)
     var selectedDatabaseState by mutableStateOf<DatabaseState?>(null)
 
     var currentPage by mutableIntStateOf(0)

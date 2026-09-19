@@ -57,9 +57,15 @@ object AppConfigManager {
         loadPersistedConfigSync(applicationContext)
         loadNetworkConfigSync(applicationContext)
 
-        // Ensure default SQLite database exists and migrate legacy JSON databases
+        // Ensure default SQLite database exists and migrate legacy JSON databases.
+        // Also migrate old installs where activeDatabaseUrl was null (meaning default active)
+        // to the new explicit DEFAULT_DATABASE_URL convention.
         configScope.launch {
             try {
+                if (config.value.activeDatabaseUrl == null) {
+                    setActiveDatabase(DEFAULT_DATABASE_URL)
+                }
+
                 ensureDefaultDatabase(applicationContext)
 
                 // Check for legacy JSON databases and convert them to SQLite (.db)
@@ -110,7 +116,7 @@ object AppConfigManager {
      */
     fun setInitialized(initialized: Boolean = true) {
         updateConfig { it.copy(isInitialized = initialized) }
-        setActiveDatabase(null)
+        setActiveDatabase(DEFAULT_DATABASE_URL)
     }
 
     /**
@@ -145,7 +151,7 @@ object AppConfigManager {
                 urls.forEach { url ->
                     DatabaseUpdateWorker.enqueueDatabase(context, url)
                 }
-                if (config.value.activeDatabaseUrl == null) {
+                if (config.value.activeDatabaseUrl == DEFAULT_DATABASE_URL) {
                     setActiveDatabase(urls.first())
                 }
                 setInitialized(true)
@@ -313,7 +319,7 @@ object AppConfigManager {
             it.copy(
                 databases = newDatabases,
                 dbConfigs = newDbConfigs,
-                activeDatabaseUrl = if (it.activeDatabaseUrl == url) null else it.activeDatabaseUrl
+                activeDatabaseUrl = if (it.activeDatabaseUrl == url) DEFAULT_DATABASE_URL else it.activeDatabaseUrl
             )
         }
     }

@@ -27,7 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_FILE
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_NAME
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -323,41 +327,46 @@ fun DatabaseList(
     onDelete: (String, DatabaseState) -> Unit,
     onUpdate: (String, DatabaseState) -> Unit
 ) {
-    // The "Default (Assets)" database is always available even though it has no
-    // entry in the databases map. Show it as a permanent first item.
-    val defaultState = DatabaseState(
-        url = "",
-        localFileName = "default.db",
-        status = io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY,
+    // Read live default database state from the map (registered by DefaultDatabaseBuilder).
+    // Fall back to a minimal READY state only if the entry hasn't been registered yet
+    // (e.g. before initialization completes).
+    val defaultState = databases[DEFAULT_DATABASE_URL] ?: DatabaseState(
+        url = DEFAULT_DATABASE_URL,
+        localFileName = DEFAULT_DATABASE_FILE,
+        displayNameField = DEFAULT_DATABASE_NAME,
+        status = DatabaseStatus.READY,
         progress = 1f,
         isReadOnly = false
     )
-    val isDefaultActive = activeDatabaseUrl == null
+    val isDefaultActive = activeDatabaseUrl == DEFAULT_DATABASE_URL
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         DefaultDatabaseItem(
+            state = defaultState,
             isActive = isDefaultActive,
             onItemClick = if (onItemClick != null) {
-                { onItemClick(null, defaultState) }
+                { onItemClick(DEFAULT_DATABASE_URL, defaultState) }
             } else null,
-            onSetActive = { onSetActive(null) },
-            onUpdate = { onUpdate("", defaultState) }
+            onSetActive = { onSetActive(DEFAULT_DATABASE_URL) },
+            onUpdate = { onUpdate(DEFAULT_DATABASE_URL, defaultState) }
         )
 
-        databases.forEach { (url, state) ->
-            val isActive = activeDatabaseUrl == url
-            DatabaseItem(
-                state = state,
-                isActive = isActive,
-                onItemClick = { onItemClick?.invoke(url, state) },
-                onSetActive = { onSetActive(url) },
-                onDelete = { onDelete(url, state) },
-                onUpdate = { onUpdate(url, state) }
-            )
-        }
+        // Exclude the default database entry from the regular list to avoid duplication.
+        databases.filter { (url, _) -> url != DEFAULT_DATABASE_URL }
+            .forEach { (url, state) ->
+                val isActive = activeDatabaseUrl == url
+                DatabaseItem(
+                    state = state,
+                    isActive = isActive,
+                    onItemClick = { onItemClick?.invoke(url, state) },
+                    onSetActive = { onSetActive(url) },
+                    onDelete = { onDelete(url, state) },
+                    onUpdate = { onUpdate(url, state) }
+                )
+            }
     }
 }
 
@@ -368,6 +377,7 @@ fun DatabaseList(
  * so it is shown permanently at the top of the list regardless of the user-added database map.
  * It can be rebuilt/refreshed from bundled assets.
  *
+ * @param state Live [DatabaseState] for the default database (read from [AppConfigManager]).
  * @param isActive Whether this database is currently active.
  * @param onItemClick Optional callback to navigate to the database detail screen on long press.
  * @param onSetActive Optional callback to make this database active on single tap.
@@ -376,6 +386,7 @@ fun DatabaseList(
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DefaultDatabaseItem(
+    state: DatabaseState,
     isActive: Boolean = false,
     onItemClick: (() -> Unit)? = null,
     onSetActive: () -> Unit,
@@ -410,7 +421,7 @@ private fun DefaultDatabaseItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Default (Assets)",
+                    text = state.displayName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -419,8 +430,8 @@ private fun DefaultDatabaseItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    StatusBadge(io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.READY)
-                    ReadOnlyBadge(isReadOnly = false)
+                    StatusBadge(state.status)
+                    ReadOnlyBadge(isReadOnly = state.isReadOnly)
                 }
             }
 
