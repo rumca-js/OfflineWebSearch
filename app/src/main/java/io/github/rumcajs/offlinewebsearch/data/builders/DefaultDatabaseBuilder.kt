@@ -90,9 +90,8 @@ class DefaultDatabaseBuilder(
         val size = if (destFile.exists()) destFile.length() else 0L
 
         cleanup()
-        updateStatus(DatabaseStatus.READY, 1.0f)
 
-        DatabaseState(
+        val readyState = DatabaseState(
             url = "",
             localFileName = DEFAULT_DATABASE_FILE,
             displayNameField = DEFAULT_DATABASE_NAME,
@@ -101,9 +100,19 @@ class DefaultDatabaseBuilder(
             errorMessage = null,
             sizeInBytes = size,
             isReadOnly = false,
-            dateCreated = now,
+            dateCreated = AppConfigManager.config.value.databases[""]?.dateCreated ?: now,
             dateLastRefresh = now
         )
+
+        AppConfigManager.updateConfig { config ->
+            val newDatabases = config.databases.toMutableMap().apply {
+                put("", readyState)
+            }
+            config.copy(databases = newDatabases)
+        }
+
+        updateStatus(DatabaseStatus.READY, 1.0f)
+        readyState
     }
 
     override suspend fun onFailed(error: Throwable): DatabaseState = withContext(Dispatchers.IO) {

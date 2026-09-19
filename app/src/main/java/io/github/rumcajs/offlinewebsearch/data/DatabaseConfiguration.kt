@@ -76,6 +76,9 @@ data class DatabaseState(
          * All databases are stored as SQLite (.db) files.
          */
         fun deriveLocalFileName(url: String): String {
+            if (url.isBlank() || url == DEFAULT_DATABASE_URL) {
+                return DEFAULT_DATABASE_FILE
+            }
             val hash = kotlin.math.abs(url.hashCode())
             return "db_$hash.db"
         }
@@ -86,6 +89,7 @@ data class DatabaseState(
             return DatabaseState(
                 url = url,
                 localFileName = localName,
+                displayNameField = if (url.isBlank()) DEFAULT_DATABASE_NAME else "",
                 isReadOnly = false
             )
         }

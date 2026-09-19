@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch
 
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.OrderBy
@@ -118,7 +119,7 @@ class AppConfigManagerTest {
 
             AppConfigManager.removeDatabase(url)
             config = AppConfigManager.config.first()
-            assertNull(config.activeDatabaseUrl)
+            assertEquals(DEFAULT_DATABASE_URL, config.activeDatabaseUrl)
             assertEquals("Default (Assets)", config.activeDatabaseDisplayName)
             val defaultState = config.activeDatabaseState
             assertNotNull(defaultState)

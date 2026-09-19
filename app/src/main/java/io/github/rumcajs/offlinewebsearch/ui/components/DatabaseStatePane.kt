@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_FILE
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatsRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.RepositoryInterface
@@ -56,6 +57,10 @@ fun DatabaseStatePane(
             label = "Local File",
             value = if (state.localFileName.isBlank()) "default.db" else state.localFileName
         )
+        DatabasePropertyRow(
+            label = "File Exists",
+            value = if (checkFileExists(context, state)) "Yes" else "No"
+        )
         if (isSql) {
             for (repo in RepositoryList.repositories) {
                 val count = repoCounts[repo]
@@ -98,18 +103,26 @@ fun DatabaseStatePane(
     }
 }
 
+private fun checkFileExists(context: Context, state: DatabaseState): Boolean {
+    val fileName = if (state.localFileName.isBlank()) "default.db" else state.localFileName
+    return try {
+        File(context.filesDir, fileName).exists()
+    } catch (e: Exception) {
+        false
+    }
+}
+
 private fun formatFileSize(context: Context, state: DatabaseState): String {
+    val fileName = if (state.localFileName.isBlank()) DEFAULT_DATABASE_FILE else state.localFileName
     val bytes = if (state.sizeInBytes > 0L) {
         state.sizeInBytes
-    } else if (state.localFileName.isNotBlank()) {
+    } else {
         try {
-            val file = File(context.filesDir, state.localFileName)
+            val file = File(context.filesDir, fileName)
             if (file.exists()) file.length() else 0L
         } catch (e: Exception) {
             0L
         }
-    } else {
-        0L
     }
 
     if (bytes <= 0L) return "Unknown"

@@ -69,6 +69,14 @@ data class AppConfiguration(
      */
     val activeDatabaseState: DatabaseState?
         get() = databases[activeDatabaseUrl ?: DEFAULT_DATABASE_URL]
+            ?: if (activeDatabaseUrl.isNullOrEmpty()) {
+                DatabaseState(
+                    url = DEFAULT_DATABASE_URL,
+                    localFileName = DEFAULT_DATABASE_FILE,
+                    displayNameField = DEFAULT_DATABASE_NAME,
+                    isReadOnly = false
+                )
+            } else null
 
     val activeDatabaseDisplayName: String
         get() = activeDatabaseState?.displayName ?: DEFAULT_DATABASE_NAME
