@@ -166,7 +166,7 @@ fun EntryEditScreen(
                     text = if (activeDbState != null)
                         "Source: ${activeDbState.displayName} (${activeDbState.localFileName})"
                     else
-                        "Source: Default (Assets) – read-only",
+                        "Source: Default (Assets) (default.db)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(12.dp)

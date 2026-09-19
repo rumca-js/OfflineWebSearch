@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 const val DATABASES_LIST: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases.txt"
 const val DATABASES_LIST_INIT: String = "https://raw.githubusercontent.com/rumca-js/rumca-js.github.io/main/data/databases_init.txt"
 const val DEFAULT_DATABASE_NAME: String = "Default (Assets)"
+const val DEFAULT_DATABASE_FILE: String = "default.db"
 const val ASSET_EMPTY_TABLE: String = "table.db"
 
 val defaultAssets = listOf(
@@ -57,10 +58,21 @@ data class AppConfiguration(
 
     /**
      * Gets the state (downloading, unpacking, ready, etc.) of the currently active database.
-     * Returns null if there is no active database or if it hasn't been registered in the map.
+     * When [activeDatabaseUrl] is null, returns the state of the default database.
      */
     val activeDatabaseState: DatabaseState?
-        get() = activeDatabaseUrl?.let { databases[it] }
+        get() = if (activeDatabaseUrl != null) {
+            databases[activeDatabaseUrl]
+        } else {
+            databases[""] ?: DatabaseState(
+                url = "",
+                localFileName = DEFAULT_DATABASE_FILE,
+                displayNameField = DEFAULT_DATABASE_NAME,
+                status = DatabaseStatus.READY,
+                progress = 1.0f,
+                isReadOnly = false
+            )
+        }
 
     val activeDatabaseDisplayName: String
         get() = activeDatabaseState?.displayName ?: DEFAULT_DATABASE_NAME

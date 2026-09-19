@@ -120,6 +120,11 @@ class AppConfigManagerTest {
             config = AppConfigManager.config.first()
             assertNull(config.activeDatabaseUrl)
             assertEquals("Default (Assets)", config.activeDatabaseDisplayName)
+            val defaultState = config.activeDatabaseState
+            assertNotNull(defaultState)
+            assertFalse(defaultState!!.isReadOnly)
+            assertEquals("default.db", defaultState.localFileName)
+            assertEquals("Default (Assets)", defaultState.displayName)
         }
 
         @Test
