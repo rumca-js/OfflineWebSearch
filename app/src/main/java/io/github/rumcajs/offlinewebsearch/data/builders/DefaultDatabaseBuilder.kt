@@ -34,12 +34,12 @@ class DefaultDatabaseBuilder(
     private var tempWorkingFile: File? = null
 
     override suspend fun onInit() = withContext(Dispatchers.IO) {
+        updateStatus(DatabaseStatus.INIT, 0.0f)
         val destFile = File(context.filesDir, DEFAULT_DATABASE_FILE)
         if (destFile.exists() && !forceRebuild) {
-            _currentStatus = DatabaseStatus.READY
+            updateStatus(DatabaseStatus.READY, 1.0f)
             return@withContext
         }
-        updateStatus(DatabaseStatus.INIT, 0.0f)
         tempWorkingFile = File.createTempFile("default_build_db_", ".db", context.cacheDir)
     }
 
