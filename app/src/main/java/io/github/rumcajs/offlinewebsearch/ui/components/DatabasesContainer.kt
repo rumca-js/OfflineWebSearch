@@ -344,13 +344,14 @@ fun DatabaseList(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        DefaultDatabaseItem(
+        DatabaseItem(
             state = defaultState,
             isActive = isDefaultActive,
             onItemClick = if (onItemClick != null) {
                 { onItemClick(DEFAULT_DATABASE_URL, defaultState) }
             } else null,
             onSetActive = { onSetActive(DEFAULT_DATABASE_URL) },
+            onDelete = null,
             onUpdate = { onUpdate(DEFAULT_DATABASE_URL, defaultState) }
         )
 
@@ -370,78 +371,6 @@ fun DatabaseList(
     }
 }
 
-/**
- * A fixed row representing the built-in "Default (Assets)" database.
- *
- * This database is always present (backed by default.db created from bundled asset files),
- * so it is shown permanently at the top of the list regardless of the user-added database map.
- * It can be rebuilt/refreshed from bundled assets.
- *
- * @param state Live [DatabaseState] for the default database (read from [AppConfigManager]).
- * @param isActive Whether this database is currently active.
- * @param onItemClick Optional callback to navigate to the database detail screen on long press.
- * @param onSetActive Optional callback to make this database active on single tap.
- * @param onUpdate Optional callback to rebuild the default database.
- */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-private fun DefaultDatabaseItem(
-    state: DatabaseState,
-    isActive: Boolean = false,
-    onItemClick: (() -> Unit)? = null,
-    onSetActive: () -> Unit,
-    onUpdate: () -> Unit
-) {
-    val shape = RoundedCornerShape(24.dp)
-    val borderStroke = if (isActive) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-    } else {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    }
-
-    Surface(
-        shape = shape,
-        border = borderStroke,
-        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .combinedClickable(
-                onClick = onSetActive,
-                onLongClick = { onItemClick?.invoke() }
-            )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = state.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    StatusBadge(state.status)
-                    ReadOnlyBadge(isReadOnly = state.isReadOnly)
-                }
-            }
-
-            IconButton(onClick = onUpdate) {
-                Icon(Icons.Default.Refresh, contentDescription = "Rebuild Default Database")
-            }
-        }
-    }
-}
-
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun DatabaseItem(
@@ -449,10 +378,10 @@ fun DatabaseItem(
     isActive: Boolean = false,
     onItemClick: (() -> Unit)? = null,
     onSetActive: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)? = null,
     onUpdate: () -> Unit
 ) {
-    val isLocal = state.isLocal
+    val isLocal = state.isLocal && state.url != DEFAULT_DATABASE_URL
     val displayName = state.displayName
 
     val shape = RoundedCornerShape(24.dp)
@@ -494,10 +423,9 @@ fun DatabaseItem(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     StatusBadge(state.status)
-                    ReadOnlyBadge(isReadOnly = state.isReadOnly)
                 }
 
-                if (state.status == io.github.rumcajs.offlinewebsearch.data.DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
+                if (state.status == DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
                     Text(
                         text = state.errorMessage,
                         color = Color(0xFFC62828),
@@ -512,8 +440,10 @@ fun DatabaseItem(
                     Icon(Icons.Default.Refresh, contentDescription = "Update")
                 }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+            if (onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
             }
         }
     }

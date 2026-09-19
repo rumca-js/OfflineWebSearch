@@ -179,8 +179,19 @@ object AppConfigManager {
                 context.openFileInput(APP_CONFIG_FILE_NAME).bufferedReader().use { reader ->
                     val jsonString = reader.readText()
                     val persistedConfig = json.decodeFromString<AppConfiguration>(jsonString)
+                    val normalizedDatabases = persistedConfig.databases.mapValues { (key, state) ->
+                        if ((key == DEFAULT_DATABASE_URL || key.isBlank()) && (state.localFileName == "db_0.db" || state.localFileName.isBlank())) {
+                            state.copy(
+                                localFileName = DEFAULT_DATABASE_FILE,
+                                displayNameField = if (state.displayNameField.isBlank()) DEFAULT_DATABASE_NAME else state.displayNameField
+                            )
+                        } else state
+                    }
                     _config.update { currentConfig ->
-                        persistedConfig.copy(networkConfig = currentConfig.networkConfig)
+                        persistedConfig.copy(
+                            databases = normalizedDatabases,
+                            networkConfig = currentConfig.networkConfig
+                        )
                     }
                 }
             }
