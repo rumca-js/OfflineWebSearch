@@ -18,8 +18,8 @@ android {
         applicationId = "io.github.rumcajs.offlinewebsearch"
         minSdk = 24
         targetSdk = 36
-        versionCode = 34
-        versionName = "1.0.32"
+        versionCode = 35
+        versionName = "1.0.33"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
