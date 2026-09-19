@@ -20,7 +20,7 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
 
 # Databases
 
-The application is distributed together with default database, with most credible domains.
+The application is distributed together with a default database, with most credible domains.
 
 The application is highly customizable and allows you to load different databases directly from a file. You can curate your own search indexes, share them, or swap between specialized databases depending on your current needs - all completely offline.
 
@@ -28,17 +28,17 @@ The application is highly customizable and allows you to load different database
 
 ## Ready Databases
 
- - [Feeds](https://rumca-js.github.io/data/feeds.db.zip)
- - [Awesome Lists](https://rumca-js.github.io/data/awesomelists.db.zip)
- - [Books](https://rumca-js.github.io/data/books.db.zip)
- - [Memes](https://rumca-js.github.io/data/memes.db.zip)
- - [Movies](https://rumca-js.github.io/data/movies.db.zip)
- - [Music](https://rumca-js.github.io/data/music.db.zip)
- - [Top](https://rumca-js.github.io/data/top.db.zip)
- - [Video games](https://rumca-js.github.io/data/videogames.db.zip)
- - [YouTube](https://rumca-js.github.io/data/youtube.db.zip)
+[Feeds](https://rumca-js.github.io/data/feeds.db.zip), 
+[Top](https://rumca-js.github.io/data/top.db.zip), 
+[YouTube](https://rumca-js.github.io/data/youtube.db.zip), 
+[Awesome Lists](https://rumca-js.github.io/data/awesomelists.db.zip), 
+[Books](https://rumca-js.github.io/data/books.db.zip), 
+[Memes](https://rumca-js.github.io/data/memes.db.zip), 
+[Movies](https://rumca-js.github.io/data/movies.db.zip), 
+[Music](https://rumca-js.github.io/data/music.db.zip), 
+[Video games](https://rumca-js.github.io/data/videogames.db.zip)
  
- [List of files](https://github.com/rumca-js/rumca-js.github.io/blob/main/data/databases.txt)
+[List of precondigured databases](https://github.com/rumca-js/rumca-js.github.io/blob/main/data/databases.txt)
 
 The databases need to comply specification maintained in the code of [linkarchivetools](https://github.com/rumca-js/linkarchivetools)
 
@@ -65,6 +65,14 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
  - Bookmark managing
  - Tagging, entry voting
 
+# Scenarios to use as RSS reader
+ - create an empty database and insert RSS feeds as 'sources'
+ - use [Feeds](https://rumca-js.github.io/data/feeds.db.zip) database to find new RSS sources (and use them in your own databse)
+ - use [Top](https://rumca-js.github.io/data/top.db.zip) database to find pages, or channels to find their feeds (and use them in your own databse)
+
+# Scenario to use as YouTube consumption machine
+ - configure [YouTube](https://rumca-js.github.io/data/youtube.db.zip) database and allow system to fetch all sources to see newer videos froma rSS channels
+
 # Screenshots
 
 [Screenshots](https://github.com/rumca-js/OfflineWebSearch/tree/main/screenshot)
@@ -76,9 +84,6 @@ This project is open source and welcomes contributions, bug reports, and suggest
 # Alternatives
 
 [LinkHub](https://f-droid.org/packages/com.amrdeveloper.linkhub/)
-
 [Linkora](https://f-droid.org/en/packages/com.sakethh.linkora/)
-
 [Savr](https://play.google.com/store/apps/details?id=com.zarnth.savr&pcampaignid=web_share)
-
 [Raindrop.io](https://play.google.com/store/apps/details?id=io.raindrop.raindropio&pcampaignid=web_share)
