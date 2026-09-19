@@ -191,9 +191,11 @@ abstract class AbstractDatabaseBuilder(
 
     /**
      * Populates a list of [Entry] records into the SQLite database file (`linkdatamodel`, `entrycompactedtags`, `socialdata`).
+     *
+     * @return The number of rows successfully inserted into `linkdatamodel`.
      */
-    protected fun populateEntriesToDatabase(entries: List<Entry>, dbFile: File) {
-        if (entries.isEmpty()) return
+    protected fun populateEntriesToDatabase(entries: List<Entry>, dbFile: File): Int {
+        if (entries.isEmpty()) return 0
 
         val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
         val insertSql = """
@@ -218,6 +220,7 @@ abstract class AbstractDatabaseBuilder(
         val tagStmt = db.compileStatement(insertTagSql)
         val socialStmt = db.compileStatement(insertSocialSql)
 
+        var insertedCount = 0
         db.beginTransaction()
         try {
             for (entry in entries) {
@@ -247,6 +250,7 @@ abstract class AbstractDatabaseBuilder(
                 stmt.bindLong(23, 0L)
 
                 val rowId = stmt.executeInsert()
+                if (rowId >= 0) insertedCount++
                 val entryId = entry.id ?: rowId
 
                 if (!entry.tags.isNullOrEmpty()) {
@@ -282,6 +286,7 @@ abstract class AbstractDatabaseBuilder(
             socialStmt.close()
             db.close()
         }
+        return insertedCount
     }
 
     /**
