@@ -34,11 +34,6 @@ private const val SENTINEL_NO_DATABASE = "\$__no_database__"
 
 val SOURCE_FILTER_OPTIONS = listOf(
     FilterOption(
-        key = SOURCE_FILTER_KEY_BY_URL,
-        label = "By Url",
-        icon = Icons.Default.SortByAlpha
-    ),
-    FilterOption(
         key = SOURCE_FILTER_KEY_BY_TITLE,
         label = "By Title",
         icon = Icons.Default.SortByAlpha
@@ -47,7 +42,12 @@ val SOURCE_FILTER_OPTIONS = listOf(
         key = SOURCE_FILTER_KEY_BY_FETCH_TIME,
         label = "By Fetch Time",
         icon = Icons.Default.DateRange
-    )
+    ),
+    FilterOption(
+        key = SOURCE_FILTER_KEY_BY_URL,
+        label = "By Url",
+        icon = Icons.Default.SortByAlpha
+),
 )
 
 /**

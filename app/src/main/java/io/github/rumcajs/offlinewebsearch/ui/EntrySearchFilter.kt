@@ -19,12 +19,12 @@ import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
  * [ByDatePublished], [ByVotes], [ByVisits] change the sort order without
  * restricting the result set.
  */
-enum class SearchFilter(val label: String) {
+enum class EntrySearchFilter(val label: String) {
     None("None"),
-    Visited("Visited"),
     ReadLater("Read Later"),
     ByDatePublished("By Date Published"),
     ByVotes("By Votes"),
+    Visited("By Visit Time"),
     ByVisits("By Visits");
 
     /** Whether this filter restricts results to the visited-entries table. */
@@ -68,15 +68,15 @@ enum class SearchFilter(val label: String) {
          */
         fun entryFilterOptions(showVisited: Boolean, showReadLater: Boolean): List<FilterOption> =
             buildList {
-                if (showVisited) add(Visited.toFilterOption())
                 if (showReadLater) add(ReadLater.toFilterOption())
                 add(ByDatePublished.toFilterOption())
                 add(ByVotes.toFilterOption())
+                if (showVisited) add(Visited.toFilterOption())
                 add(ByVisits.toFilterOption())
             }
 
-        /** Returns the [SearchFilter] that matches [key], or [None] if not found. */
-        fun fromKey(key: String): SearchFilter =
+        /** Returns the [EntrySearchFilter] that matches [key], or [None] if not found. */
+        fun fromKey(key: String): EntrySearchFilter =
             entries.firstOrNull { it.name == key } ?: None
     }
 }

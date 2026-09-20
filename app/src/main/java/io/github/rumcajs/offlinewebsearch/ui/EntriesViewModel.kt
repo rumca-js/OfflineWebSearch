@@ -31,7 +31,7 @@ class EntriesViewModel : ViewModel() {
     var searchHistory by mutableStateOf<List<String>>(emptyList())
 
     /** Currently active filter / order-by override selected via the filter button. */
-    var activeFilter by mutableStateOf(SearchFilter.None)
+    var activeFilter by mutableStateOf(EntrySearchFilter.None)
         private set
 
     /** Lazy list state preserved across navigation. */
@@ -40,14 +40,14 @@ class EntriesViewModel : ViewModel() {
     /** Convenience accessors used by [fetchPage]. */
     val isFilterVisited: Boolean get() = activeFilter.filterByVisited
     val isFilterReadLater: Boolean get() = activeFilter.filterByReadLater
-    val isFilterVisits: Boolean get() = activeFilter == SearchFilter.ByVisits
+    val isFilterVisits: Boolean get() = activeFilter == EntrySearchFilter.ByVisits
 
     /**
      * Applies [filter] as the new active filter and re-fetches data if [context] is provided.
      * Selecting the already-active filter deactivates it (toggles back to None).
      */
-    fun setFilter(context: Context? = null, filter: SearchFilter) {
-        activeFilter = if (activeFilter == filter) SearchFilter.None else filter
+    fun setFilter(context: Context? = null, filter: EntrySearchFilter) {
+        activeFilter = if (activeFilter == filter) EntrySearchFilter.None else filter
         currentPage = 0
         if (context != null) {
             viewModelScope.launch {
@@ -191,7 +191,7 @@ class EntriesViewModel : ViewModel() {
         searchQuery = ""
         activeSearchQuery = ""
         showSuggestions = false
-        activeFilter = SearchFilter.None
+        activeFilter = EntrySearchFilter.None
         currentPage = 0
     }
 

@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
-import io.github.rumcajs.offlinewebsearch.ui.SearchFilter
+import io.github.rumcajs.offlinewebsearch.ui.EntrySearchFilter
 import io.github.rumcajs.offlinewebsearch.ui.components.EntriesListSearchResultsContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import kotlinx.coroutines.launch
@@ -69,7 +69,7 @@ fun EntriesListScreen(
     // TODO if filter changes - also scroll
     var previousPage by remember { mutableStateOf<Int?>(null) }
     var previousQuery by remember { mutableStateOf<String?>(null) }
-    var previousFilter by remember { mutableStateOf<SearchFilter?>(null) }
+    var previousFilter by remember { mutableStateOf<EntrySearchFilter?>(null) }
     LaunchedEffect(viewModel.currentPage, viewModel.activeSearchQuery, viewModel.activeFilter) {
         if (previousPage != null && previousQuery != null && previousFilter != null &&
             (previousPage != viewModel.currentPage || previousQuery != viewModel.activeSearchQuery ||
@@ -83,7 +83,7 @@ fun EntriesListScreen(
     }
 
     val filterOptions = remember(config.dbconfig.trackUserNavigation, isEditable) {
-        SearchFilter.entryFilterOptions(
+        EntrySearchFilter.entryFilterOptions(
             showVisited = config.dbconfig.trackUserNavigation,
             showReadLater = isEditable
         )
@@ -120,9 +120,9 @@ fun EntriesListScreen(
                     },
                     isSearchButtonEnabled = viewModel.isSearchButtonEnabled,
                     filterOptions = filterOptions,
-                    activeFilterKey = viewModel.activeFilter.takeIf { it != SearchFilter.None }?.name,
+                    activeFilterKey = viewModel.activeFilter.takeIf { it != EntrySearchFilter.None }?.name,
                     onFilterSelected = { option ->
-                        viewModel.setFilter(context, SearchFilter.fromKey(option.key))
+                        viewModel.setFilter(context, EntrySearchFilter.fromKey(option.key))
                         coroutineScope.launch {
                             listState.scrollToItem(0)
                         }

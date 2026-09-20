@@ -385,7 +385,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                      onBack = {
                                          val cfg = _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value
                                          val isSortingByVisits = entriesViewModel.isFilterVisits ||
-                                             (entriesViewModel.activeFilter == _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.SearchFilter.None &&
+                                             (entriesViewModel.activeFilter == _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.EntrySearchFilter.None &&
                                                  cfg.dbconfig.orderBy == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VISITS_DESC)
                                          if (isSortingByVisits) {
                                              entriesViewModel.refreshPage(context)
