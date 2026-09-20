@@ -3,10 +3,12 @@ package io.github.rumcajs.offlinewebsearch.data
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import io.github.rumcajs.offlinewebsearch.data.repositories.AppLoggingRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.SocialData
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.runBlocking
@@ -72,9 +74,22 @@ class EntryRepositoryTest {
                         link = c.getString(c.getColumnIndexOrThrow("link")),
                         title = c.getString(c.getColumnIndexOrThrow("title")),
                         description = c.getString(c.getColumnIndexOrThrow("description")),
-                        bookmarked = c.getInt(c.getColumnIndexOrThrow("bookmarked")) == 1,
+                        author = c.getString(c.getColumnIndexOrThrow("author")),
+                        album = c.getString(c.getColumnIndexOrThrow("album")),
+                        language = c.getString(c.getColumnIndexOrThrow("language")),
                         page_rating_votes = c.getInt(c.getColumnIndexOrThrow("page_rating_votes")),
                         page_rating_visits = c.getInt(c.getColumnIndexOrThrow("page_rating_visits")),
+                        page_rating = c.getInt(c.getColumnIndexOrThrow("page_rating")),
+                        thumbnail = c.getString(c.getColumnIndexOrThrow("thumbnail")),
+                        date_created = c.getString(c.getColumnIndexOrThrow("date_created")),
+                        date_published = c.getString(c.getColumnIndexOrThrow("date_published")),
+                        date_dead_since = c.getString(c.getColumnIndexOrThrow("date_dead_since")),
+                        age = c.getInt(c.getColumnIndexOrThrow("age")),
+                        status_code = c.getInt(c.getColumnIndexOrThrow("status_code")),
+                        manual_status_code = c.getInt(c.getColumnIndexOrThrow("manual_status_code")),
+                        bookmarked = c.getInt(c.getColumnIndexOrThrow("bookmarked")) == 1,
+                        source_id = if (!c.isNull(c.getColumnIndexOrThrow("source_id"))) c.getLong(c.getColumnIndexOrThrow("source_id")) else null,
+                        source_url = c.getString(c.getColumnIndexOrThrow("source_url")),
                     )
                 } else null
             }
@@ -93,6 +108,36 @@ class EntryRepositoryTest {
                 buildList {
                     while (c.moveToNext()) add(c.getString(0))
                 }
+            }
+        }
+    }
+
+    /** Returns [SocialData] row for [entryId] from socialdata table, or null if absent. */
+    private fun querySocialData(entryId: Long): SocialData? {
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+        return db.use {
+            val cursor = it.rawQuery(
+                "SELECT entry_id, thumbs_up, thumbs_down, view_count, rating, upvote_ratio, " +
+                    "upvote_diff, upvote_view_ratio, stars, followers_count, date_updated " +
+                    "FROM socialdata WHERE entry_id = ?",
+                arrayOf(entryId.toString())
+            )
+            cursor.use { c ->
+                if (c.moveToFirst()) {
+                    SocialData(
+                        entryId = c.getLong(c.getColumnIndexOrThrow("entry_id")),
+                        thumbsUp = c.getInt(c.getColumnIndexOrThrow("thumbs_up")),
+                        thumbsDown = c.getInt(c.getColumnIndexOrThrow("thumbs_down")),
+                        viewCount = c.getInt(c.getColumnIndexOrThrow("view_count")),
+                        rating = c.getInt(c.getColumnIndexOrThrow("rating")),
+                        upvoteRatio = c.getInt(c.getColumnIndexOrThrow("upvote_ratio")),
+                        upvoteDiff = c.getInt(c.getColumnIndexOrThrow("upvote_diff")),
+                        upvoteViewRatio = c.getInt(c.getColumnIndexOrThrow("upvote_view_ratio")),
+                        stars = c.getInt(c.getColumnIndexOrThrow("stars")),
+                        followersCount = c.getInt(c.getColumnIndexOrThrow("followers_count")),
+                        dateUpdated = c.getString(c.getColumnIndexOrThrow("date_updated")),
+                    )
+                } else null
             }
         }
     }
@@ -362,5 +407,182 @@ class EntryRepositoryTest {
         db.close()
 
         assertEquals(0, remaining)
+    }
+
+    // ── EntrySqliteRepository: populateEntries ────────────────────────────────
+
+    @Test
+    fun `populateEntries returns 0 for empty list`() {
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        val count = db.use {
+            EntrySqliteRepository.populateEntries(it, emptyList())
+        }
+        assertEquals(0, count)
+    }
+
+    @Test
+    fun `populateEntries inserts all fields, tags, and socialData into SQLite`() {
+        val entry = Entry(
+            id = 5001L,
+            link = "https://populated.example.com",
+            title = "Populated Title",
+            description = "Populated Description",
+            author = "Populated Author",
+            album = "Populated Album",
+            language = "en",
+            page_rating_votes = 12,
+            page_rating_visits = 34,
+            page_rating = 56,
+            thumbnail = "https://thumb.example.com/img.png",
+            date_created = "2026-01-01 10:00:00",
+            date_published = "2026-01-01 12:00:00",
+            date_dead_since = "2026-02-01 00:00:00",
+            age = 18,
+            status_code = 200,
+            manual_status_code = 200,
+            bookmarked = true,
+            source_id = 99L,
+            source_url = "https://source.example.com/rss",
+            tags = listOf("alpha", "beta", "gamma"),
+            socialData = SocialData(
+                thumbsUp = 10,
+                thumbsDown = 2,
+                viewCount = 1000,
+                rating = 4,
+                upvoteRatio = 83,
+                upvoteDiff = 8,
+                upvoteViewRatio = 1,
+                stars = 5,
+                followersCount = 500,
+                dateUpdated = "2026-03-01 12:00:00"
+            )
+        )
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        val inserted = db.use {
+            EntrySqliteRepository.populateEntries(it, listOf(entry))
+        }
+        assertEquals(1, inserted)
+
+        val storedEntry = queryEntry(5001L)
+        assertNotNull(storedEntry)
+        assertEquals("https://populated.example.com", storedEntry!!.link)
+        assertEquals("Populated Title", storedEntry.title)
+        assertEquals("Populated Description", storedEntry.description)
+        assertEquals("Populated Author", storedEntry.author)
+        assertEquals("Populated Album", storedEntry.album)
+        assertEquals("en", storedEntry.language)
+        assertEquals(12, storedEntry.page_rating_votes)
+        assertEquals(34, storedEntry.page_rating_visits)
+        assertEquals(56, storedEntry.page_rating)
+        assertEquals("https://thumb.example.com/img.png", storedEntry.thumbnail)
+        assertEquals("2026-01-01 10:00:00", storedEntry.date_created)
+        assertEquals("2026-01-01 12:00:00", storedEntry.date_published)
+        assertEquals("2026-02-01 00:00:00", storedEntry.date_dead_since)
+        assertEquals(18, storedEntry.age)
+        assertEquals(200, storedEntry.status_code)
+        assertEquals(200, storedEntry.manual_status_code)
+        assertTrue(storedEntry.bookmarked == true)
+        assertEquals(99L, storedEntry.source_id)
+        assertEquals("https://source.example.com/rss", storedEntry.source_url)
+
+        val storedTags = queryTags(5001L)
+        assertEquals(3, storedTags.size)
+        assertTrue(storedTags.containsAll(listOf("alpha", "beta", "gamma")))
+
+        val storedSocial = querySocialData(5001L)
+        assertNotNull(storedSocial)
+        assertEquals(5001L, storedSocial!!.entryId)
+        assertEquals(10, storedSocial.thumbsUp)
+        assertEquals(2, storedSocial.thumbsDown)
+        assertEquals(1000, storedSocial.viewCount)
+        assertEquals(4, storedSocial.rating)
+        assertEquals(83, storedSocial.upvoteRatio)
+        assertEquals(8, storedSocial.upvoteDiff)
+        assertEquals(1, storedSocial.upvoteViewRatio)
+        assertEquals(5, storedSocial.stars)
+        assertEquals(500, storedSocial.followersCount)
+        assertEquals("2026-03-01 12:00:00", storedSocial.dateUpdated)
+    }
+
+    @Test
+    fun `populateEntries with dbFile overload successfully populates database`() {
+        val entries = listOf(
+            Entry(id = 6001L, link = "https://file1.example.com", title = "File Entry 1"),
+            Entry(id = 6002L, link = "https://file2.example.com", title = "File Entry 2")
+        )
+
+        val inserted = EntrySqliteRepository.populateEntries(dbFile, entries)
+        assertEquals(2, inserted)
+
+        val e1 = queryEntry(6001L)
+        val e2 = queryEntry(6002L)
+        assertNotNull(e1)
+        assertNotNull(e2)
+        assertEquals("File Entry 1", e1!!.title)
+        assertEquals("File Entry 2", e2!!.title)
+    }
+
+    @Test
+    fun `populateEntries links tags and social data to auto-generated rowId when id is null`() {
+        val entry = Entry(
+            id = null,
+            link = "https://autoid.example.com",
+            title = "Auto ID Entry",
+            tags = listOf("autotag1", "autotag2"),
+            socialData = SocialData(viewCount = 999)
+        )
+
+        val inserted = EntrySqliteRepository.populateEntries(dbFile, listOf(entry))
+        assertEquals(1, inserted)
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+        val generatedId = db.use {
+            val cursor = it.rawQuery("SELECT id FROM linkdatamodel WHERE link = ?", arrayOf("https://autoid.example.com"))
+            cursor.use { c ->
+                if (c.moveToFirst()) c.getLong(0) else -1L
+            }
+        }
+        assertTrue(generatedId > 0)
+
+        val tags = queryTags(generatedId)
+        assertEquals(listOf("autotag1", "autotag2"), tags)
+
+        val social = querySocialData(generatedId)
+        assertNotNull(social)
+        assertEquals(999, social!!.viewCount)
+    }
+
+    @Test
+    fun `populateEntries rolls back transaction and logs error on failure`() {
+        // Pre-insert an entry with id 7001L
+        val initialEntry = Entry(id = 7001L, link = "https://existing.example.com", title = "Existing")
+        EntrySqliteRepository.populateEntries(dbFile, listOf(initialEntry))
+
+        // Attempt to batch insert where second item causes primary key constraint violation
+        val batch = listOf(
+            Entry(id = 7002L, link = "https://batch1.example.com", title = "Batch 1"),
+            Entry(id = 7001L, link = "https://duplicate.example.com", title = "Duplicate ID")
+        )
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        try {
+            db.use {
+                EntrySqliteRepository.populateEntries(it, batch)
+            }
+            fail("Expected exception on primary key collision")
+        } catch (e: Exception) {
+            // Expected
+        }
+
+        // Verify transaction was rolled back: 7002L must NOT exist in linkdatamodel
+        assertNull(queryEntry(7002L))
+
+        // Verify error was logged to AppLoggingRepository table
+        val logs = runBlocking {
+            AppLoggingRepository.getLogs(context, dbState)
+        }
+        assertTrue("Log should be recorded on insertion failure", logs.isNotEmpty())
+        assertTrue(logs.any { it.info_text.contains("Failed to insert entry") })
     }
 }

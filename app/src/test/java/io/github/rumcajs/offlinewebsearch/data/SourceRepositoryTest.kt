@@ -1,7 +1,9 @@
 package io.github.rumcajs.offlinewebsearch.data
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import io.github.rumcajs.offlinewebsearch.data.repositories.AppLoggingRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOperationalDataRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
@@ -1101,6 +1103,128 @@ class SourceRepositoryTest {
         val jsonResult = SourceRepository.getAllSourcesWithOperationalData(context, nonSqlite)
         assertTrue(jsonResult.isEmpty())
     }
+
+    // ── populateSources ───────────────────────────────────────────────────────
+
+    @Test
+    fun `populateSources returns 0 for empty list`() {
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        val count = db.use {
+            SourceRepository.populateSources(it, emptyList())
+        }
+        assertEquals(0, count)
+    }
+
+    @Test
+    fun `populateSources inserts all source fields into SQLite`() = runBlocking {
+        val source = Source(
+            id = 8001L,
+            enabled = true,
+            url = "https://populated-source.example.com/rss",
+            title = "Populated Source",
+            favicon = "https://populated-source.example.com/favicon.ico",
+            source_type = "RSS",
+            age = 7,
+            auto_tag = "news,tech",
+            language = "pl"
+        )
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        val inserted = db.use {
+            SourceRepository.populateSources(it, listOf(source))
+        }
+        assertEquals(1, inserted)
+
+        val stored = SourceRepository.getSourceById(context, dbState, 8001L)
+        assertNotNull(stored)
+        assertEquals(8001L, stored!!.id)
+        assertTrue(stored.enabled)
+        assertEquals("https://populated-source.example.com/rss", stored.url)
+        assertEquals("Populated Source", stored.title)
+        assertEquals("https://populated-source.example.com/favicon.ico", stored.favicon)
+        assertEquals("RSS", stored.source_type)
+        assertEquals(7, stored.age)
+        assertEquals("news,tech", stored.auto_tag)
+        assertEquals("pl", stored.language)
+    }
+
+    @Test
+    fun `populateSources with dbFile overload successfully populates database`() = runBlocking {
+        val sources = listOf(
+            Source(id = 8002L, url = "https://src1.example.com", title = "Source 1"),
+            Source(id = 8003L, url = "https://src2.example.com", title = "Source 2")
+        )
+
+        val count = SourceRepository.populateSources(dbFile, sources)
+        assertEquals(2, count)
+
+        val s1 = SourceRepository.getSourceById(context, dbState, 8002L)
+        val s2 = SourceRepository.getSourceById(context, dbState, 8003L)
+        assertNotNull(s1)
+        assertNotNull(s2)
+        assertEquals("Source 1", s1!!.title)
+        assertEquals("Source 2", s2!!.title)
+    }
+
+    @Test
+    fun `populateSources with activeDatabaseState coroutine overload populates database`() = runBlocking {
+        val sources = listOf(
+            Source(url = "https://coroutine-src.example.com", title = "Coroutine Source")
+        )
+
+        val (ok, count) = SourceRepository.populateSources(context, dbState, sources)
+        assertTrue(ok)
+        assertEquals(1, count)
+
+        val stored = SourceRepository.getSourceByUrl(context, dbState, "https://coroutine-src.example.com")
+        assertNotNull(stored)
+        assertEquals("Coroutine Source", stored!!.title)
+    }
+
+    @Test
+    fun `populateSources with activeDatabaseState fails gracefully for read-only db`() = runBlocking {
+        val readOnlyState = dbState.copy(isReadOnly = true)
+        val sources = listOf(
+            Source(url = "https://readonly-src.example.com", title = "Read Only Source")
+        )
+
+        val (ok, count) = SourceRepository.populateSources(context, readOnlyState, sources)
+        assertFalse(ok)
+        assertEquals(0, count)
+    }
+
+    @Test
+    fun `populateSources rolls back transaction and logs error on failure`() = runBlocking {
+        // Pre-insert a source with id 9001L
+        val initialSource = Source(id = 9001L, url = "https://existing-src.example.com", title = "Existing")
+        SourceRepository.populateSources(dbFile, listOf(initialSource))
+
+        // Attempt batch insert where second item causes primary key collision
+        val batch = listOf(
+            Source(id = 9002L, url = "https://batch-src.example.com", title = "Batch Source"),
+            Source(id = 9001L, url = "https://duplicate-src.example.com", title = "Duplicate ID Source")
+        )
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        try {
+            db.use {
+                SourceRepository.populateSources(it, batch)
+            }
+            fail("Expected exception on primary key collision")
+        } catch (e: Exception) {
+            // Expected
+        }
+
+        // Verify transaction rollback: 9002L must NOT exist in database
+        val s2 = SourceRepository.getSourceById(context, dbState, 9002L)
+        assertNull(s2)
+
+        // Verify error logged to AppLoggingRepository
+        val logs = AppLoggingRepository.getLogs(context, dbState)
+        assertTrue("Log should be recorded on insertion failure", logs.isNotEmpty())
+        assertTrue(logs.any { it.info_text.contains("Failed to insert source") })
+    }
 }
+
 
 

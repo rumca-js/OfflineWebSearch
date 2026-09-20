@@ -279,6 +279,135 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Populates a list of [Source] records into the specified [SQLiteDatabase] (`sourcedatamodel`).
+     * If an insertion fails, logs an error to [AppLoggingRepository], rolls back the transaction, and throws the exception.
+     *
+     * @param db SQLiteDatabase instance to populate.
+     * @param sources List of [Source] records to insert.
+     * @return The number of rows successfully inserted.
+     * @throws Exception If an insertion fails.
+     */
+    fun populateSources(db: SQLiteDatabase, sources: List<Source>): Int {
+        if (sources.isEmpty()) return 0
+
+        val insertSql = """
+            INSERT INTO ${getTableName()} (
+                id, title, url, enabled, source_type, category_name, subcategory_name,
+                export_to_cms, remove_after_days, language, age, favicon, fetch_period,
+                auto_tag, entries_backgroundcolor_alpha, entries_backgroundcolor,
+                entries_alpha, proxy_location, auto_update_favicon, category_id,
+                subcategory_id, xpath
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent()
+
+        val stmt = db.compileStatement(insertSql)
+        var insertedCount = 0
+        var insertError: Exception? = null
+        var failedSourceIdentifier: String? = null
+
+        db.beginTransaction()
+        try {
+            for (source in sources) {
+                try {
+                    stmt.clearBindings()
+                    if (source.id != null) stmt.bindLong(1, source.id) else stmt.bindNull(1)
+                    stmt.bindString(2, source.title)
+                    stmt.bindString(3, source.url)
+                    stmt.bindLong(4, if (source.enabled) 1L else 0L)
+                    if (source.source_type != null) stmt.bindString(5, source.source_type) else stmt.bindString(5, "")
+                    stmt.bindString(6, "")
+                    stmt.bindString(7, "")
+                    stmt.bindLong(8, 0L)
+                    stmt.bindLong(9, 0L)
+                    stmt.bindString(10, source.language)
+                    stmt.bindLong(11, if ((source.age ?: 0) >= 0) (source.age ?: 0).toLong() else 0L)
+                    stmt.bindString(12, source.favicon)
+                    stmt.bindLong(13, 3600L)
+                    stmt.bindString(14, source.auto_tag.take(1000))
+                    stmt.bindDouble(15, 1.0)
+                    stmt.bindString(16, "")
+                    stmt.bindDouble(17, 1.0)
+                    stmt.bindString(18, "")
+                    stmt.bindLong(19, 0L)
+                    stmt.bindLong(20, 0L)
+                    stmt.bindLong(21, 0L)
+                    stmt.bindString(22, "")
+
+                    val rowId = stmt.executeInsert()
+                    if (rowId >= 0) insertedCount++
+                } catch (e: Exception) {
+                    insertError = e
+                    failedSourceIdentifier = source.url.ifBlank { null } ?: source.title.ifBlank { null } ?: "ID: ${source.id}"
+                    break
+                }
+            }
+            if (insertError == null) {
+                db.setTransactionSuccessful()
+            }
+        } finally {
+            db.endTransaction()
+            stmt.close()
+        }
+
+        if (insertError != null) {
+            AppLoggingRepository.insertLogDirect(
+                db = db,
+                infoText = "Failed to insert source: $failedSourceIdentifier",
+                detailText = insertError.stackTraceToString(),
+                level = AppLoggingRepository.LEVEL_ERROR
+            )
+            throw insertError
+        }
+
+        return insertedCount
+    }
+
+    /**
+     * Populates a list of [Source] records into the SQLite database file.
+     *
+     * @param dbFile SQLite database file.
+     * @param sources List of [Source] records to insert.
+     * @return The number of rows successfully inserted.
+     * @throws Exception If an insertion fails.
+     */
+    fun populateSources(dbFile: File, sources: List<Source>): Int {
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        return try {
+            populateSources(db, sources)
+        } finally {
+            db.close()
+        }
+    }
+
+    /**
+     * Populates a list of [Source] records into the database referenced by [activeDatabaseState].
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current active database state.
+     * @param sources List of [Source] records to insert.
+     * @return Pair of Boolean (success) and Int (count of inserted sources).
+     */
+    suspend fun populateSources(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sources: List<Source>
+    ): Pair<Boolean, Int> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, 0)
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, 0)
+
+        try {
+            val inserted = populateSources(file, sources)
+            Pair(true, inserted)
+        } catch (e: Exception) {
+            Pair(false, 0)
+        }
+    }
+
+    /**
      * Inserts a new source into the database.
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
