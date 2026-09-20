@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
+import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.Dispatchers
@@ -92,7 +93,7 @@ class InternetDatabaseBuilder(
         } else if (isZip && !url.endsWith(".db.zip", ignoreCase = true) && tempZipFile != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            unzipAndPopulateJsonToDb(tempZipFile!!, tempWorkingFile!!)
+            EntryJsonToDatabase.importZipToDatabase(tempZipFile!!, tempWorkingFile!!)
         } else if (!isZip && !isJson && downloadedBytes != null) {
             // Direct SQLite .db file downloaded
             tempWorkingFile!!.writeBytes(downloadedBytes!!)

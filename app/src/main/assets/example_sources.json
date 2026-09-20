@@ -1,0 +1,18 @@
+[
+    {
+        "age": 0,
+        "category_name": "Tech",
+        "enabled": true,
+        "export_to_cms": true,
+        "favicon": "https://b.thumbs.redditmedia.com/zonmOxJ9751w7fyBxTIhTW8NMP7WLSFjQuOEwTUOG2k.png",
+        "fetch_period": 3600,
+        "id": 530,
+        "language": "en",
+        "proxy_location": "",
+        "remove_after_days": 0,
+        "source_type": "BaseRssPlugin",
+        "subcategory_name": "Piracy",
+        "title": "Piracy: \ua731\u1d00\u026a\u029f \u1d1b\u029c\u1d07 \u029c\u026a\u0262\u029c \ua731\u1d07\u1d00\ua731",
+        "url": "https://www.reddit.com/r/Piracy/.rss"
+    }
+]

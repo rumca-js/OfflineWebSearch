@@ -1,17 +1,15 @@
 package io.github.rumcajs.offlinewebsearch.data.builders
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
 import io.github.rumcajs.offlinewebsearch.data.ASSET_EMPTY_TABLE
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
-import io.github.rumcajs.offlinewebsearch.data.repositories.AppLoggingRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.ConfigurationEntry
-import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SearchViewRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

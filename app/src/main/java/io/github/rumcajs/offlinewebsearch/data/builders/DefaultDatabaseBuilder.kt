@@ -7,8 +7,8 @@ import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_NAME
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
 import io.github.rumcajs.offlinewebsearch.data.defaultAssets
-import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

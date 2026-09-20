@@ -6,6 +6,7 @@ import io.github.rumcajs.offlinewebsearch.data.ASSET_EMPTY_TABLE
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
+import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -102,7 +103,7 @@ class LocalDatabaseBuilder(
             // General zip containing JSON files
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            unzipAndPopulateJsonToDb(tempZipFile!!, tempWorkingFile!!)
+            EntryJsonToDatabase.importZipToDatabase(tempZipFile!!, tempWorkingFile!!)
         } else if (contentBytes != null && !isZipInput && !isJsonInput && assetFileName == null) {
             // Direct SQLite file bytes
             tempWorkingFile!!.writeBytes(contentBytes!!)
