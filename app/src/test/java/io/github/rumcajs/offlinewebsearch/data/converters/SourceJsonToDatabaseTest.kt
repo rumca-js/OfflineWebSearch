@@ -51,16 +51,16 @@ class SourceJsonToDatabaseTest {
         dbFile.delete()
     }
 
-    // ── parseJson ─────────────────────────────────────────────────────────────
+    // ── parse ─────────────────────────────────────────────────────────────
 
     /**
      * Parsing the bundled `example_sources.json` asset via an [InputStream] must return
      * at least one source with a non-blank URL.
      */
     @Test
-    fun `parseJson InputStream returns non-empty sources with urls`() {
+    fun `parse InputStream returns non-empty sources with urls`() {
         val sources: List<Source> = context.assets.open(jsonAsset).use { stream ->
-            SourceJsonToDatabase.parseJson(stream)
+            SourceJsonToDatabase.parse(stream)
         }
 
         assertTrue("Expected at least one source in $jsonAsset", sources.isNotEmpty())
@@ -74,10 +74,10 @@ class SourceJsonToDatabaseTest {
      * Parsing a raw JSON string must produce the same count as parsing the equivalent stream.
      */
     @Test
-    fun `parseJson String produces same count as InputStream parse`() {
+    fun `parse String produces same count as InputStream parse`() {
         val jsonText = context.assets.open(jsonAsset).bufferedReader().readText()
-        val fromStream = SourceJsonToDatabase.parseJson(jsonText.byteInputStream())
-        val fromString = SourceJsonToDatabase.parseJson(jsonText)
+        val fromStream = SourceJsonToDatabase.parse(jsonText.byteInputStream())
+        val fromString = SourceJsonToDatabase.parse(jsonText)
 
         assertEquals(
             "String and stream parse must produce the same count",
@@ -89,8 +89,8 @@ class SourceJsonToDatabaseTest {
      * Parsing an empty JSON array must return an empty list without errors.
      */
     @Test
-    fun `parseJson empty array returns empty list`() {
-        val sources = SourceJsonToDatabase.parseJson("[]".byteInputStream())
+    fun `parse empty array returns empty list`() {
+        val sources = SourceJsonToDatabase.parse("[]".byteInputStream())
         assertTrue("Expected empty list for empty JSON array", sources.isEmpty())
     }
 
@@ -98,8 +98,8 @@ class SourceJsonToDatabaseTest {
      * Parsing malformed JSON must throw a serialization exception.
      */
     @Test(expected = Exception::class)
-    fun `parseJson throws on malformed JSON`() {
-        SourceJsonToDatabase.parseJson("{not valid json".byteInputStream())
+    fun `parse throws on malformed JSON`() {
+        SourceJsonToDatabase.parse("{not valid json".byteInputStream())
     }
 
     /**
@@ -107,7 +107,7 @@ class SourceJsonToDatabaseTest {
      * (e.g. `category_name`, `fetch_period`, `proxy_location`) without throwing.
      */
     @Test
-    fun `parseJson tolerates extra fields from linkarchivetools export`() {
+    fun `parse tolerates extra fields from linkarchivetools export`() {
         val jsonWithExtras = """
             [
               {
@@ -130,7 +130,7 @@ class SourceJsonToDatabaseTest {
             ]
         """.trimIndent()
 
-        val sources = SourceJsonToDatabase.parseJson(jsonWithExtras)
+        val sources = SourceJsonToDatabase.parse(jsonWithExtras)
 
         assertEquals("Expected exactly one source", 1, sources.size)
         assertEquals("https://example.com/feed.rss", sources.first().url)
@@ -140,9 +140,9 @@ class SourceJsonToDatabaseTest {
      * Every parsed source from the asset file must have a non-blank title.
      */
     @Test
-    fun `parseJson extracts title for each source`() {
+    fun `parse extracts title for each source`() {
         val sources: List<Source> = context.assets.open(jsonAsset).use { stream ->
-            SourceJsonToDatabase.parseJson(stream)
+            SourceJsonToDatabase.parse(stream)
         }
 
         assertTrue("Expected at least one source", sources.isNotEmpty())
@@ -168,7 +168,7 @@ class SourceJsonToDatabaseTest {
             SourceJsonToDatabase.parseZip(zis, errors)
         }
 
-        val expected = SourceJsonToDatabase.parseJson(jsonText)
+        val expected = SourceJsonToDatabase.parse(jsonText)
         assertEquals(
             "ZIP parse must yield same count as direct JSON parse",
             expected.size, sources.size
@@ -187,7 +187,7 @@ class SourceJsonToDatabaseTest {
             "b.json" to jsonText
         )
 
-        val expected = SourceJsonToDatabase.parseJson(jsonText)
+        val expected = SourceJsonToDatabase.parse(jsonText)
         val errors = mutableListOf<String>()
         val sources = ZipInputStream(zipBytes.inputStream()).use { zis ->
             SourceJsonToDatabase.parseZip(zis, errors)
@@ -210,7 +210,7 @@ class SourceJsonToDatabaseTest {
             "sources.json" to jsonText
         )
 
-        val expected = SourceJsonToDatabase.parseJson(jsonText)
+        val expected = SourceJsonToDatabase.parse(jsonText)
         val sources = ZipInputStream(zipBytes.inputStream()).use { zis ->
             SourceJsonToDatabase.parseZip(zis)
         }
@@ -218,16 +218,16 @@ class SourceJsonToDatabaseTest {
         assertEquals("Only .json files should be parsed", expected.size, sources.size)
     }
 
-    // ── importJsonToDatabase (suspend) ────────────────────────────────────────
+    // ── importToDatabase (suspend) ────────────────────────────────────────
 
     /**
      * Importing `example_sources.json` into the database must succeed and persist
      * the expected number of sources in `sourcedatamodel`.
      */
     @Test
-    fun `importJsonToDatabase inserts sources from asset JSON`() = runBlocking {
+    fun `importToDatabase inserts sources from asset JSON`() = runBlocking {
         val result: SourceJsonImportResult = context.assets.open(jsonAsset).use { stream ->
-            SourceJsonToDatabase.importJsonToDatabase(
+            SourceJsonToDatabase.importToDatabase(
                 context = context,
                 inputStream = stream,
                 activeDatabaseState = dbState
@@ -253,9 +253,9 @@ class SourceJsonToDatabaseTest {
      * Importing with a null database state must return an error and insert no sources.
      */
     @Test
-    fun `importJsonToDatabase returns error for null database state`() = runBlocking {
+    fun `importToDatabase returns error for null database state`() = runBlocking {
         val result: SourceJsonImportResult = context.assets.open(jsonAsset).use { stream ->
-            SourceJsonToDatabase.importJsonToDatabase(
+            SourceJsonToDatabase.importToDatabase(
                 context = context,
                 inputStream = stream,
                 activeDatabaseState = null
@@ -270,8 +270,8 @@ class SourceJsonToDatabaseTest {
      * Importing malformed JSON must return an error and insert no sources.
      */
     @Test
-    fun `importJsonToDatabase returns error for malformed JSON`() = runBlocking {
-        val result: SourceJsonImportResult = SourceJsonToDatabase.importJsonToDatabase(
+    fun `importToDatabase returns error for malformed JSON`() = runBlocking {
+        val result: SourceJsonImportResult = SourceJsonToDatabase.importToDatabase(
             context = context,
             inputStream = "{bad json".byteInputStream(),
             activeDatabaseState = dbState
@@ -285,8 +285,8 @@ class SourceJsonToDatabaseTest {
      * Importing an empty JSON array must produce zero sources and no errors.
      */
     @Test
-    fun `importJsonToDatabase handles empty JSON array`() = runBlocking {
-        val result: SourceJsonImportResult = SourceJsonToDatabase.importJsonToDatabase(
+    fun `importToDatabase handles empty JSON array`() = runBlocking {
+        val result: SourceJsonImportResult = SourceJsonToDatabase.importToDatabase(
             context = context,
             inputStream = "[]".byteInputStream(),
             activeDatabaseState = dbState
