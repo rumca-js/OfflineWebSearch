@@ -70,7 +70,7 @@ class DefaultDatabaseBuilder(
         val totalAssets = assetList.size
         for ((index, fileName) in assetList.withIndex()) {
             context.assets.open(fileName).use { inputStream ->
-                val entries = EntryJsonToDatabase.parseJson(inputStream)
+                val entries = EntryJsonToDatabase.parse(inputStream)
                 populateEntriesToDatabase(entries, tempWorkingFile!!)
             }
             val progress = 0.5f + ((index + 1).toFloat() / totalAssets) * 0.45f

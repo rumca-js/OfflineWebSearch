@@ -86,7 +86,7 @@ class InternetDatabaseBuilder(
         if (isJson && downloadedBytes != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            val entries = EntryJsonToDatabase.parseJson(String(downloadedBytes!!, Charsets.UTF_8))
+            val entries = EntryJsonToDatabase.parse(String(downloadedBytes!!, Charsets.UTF_8))
             populateEntriesToDatabase(entries, tempWorkingFile!!)
         } else if (isZip && !url.endsWith(".db.zip", ignoreCase = true) && tempZipFile != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
