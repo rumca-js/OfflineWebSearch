@@ -56,7 +56,7 @@ val SOURCE_FILTER_OPTIONS = listOf(
 class SourcesViewModel : ViewModel() {
     var searchQuery by mutableStateOf("")
     var activeSearchQuery by mutableStateOf("")
-    var sourceOrder by mutableStateOf(SourceOrder.ByUrl)
+    var sourceOrder by mutableStateOf(SourceOrder.ByTitle)
     var sourceItems by mutableStateOf<List<SourceWithOperationalData>>(emptyList())
         private set
     var isLoading by mutableStateOf(true)
@@ -168,7 +168,7 @@ class SourcesViewModel : ViewModel() {
                 if (sourceOrder == SourceOrder.ByTitle) SourceOrder.ByUrl else SourceOrder.ByTitle
             SOURCE_FILTER_KEY_BY_FETCH_TIME ->
                 if (sourceOrder == SourceOrder.ByFetchTime) SourceOrder.ByUrl else SourceOrder.ByFetchTime
-            else -> SourceOrder.ByUrl
+            else -> SourceOrder.ByTitle
         }
     }
 
