@@ -23,6 +23,7 @@ enum class EntrySearchFilter(val label: String) {
     None("None"),
     ReadLater("Read Later"),
     ByDatePublished("By Date Published"),
+    ByDateCreated("By Date Created"),
     ByVotes("By Votes"),
     Visited("By Visit Time"),
     ByVisits("By Visits");
@@ -39,6 +40,7 @@ enum class EntrySearchFilter(val label: String) {
      */
     fun orderByOverride(): OrderBy? = when (this) {
         ByDatePublished -> OrderBy.DATE_PUBLISHED
+        ByDateCreated -> OrderBy.DATE_CREATED
         ByVotes -> OrderBy.PAGE_RATING_VOTES
         ByVisits -> OrderBy.PAGE_RATING_VISITS_DESC
         else -> null
@@ -52,6 +54,7 @@ enum class EntrySearchFilter(val label: String) {
             Visited -> Icons.Default.History
             ReadLater -> Icons.Default.Bookmark
             ByDatePublished -> Icons.Default.DateRange
+            ByDateCreated -> Icons.Default.DateRange
             ByVotes -> Icons.Default.Star
             ByVisits -> Icons.Default.Visibility
             None -> Icons.Default.Star // never shown directly
@@ -70,6 +73,7 @@ enum class EntrySearchFilter(val label: String) {
             buildList {
                 if (showReadLater) add(ReadLater.toFilterOption())
                 add(ByDatePublished.toFilterOption())
+                add(ByDateCreated.toFilterOption())
                 add(ByVotes.toFilterOption())
                 if (showVisited) add(Visited.toFilterOption())
                 add(ByVisits.toFilterOption())
