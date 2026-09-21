@@ -3,7 +3,6 @@ package io.github.rumcajs.offlinewebsearch.data.converters
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +81,7 @@ private data class JsonSourceEntry(
  * Both converters produce [Source] records and persist via [SourceRepository]. This converter
  * handles JSON-format exports while [OpmlToDatabase] handles OPML/XML exports.
  */
-object SourceJsonToDatabase : FileToDatabase<Source, SourceJsonImportResult>{
+object SourceJsonToDatabase : FileToDatabaseInterface<Source, SourceJsonImportResult>{
 
     private val jsonConfig = Json {
         ignoreUnknownKeys = true

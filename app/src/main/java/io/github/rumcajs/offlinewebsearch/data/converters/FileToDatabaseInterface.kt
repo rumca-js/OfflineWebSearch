@@ -30,7 +30,7 @@ import java.io.InputStream
  * )
  * ```
  */
-interface FileToDatabase<TEntity, TResult> {
+interface FileToDatabaseInterface<TEntity, TResult> {
 
     /**
      * Parses [inputStream] into a list of [TEntity] records.

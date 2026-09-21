@@ -40,9 +40,9 @@ data class EntryJsonImportResult(
  * `InternetDatabaseBuilder.onPopulatingTable` and `AbstractDatabaseBuilder.unzipAndPopulateJsonToDb`,
  * making it reusable and independently testable.
  *
- * @see FileToDatabase
+ * @see FileToDatabaseInterface
  */
-object EntryJsonToDatabase : FileToDatabase<Entry, EntryJsonImportResult> {
+object EntryJsonToDatabase : FileToDatabaseInterface<Entry, EntryJsonImportResult> {
 
     private val jsonConfig = Json {
         ignoreUnknownKeys = true

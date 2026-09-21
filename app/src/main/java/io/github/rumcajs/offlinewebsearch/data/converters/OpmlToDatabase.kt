@@ -49,9 +49,9 @@ data class OpmlImportResult(
  * Container (group) outlines without `xmlUrl` are recorded as the current group name
  * and stored in the `auto_tag` field of each child source.
  *
- * @see FileToDatabase
+ * @see FileToDatabaseInterface
  */
-object OpmlToDatabase : FileToDatabase<Source, OpmlImportResult> {
+object OpmlToDatabase : FileToDatabaseInterface<Source, OpmlImportResult> {
 
     /**
      * Parses [inputStream] as OPML and returns a list of [Source] objects.
