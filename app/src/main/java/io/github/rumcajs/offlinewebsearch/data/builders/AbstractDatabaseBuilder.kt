@@ -215,13 +215,4 @@ abstract class AbstractDatabaseBuilder(
             throw NoSuchElementException("ZIP archive parsed successfully, but no file ending in '.db' was found inside.")
         }
     }
-
-    /**
-     * Extracts all `.json` files from a ZIP archive, parses entries, and inserts them into [dbFile].
-     *
-     * Delegates to [EntryJsonToDatabase.importZipToDatabase] for consistent parsing behaviour.
-     */
-    protected fun unzipAndPopulateJsonToDb(zipFile: File, dbFile: File) {
-        EntryJsonToDatabase.importZipToDatabase(zipFile, dbFile)
-    }
 }
