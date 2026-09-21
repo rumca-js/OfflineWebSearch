@@ -1,7 +1,7 @@
 package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.database.sqlite.SQLiteDatabase
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import java.io.File
 
 data class SearchViewRepository(
@@ -9,19 +9,19 @@ data class SearchViewRepository(
     val isDefault: Boolean = false,
     val orderByStr: String? = null
 ) {
-    val orderBy: OrderBy?
+    val orderBy: EntryOrderBy?
         get() {
             val firstOrder = orderByStr?.split(",")?.firstOrNull()?.lowercase()?.trim()
             return when (firstOrder) {
-                "page_rating_votes", "-page_rating_votes" -> OrderBy.PAGE_RATING_VOTES
-                "-page_rating_visits", "page_rating_visits desc" -> OrderBy.PAGE_RATING_VISITS_DESC
-                "page_rating_visits", "+page_rating_visits", "page_rating_visits asc" -> OrderBy.PAGE_RATING_VISITS_ASC
-                "date_created", "-date_created" -> OrderBy.DATE_CREATED
-                "date_published", "-date_published" -> OrderBy.DATE_PUBLISHED
-                "-stars", "stars desc" -> OrderBy.STARS_DESC
-                "stars", "+stars", "stars asc" -> OrderBy.STARS_ASC
-                "-followers_count", "followers_count desc" -> OrderBy.FOLLOWERS_COUNT_DESC
-                "followers_count", "+followers_count", "followers_count asc" -> OrderBy.FOLLOWERS_COUNT_ASC
+                "page_rating_votes", "-page_rating_votes" -> EntryOrderBy.PAGE_RATING_VOTES
+                "-page_rating_visits", "page_rating_visits desc" -> EntryOrderBy.PAGE_RATING_VISITS_DESC
+                "page_rating_visits", "+page_rating_visits", "page_rating_visits asc" -> EntryOrderBy.PAGE_RATING_VISITS_ASC
+                "date_created", "-date_created" -> EntryOrderBy.DATE_CREATED
+                "date_published", "-date_published" -> EntryOrderBy.DATE_PUBLISHED
+                "-stars", "stars desc" -> EntryOrderBy.STARS_DESC
+                "stars", "+stars", "stars asc" -> EntryOrderBy.STARS_ASC
+                "-followers_count", "followers_count desc" -> EntryOrderBy.FOLLOWERS_COUNT_DESC
+                "followers_count", "+followers_count", "followers_count asc" -> EntryOrderBy.FOLLOWERS_COUNT_ASC
                 else -> null
             }
         }

@@ -2,7 +2,7 @@ package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import io.github.rumcajs.offlinewebsearch.data.defaultAssets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,7 +24,7 @@ object EntryJsonRepository : EntryRepository() {
         context: Context,
         activeDatabaseState: DatabaseState?,
         searchQuery: String,
-        orderBy: OrderBy,
+        orderBy: EntryOrderBy,
         filterByVisited: Boolean,
         filterByReadLater: Boolean
     ): Int = withContext(Dispatchers.IO) {
@@ -40,7 +40,7 @@ object EntryJsonRepository : EntryRepository() {
         context: Context,
         activeDatabaseState: DatabaseState?,
         searchQuery: String,
-        orderBy: OrderBy,
+        orderBy: EntryOrderBy,
         offset: Int,
         pageSize: Int,
         filterByVisited: Boolean,
@@ -164,15 +164,15 @@ object EntryJsonRepository : EntryRepository() {
     }
 }
 
-/** Sorts a list of [Entry] for this [OrderBy] value. */
-fun List<Entry>.sortedByOrderBy(orderBy: OrderBy): List<Entry> = when (orderBy) {
-    OrderBy.PAGE_RATING_VOTES -> sortedByDescending { it.page_rating_votes ?: 0 }
-    OrderBy.PAGE_RATING_VISITS_DESC -> sortedByDescending { it.page_rating_visits ?: 0 }
-    OrderBy.PAGE_RATING_VISITS_ASC -> sortedBy { it.page_rating_visits ?: 0 }
-    OrderBy.DATE_CREATED -> sortedByDescending { it.date_created ?: "" }
-    OrderBy.DATE_PUBLISHED -> sortedByDescending { it.date_published ?: "" }
-    OrderBy.STARS_DESC -> sortedByDescending { it.socialData?.stars ?: 0 }
-    OrderBy.STARS_ASC -> sortedBy { it.socialData?.stars ?: 0 }
-    OrderBy.FOLLOWERS_COUNT_DESC -> sortedByDescending { it.socialData?.followersCount ?: 0 }
-    OrderBy.FOLLOWERS_COUNT_ASC -> sortedBy { it.socialData?.followersCount ?: 0 }
+/** Sorts a list of [Entry] for this [EntryOrderBy] value. */
+fun List<Entry>.sortedByOrderBy(orderBy: EntryOrderBy): List<Entry> = when (orderBy) {
+    EntryOrderBy.PAGE_RATING_VOTES -> sortedByDescending { it.page_rating_votes ?: 0 }
+    EntryOrderBy.PAGE_RATING_VISITS_DESC -> sortedByDescending { it.page_rating_visits ?: 0 }
+    EntryOrderBy.PAGE_RATING_VISITS_ASC -> sortedBy { it.page_rating_visits ?: 0 }
+    EntryOrderBy.DATE_CREATED -> sortedByDescending { it.date_created ?: "" }
+    EntryOrderBy.DATE_PUBLISHED -> sortedByDescending { it.date_published ?: "" }
+    EntryOrderBy.STARS_DESC -> sortedByDescending { it.socialData?.stars ?: 0 }
+    EntryOrderBy.STARS_ASC -> sortedBy { it.socialData?.stars ?: 0 }
+    EntryOrderBy.FOLLOWERS_COUNT_DESC -> sortedByDescending { it.socialData?.followersCount ?: 0 }
+    EntryOrderBy.FOLLOWERS_COUNT_ASC -> sortedBy { it.socialData?.followersCount ?: 0 }
 }

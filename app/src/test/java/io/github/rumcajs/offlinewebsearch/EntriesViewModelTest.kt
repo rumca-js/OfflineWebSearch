@@ -112,7 +112,7 @@ class EntriesViewModelTest {
         assertEquals(io.github.rumcajs.offlinewebsearch.ui.EntrySearchFilter.ByVotes, viewModel.activeFilter)
         assertFalse(viewModel.isFilterVisited)
         assertFalse(viewModel.isFilterReadLater)
-        assertEquals(io.github.rumcajs.offlinewebsearch.data.OrderBy.PAGE_RATING_VOTES, viewModel.activeFilter.orderByOverride())
+        assertEquals(io.github.rumcajs.offlinewebsearch.data.EntryOrderBy.PAGE_RATING_VOTES, viewModel.activeFilter.orderByOverride())
     }
 
     @Test

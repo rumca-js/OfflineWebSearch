@@ -6,7 +6,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Visibility
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import io.github.rumcajs.offlinewebsearch.ui.components.FilterOption
 
 /**
@@ -35,14 +35,14 @@ enum class EntrySearchFilter(val label: String) {
     val filterByReadLater: Boolean get() = this == ReadLater
 
     /**
-     * Returns the [OrderBy] override for this filter, or null to fall back to
+     * Returns the [EntryOrderBy] override for this filter, or null to fall back to
      * the global configuration order.
      */
-    fun orderByOverride(): OrderBy? = when (this) {
-        ByDatePublished -> OrderBy.DATE_PUBLISHED
-        ByDateCreated -> OrderBy.DATE_CREATED
-        ByVotes -> OrderBy.PAGE_RATING_VOTES
-        ByVisits -> OrderBy.PAGE_RATING_VISITS_DESC
+    fun orderByOverride(): EntryOrderBy? = when (this) {
+        ByDatePublished -> EntryOrderBy.DATE_PUBLISHED
+        ByDateCreated -> EntryOrderBy.DATE_CREATED
+        ByVotes -> EntryOrderBy.PAGE_RATING_VOTES
+        ByVisits -> EntryOrderBy.PAGE_RATING_VISITS_DESC
         else -> null
     }
 

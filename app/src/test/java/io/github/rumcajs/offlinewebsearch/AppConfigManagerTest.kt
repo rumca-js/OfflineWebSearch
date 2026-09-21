@@ -5,7 +5,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import io.github.rumcajs.offlinewebsearch.data.ViewStyle
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -16,7 +16,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Test
-import org.junit.Assert.assertNull
 
 
 class AppConfigManagerTest {
@@ -142,7 +141,7 @@ class AppConfigManagerTest {
                     directLinks = true,
                     showIcons = true,
                     videoPreview = true,
-                    orderBy = OrderBy.DATE_CREATED,
+                    orderBy = EntryOrderBy.DATE_CREATED,
                     viewStyle = ViewStyle.GALLERY
                 ),
                 dbConfigs = mapOf(
@@ -150,7 +149,7 @@ class AppConfigManagerTest {
                         directLinks = false,
                         showIcons = false,
                         videoPreview = false,
-                        orderBy = OrderBy.DATE_PUBLISHED,
+                        orderBy = EntryOrderBy.DATE_PUBLISHED,
                         viewStyle = ViewStyle.STANDARD
                     )
                 )
@@ -166,13 +165,13 @@ class AppConfigManagerTest {
 
             // Assert that the active database's configuration is returned by dbconfig
             assertEquals(false, decodedConfig.dbconfig.directLinks)
-            assertEquals(OrderBy.DATE_PUBLISHED, decodedConfig.dbconfig.orderBy)
+            assertEquals(EntryOrderBy.DATE_PUBLISHED, decodedConfig.dbconfig.orderBy)
             assertEquals(ViewStyle.STANDARD, decodedConfig.dbconfig.viewStyle)
 
             // Assert that when active database is changed or cleared, dbconfig falls back to default
             val configWithNoActive = decodedConfig.copy(activeDatabaseUrl = null)
             assertEquals(true, configWithNoActive.dbconfig.directLinks)
-            assertEquals(OrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
+            assertEquals(EntryOrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
             assertEquals(ViewStyle.GALLERY, configWithNoActive.dbconfig.viewStyle)
     }
 

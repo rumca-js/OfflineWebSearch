@@ -2,7 +2,7 @@ package io.github.rumcajs.offlinewebsearch.data.repositories
 
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -50,7 +50,7 @@ abstract class EntryRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState? = null,
         searchQuery: String = "",
-        orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+        orderBy: EntryOrderBy = EntryOrderBy.PAGE_RATING_VOTES,
         filterByVisited: Boolean = false,
         filterByReadLater: Boolean = false
     ): Int
@@ -62,7 +62,7 @@ abstract class EntryRepository : RepositoryInterface {
         context: Context,
         activeDatabaseState: DatabaseState? = null,
         searchQuery: String = "",
-        orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+        orderBy: EntryOrderBy = EntryOrderBy.PAGE_RATING_VOTES,
         offset: Int = 0,
         pageSize: Int = 20,
         filterByVisited: Boolean = false,
@@ -110,7 +110,7 @@ abstract class EntryRepository : RepositoryInterface {
             context: Context,
             activeDatabaseState: DatabaseState? = null,
             searchQuery: String = "",
-            orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+            orderBy: EntryOrderBy = EntryOrderBy.PAGE_RATING_VOTES,
             filterByVisited: Boolean = false,
             filterByReadLater: Boolean = false
         ): Int = getRepository(activeDatabaseState).countEntries(
@@ -125,7 +125,7 @@ abstract class EntryRepository : RepositoryInterface {
             context: Context,
             activeDatabaseState: DatabaseState? = null,
             searchQuery: String = "",
-            orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+            orderBy: EntryOrderBy = EntryOrderBy.PAGE_RATING_VOTES,
             offset: Int = 0,
             pageSize: Int = 20,
             filterByVisited: Boolean = false,

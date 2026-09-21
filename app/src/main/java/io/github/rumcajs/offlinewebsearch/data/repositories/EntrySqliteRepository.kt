@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.database.SQLException
 import android.database.sqlite.SQLiteDatabase
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -147,7 +147,7 @@ object EntrySqliteRepository : EntryRepository() {
         context: Context,
         activeDatabaseState: DatabaseState?,
         searchQuery: String,
-        orderBy: OrderBy,
+        orderBy: EntryOrderBy,
         filterByVisited: Boolean,
         filterByReadLater: Boolean
     ): Int = withContext(Dispatchers.IO) {
@@ -159,7 +159,7 @@ object EntrySqliteRepository : EntryRepository() {
         context: Context,
         activeDatabaseState: DatabaseState?,
         searchQuery: String,
-        orderBy: OrderBy,
+        orderBy: EntryOrderBy,
         offset: Int,
         pageSize: Int,
         filterByVisited: Boolean,
@@ -845,7 +845,7 @@ object EntrySqliteRepository : EntryRepository() {
         context: Context,
         state: DatabaseState,
         searchQuery: String,
-        orderBy: OrderBy,
+        orderBy: EntryOrderBy,
         offset: Int,
         pageSize: Int,
         filterByVisited: Boolean = false,
@@ -955,15 +955,15 @@ object EntrySqliteRepository : EntryRepository() {
     }
 }
 
-/** Returns the SQL column name + direction for this [OrderBy] value. */
-private fun OrderBy.toSqlColumn(): String = when (this) {
-    OrderBy.PAGE_RATING_VOTES -> "l.page_rating_votes DESC"
-    OrderBy.PAGE_RATING_VISITS_DESC -> "l.page_rating_visits DESC"
-    OrderBy.PAGE_RATING_VISITS_ASC -> "l.page_rating_visits ASC"
-    OrderBy.DATE_CREATED -> "l.date_created DESC"
-    OrderBy.DATE_PUBLISHED -> "l.date_published DESC"
-    OrderBy.STARS_DESC -> "COALESCE(s.stars, 0) DESC"
-    OrderBy.STARS_ASC -> "COALESCE(s.stars, 0) ASC"
-    OrderBy.FOLLOWERS_COUNT_DESC -> "COALESCE(s.followers_count, 0) DESC"
-    OrderBy.FOLLOWERS_COUNT_ASC -> "COALESCE(s.followers_count, 0) ASC"
+/** Returns the SQL column name + direction for this [EntryOrderBy] value. */
+private fun EntryOrderBy.toSqlColumn(): String = when (this) {
+    EntryOrderBy.PAGE_RATING_VOTES -> "l.page_rating_votes DESC"
+    EntryOrderBy.PAGE_RATING_VISITS_DESC -> "l.page_rating_visits DESC"
+    EntryOrderBy.PAGE_RATING_VISITS_ASC -> "l.page_rating_visits ASC"
+    EntryOrderBy.DATE_CREATED -> "l.date_created DESC"
+    EntryOrderBy.DATE_PUBLISHED -> "l.date_published DESC"
+    EntryOrderBy.STARS_DESC -> "COALESCE(s.stars, 0) DESC"
+    EntryOrderBy.STARS_ASC -> "COALESCE(s.stars, 0) ASC"
+    EntryOrderBy.FOLLOWERS_COUNT_DESC -> "COALESCE(s.followers_count, 0) DESC"
+    EntryOrderBy.FOLLOWERS_COUNT_ASC -> "COALESCE(s.followers_count, 0) ASC"
 }

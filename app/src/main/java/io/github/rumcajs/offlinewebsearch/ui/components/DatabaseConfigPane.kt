@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import io.github.rumcajs.offlinewebsearch.data.ViewStyle
 
 /**
@@ -127,7 +127,7 @@ fun DatabaseConfigPane(
                 expanded = orderByExpanded,
                 onDismissRequest = { orderByExpanded = false }
             ) {
-                OrderBy.values().forEach { orderByOption ->
+                EntryOrderBy.values().forEach { orderByOption ->
                     DropdownMenuItem(
                         text = { Text(orderByOption.displayName) },
                         onClick = {

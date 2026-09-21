@@ -4,7 +4,7 @@ import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class OrderBy(val displayName: String) {
+enum class EntryOrderBy(val displayName: String) {
     PAGE_RATING_VOTES("Page Rating Votes"),
     PAGE_RATING_VISITS_DESC("Page Rating Visits (Highest first)"),
     PAGE_RATING_VISITS_ASC("Page Rating Visits (Lowest first)"),
@@ -111,7 +111,7 @@ data class DatabaseConfiguration(
     val directLinks: Boolean = false,
     val showIcons: Boolean = false,
     val videoPreview: Boolean = false,
-    val orderBy: OrderBy = OrderBy.PAGE_RATING_VOTES,
+    val orderBy: EntryOrderBy = EntryOrderBy.PAGE_RATING_VOTES,
     val viewStyle: ViewStyle = ViewStyle.SEARCH_ENGINE,
     val linksPerPage: Int = MIN_LINKS_PER_PAGE,
     val trackUserSearches: Boolean = true,

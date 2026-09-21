@@ -279,7 +279,7 @@ object AppConfigManager {
         }
     }
 
-    fun setOrderBy(orderBy: OrderBy) {
+    fun setOrderBy(orderBy: EntryOrderBy) {
         updateConfig { currentConfig ->
             currentConfig.updateActiveDbConfig { it.copy(orderBy = orderBy) }
         }

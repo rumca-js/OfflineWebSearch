@@ -15,7 +15,7 @@ import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
-import io.github.rumcajs.offlinewebsearch.data.OrderBy
+import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import io.github.rumcajs.offlinewebsearch.data.repositories.SearchHistoryRepository
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.flow.first
@@ -98,7 +98,7 @@ class EntriesViewModel : ViewModel() {
     }
 
     private var currentActiveDatabase: String? = null
-    private var currentOrderBy: OrderBy? = null
+    private var currentOrderBy: EntryOrderBy? = null
     private var currentLinksPerPage: Int? = null
     private var isObservingConfig = false
     private var isObservingWorker = false
@@ -315,7 +315,7 @@ class EntriesViewModel : ViewModel() {
     private suspend fun fetchPage(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        orderBy: OrderBy,
+        orderBy: EntryOrderBy,
         effectivePageSize: Int = pageSize
     ) {
         isLoading = true
