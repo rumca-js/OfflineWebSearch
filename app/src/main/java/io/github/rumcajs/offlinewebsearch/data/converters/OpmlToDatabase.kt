@@ -48,8 +48,10 @@ data class OpmlImportResult(
  * Feed outlines are identified by the presence of a non-blank `xmlUrl` attribute.
  * Container (group) outlines without `xmlUrl` are recorded as the current group name
  * and stored in the `auto_tag` field of each child source.
+ *
+ * @see FileToDatabase
  */
-object OpmlToDatabase {
+object OpmlToDatabase : FileToDatabase<Source, OpmlImportResult> {
 
     /**
      * Parses [inputStream] as OPML and returns a list of [Source] objects.
@@ -191,7 +193,7 @@ object OpmlToDatabase {
      * @param inputStream Readable OPML XML stream; **not** closed by this function.
      * @return List of [Source] objects.
      */
-    fun parse(inputStream: InputStream): List<Source> = parseSourcesWithDepth(inputStream)
+    override fun parse(inputStream: InputStream): List<Source> = parseSourcesWithDepth(inputStream)
 
     /**
      * Parses [opmlFile] as OPML and returns a list of [Source] objects.
@@ -199,7 +201,7 @@ object OpmlToDatabase {
      * @param opmlFile File containing OPML XML.
      * @return List of [Source] objects.
      */
-    fun parse(opmlFile: File): List<Source> =
+    override fun parse(opmlFile: File): List<Source> =
         opmlFile.inputStream().use { parseSourcesWithDepth(it) }
 
     /**
@@ -210,7 +212,7 @@ object OpmlToDatabase {
      * @param db           Open, writable [SQLiteDatabase] instance.
      * @return [OpmlImportResult] with the parsed sources, number inserted, and any errors.
      */
-    fun importToDatabase(inputStream: InputStream, db: SQLiteDatabase): OpmlImportResult {
+    override fun importToDatabase(inputStream: InputStream, db: SQLiteDatabase): OpmlImportResult {
         val errors = mutableListOf<String>()
         val sources: List<Source> = try {
             parseSourcesWithDepth(inputStream)
@@ -241,7 +243,7 @@ object OpmlToDatabase {
      * @param dbFile    SQLite database file to write sources into.
      * @return [OpmlImportResult] with the parsed sources, number inserted, and any errors.
      */
-    fun importToDatabase(opmlFile: File, dbFile: File): OpmlImportResult {
+    override fun importToDatabase(opmlFile: File, dbFile: File): OpmlImportResult {
         val errors = mutableListOf<String>()
         val sources: List<Source> = try {
             parse(opmlFile)
@@ -273,7 +275,7 @@ object OpmlToDatabase {
      * @param activeDatabaseState   Target [DatabaseState]; must be writable SQLite.
      * @return [OpmlImportResult] with the parsed sources, number inserted, and any errors.
      */
-    suspend fun importToDatabase(
+    override suspend fun importToDatabase(
         context: Context,
         inputStream: InputStream,
         activeDatabaseState: DatabaseState?

@@ -39,8 +39,10 @@ data class EntryJsonImportResult(
  * This converter extracts and centralises the parsing logic that was previously inlined inside
  * `InternetDatabaseBuilder.onPopulatingTable` and `AbstractDatabaseBuilder.unzipAndPopulateJsonToDb`,
  * making it reusable and independently testable.
+ *
+ * @see FileToDatabase
  */
-object EntryJsonToDatabase {
+object EntryJsonToDatabase : FileToDatabase<Entry, EntryJsonImportResult> {
 
     private val jsonConfig = Json {
         ignoreUnknownKeys = true
@@ -56,19 +58,19 @@ object EntryJsonToDatabase {
      * @return List of [Entry] objects decoded from the stream.
      * @throws kotlinx.serialization.SerializationException if the JSON is malformed.
      */
-    fun parseJson(inputStream: InputStream): List<Entry> {
+    override fun parse(inputStream: InputStream): List<Entry> {
         val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
         return jsonConfig.decodeFromString(text)
     }
 
     /**
-     * Parses [jsonFile] as a JSON array of entries and returns the resulting list.
+     * Parses [file] as a JSON array of entries and returns the resulting list.
      *
-     * @param jsonFile File containing a JSON array of entry objects.
+     * @param file File containing a JSON array of entry objects.
      * @return List of [Entry] objects decoded from the file.
      */
-    fun parseJson(jsonFile: File): List<Entry> =
-        jsonFile.inputStream().use { parseJson(it) }
+    override fun parse(file: File): List<Entry> =
+        file.inputStream().use { parse(it) }
 
     /**
      * Parses [jsonText] as a JSON array of entries and returns the resulting list.
@@ -76,7 +78,7 @@ object EntryJsonToDatabase {
      * @param jsonText Raw JSON string containing an array of entry objects.
      * @return List of [Entry] objects decoded from the string.
      */
-    fun parseJson(jsonText: String): List<Entry> =
+    fun parse(jsonText: String): List<Entry> =
         jsonConfig.decodeFromString(jsonText)
 
     /**
@@ -125,10 +127,10 @@ object EntryJsonToDatabase {
      * @param db          Open, writable [SQLiteDatabase].
      * @return [EntryJsonImportResult] with parsed entries, insert count, and errors.
      */
-    fun importJsonToDatabase(inputStream: InputStream, db: SQLiteDatabase): EntryJsonImportResult {
+    override fun importToDatabase(inputStream: InputStream, db: SQLiteDatabase): EntryJsonImportResult {
         val errors = mutableListOf<String>()
         val entries: List<Entry> = try {
-            parseJson(inputStream)
+            parse(inputStream)
         } catch (e: Exception) {
             errors.add("Failed to parse JSON: ${e.message}")
             return EntryJsonImportResult(emptyList(), 0, errors)
@@ -140,16 +142,16 @@ object EntryJsonToDatabase {
     }
 
     /**
-     * Parses [jsonFile] and inserts the entries into [dbFile].
+     * Parses [file] and inserts the entries into [dbFile].
      *
-     * @param jsonFile JSON file to read.
-     * @param dbFile   SQLite database file to write into.
+     * @param file   JSON file to read.
+     * @param dbFile SQLite database file to write into.
      * @return [EntryJsonImportResult] with parsed entries, insert count, and errors.
      */
-    fun importJsonToDatabase(jsonFile: File, dbFile: File): EntryJsonImportResult {
+    override fun importToDatabase(file: File, dbFile: File): EntryJsonImportResult {
         val errors = mutableListOf<String>()
         val entries: List<Entry> = try {
-            parseJson(jsonFile)
+            parse(file)
         } catch (e: Exception) {
             errors.add("Failed to parse JSON: ${e.message}")
             return EntryJsonImportResult(emptyList(), 0, errors)
@@ -185,7 +187,7 @@ object EntryJsonToDatabase {
      * @param activeDatabaseState   Target [DatabaseState]; must be writable SQLite.
      * @return [EntryJsonImportResult] with parsed entries, insert count, and errors.
      */
-    suspend fun importJsonToDatabase(
+    override suspend fun importToDatabase(
         context: Context,
         inputStream: InputStream,
         activeDatabaseState: DatabaseState?
@@ -196,7 +198,7 @@ object EntryJsonToDatabase {
             ?: return@withContext EntryJsonImportResult(emptyList(), 0, errors)
 
         val entries: List<Entry> = try {
-            parseJson(inputStream)
+            parse(inputStream)
         } catch (e: Exception) {
             errors.add("Failed to parse JSON: ${e.message}")
             return@withContext EntryJsonImportResult(emptyList(), 0, errors)
