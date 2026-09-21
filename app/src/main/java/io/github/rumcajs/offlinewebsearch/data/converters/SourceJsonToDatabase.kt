@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.data.converters
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +82,7 @@ private data class JsonSourceEntry(
  * Both converters produce [Source] records and persist via [SourceRepository]. This converter
  * handles JSON-format exports while [OpmlToDatabase] handles OPML/XML exports.
  */
-object SourceJsonToDatabase {
+object SourceJsonToDatabase : FileToDatabase<Source, SourceJsonImportResult>{
 
     private val jsonConfig = Json {
         ignoreUnknownKeys = true
@@ -97,9 +98,9 @@ object SourceJsonToDatabase {
      * @return List of [Source] objects decoded from the stream.
      * @throws kotlinx.serialization.SerializationException if the JSON is malformed.
      */
-    fun parseJson(inputStream: InputStream): List<Source> {
+    override fun parse(inputStream: InputStream): List<Source> {
         val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
-        return parseJson(text)
+        return parse(text)
     }
 
     /**
@@ -108,8 +109,8 @@ object SourceJsonToDatabase {
      * @param jsonFile File containing a JSON array of source objects.
      * @return List of [Source] objects decoded from the file.
      */
-    fun parseJson(jsonFile: File): List<Source> =
-        jsonFile.inputStream().use { parseJson(it) }
+    override fun parse(jsonFile: File): List<Source> =
+        jsonFile.inputStream().use { parse(it) }
 
     /**
      * Parses [jsonText] as a JSON array of sources and returns the resulting list.
@@ -117,7 +118,7 @@ object SourceJsonToDatabase {
      * @param jsonText Raw JSON string containing an array of source objects.
      * @return List of [Source] objects decoded from the string.
      */
-    fun parseJson(jsonText: String): List<Source> =
+    fun parse(jsonText: String): List<Source> =
         jsonConfig.decodeFromString<List<JsonSourceEntry>>(jsonText).map { it.toSource() }
 
     /**
@@ -166,10 +167,10 @@ object SourceJsonToDatabase {
      * @param db          Open, writable [SQLiteDatabase].
      * @return [SourceJsonImportResult] with parsed sources, insert count, and errors.
      */
-    fun importJsonToDatabase(inputStream: InputStream, db: SQLiteDatabase): SourceJsonImportResult {
+    override fun importToDatabase(inputStream: InputStream, db: SQLiteDatabase): SourceJsonImportResult {
         val errors = mutableListOf<String>()
         val sources: List<Source> = try {
-            parseJson(inputStream)
+            parse(inputStream)
         } catch (e: Exception) {
             errors.add("Failed to parse JSON: ${e.message}")
             return SourceJsonImportResult(emptyList(), 0, errors)
@@ -187,10 +188,10 @@ object SourceJsonToDatabase {
      * @param dbFile   SQLite database file to write into.
      * @return [SourceJsonImportResult] with parsed sources, insert count, and errors.
      */
-    fun importJsonToDatabase(jsonFile: File, dbFile: File): SourceJsonImportResult {
+    override fun importToDatabase(jsonFile: File, dbFile: File): SourceJsonImportResult {
         val errors = mutableListOf<String>()
         val sources: List<Source> = try {
-            parseJson(jsonFile)
+            parse(jsonFile)
         } catch (e: Exception) {
             errors.add("Failed to parse JSON: ${e.message}")
             return SourceJsonImportResult(emptyList(), 0, errors)
@@ -226,7 +227,7 @@ object SourceJsonToDatabase {
      * @param activeDatabaseState   Target [DatabaseState]; must be writable SQLite.
      * @return [SourceJsonImportResult] with parsed sources, insert count, and errors.
      */
-    suspend fun importJsonToDatabase(
+    override suspend fun importToDatabase(
         context: Context,
         inputStream: InputStream,
         activeDatabaseState: DatabaseState?
@@ -237,7 +238,7 @@ object SourceJsonToDatabase {
             ?: return@withContext SourceJsonImportResult(emptyList(), 0, errors)
 
         val sources: List<Source> = try {
-            parseJson(inputStream)
+            parse(inputStream)
         } catch (e: Exception) {
             errors.add("Failed to parse JSON: ${e.message}")
             return@withContext SourceJsonImportResult(emptyList(), 0, errors)
