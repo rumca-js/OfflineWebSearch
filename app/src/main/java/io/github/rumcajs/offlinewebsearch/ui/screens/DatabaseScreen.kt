@@ -334,7 +334,7 @@ fun ClearRepositoryButton(
     item: RepoClearItem,
     enabled: Boolean,
     context: android.content.Context,
-    state: io.github.rumcajs.offlinewebsearch.data.DatabaseState,
+    state: DatabaseState,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
     var showDialog by remember { mutableStateOf(false) }
