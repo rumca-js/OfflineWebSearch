@@ -6,9 +6,9 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_NAME
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
+import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
 import io.github.rumcajs.offlinewebsearch.data.defaultAssets
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
-import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -69,9 +69,8 @@ class DefaultDatabaseBuilder(
 
         val totalAssets = assetList.size
         for ((index, fileName) in assetList.withIndex()) {
-            context.assets.open(fileName).bufferedReader().use { reader ->
-                val jsonString = reader.readText()
-                val entries: List<Entry> = json.decodeFromString(jsonString)
+            context.assets.open(fileName).use { inputStream ->
+                val entries = EntryJsonToDatabase.parseJson(inputStream)
                 populateEntriesToDatabase(entries, tempWorkingFile!!)
             }
             val progress = 0.5f + ((index + 1).toFloat() / totalAssets) * 0.45f

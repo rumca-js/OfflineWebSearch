@@ -7,7 +7,6 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
 import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
-import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -96,8 +95,7 @@ class LocalDatabaseBuilder(
         if (isJsonInput && contentBytes != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            val jsonText = String(contentBytes!!, Charsets.UTF_8)
-            val entries: List<Entry> = json.decodeFromString(jsonText)
+            val entries = EntryJsonToDatabase.parseJson(String(contentBytes!!, Charsets.UTF_8))
             populateEntriesToDatabase(entries, tempWorkingFile!!)
         } else if (isZipInput && !url.endsWith(".db.zip", ignoreCase = true) && tempZipFile != null) {
             // General zip containing JSON files

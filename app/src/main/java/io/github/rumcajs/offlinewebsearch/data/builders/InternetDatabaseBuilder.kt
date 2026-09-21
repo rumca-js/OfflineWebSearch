@@ -5,7 +5,6 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
 import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
-import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -87,8 +86,7 @@ class InternetDatabaseBuilder(
         if (isJson && downloadedBytes != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            val jsonText = String(downloadedBytes!!, Charsets.UTF_8)
-            val entries: List<Entry> = json.decodeFromString(jsonText)
+            val entries = EntryJsonToDatabase.parseJson(String(downloadedBytes!!, Charsets.UTF_8))
             populateEntriesToDatabase(entries, tempWorkingFile!!)
         } else if (isZip && !url.endsWith(".db.zip", ignoreCase = true) && tempZipFile != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)

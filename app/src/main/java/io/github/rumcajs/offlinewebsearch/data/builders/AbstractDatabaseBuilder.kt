@@ -6,6 +6,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
+import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
 import io.github.rumcajs.offlinewebsearch.data.repositories.ConfigurationEntry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SearchViewRepository
@@ -13,7 +14,6 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
@@ -30,11 +30,6 @@ abstract class AbstractDatabaseBuilder(
     protected val oldUrl: String? = null,
     protected val customFileName: String? = null
 ) : DatabaseBuilder {
-
-    protected val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
 
     protected var _currentStatus: DatabaseStatus = DatabaseStatus.INIT
     override val currentStatus: DatabaseStatus get() = _currentStatus
@@ -223,20 +218,10 @@ abstract class AbstractDatabaseBuilder(
 
     /**
      * Extracts all `.json` files from a ZIP archive, parses entries, and inserts them into [dbFile].
+     *
+     * Delegates to [EntryJsonToDatabase.importZipToDatabase] for consistent parsing behaviour.
      */
     protected fun unzipAndPopulateJsonToDb(zipFile: File, dbFile: File) {
-        ZipFile(zipFile).use { zip ->
-            val entries = zip.entries()
-            while (entries.hasMoreElements()) {
-                val entry = entries.nextElement()
-                if (!entry.isDirectory && entry.name.endsWith(".json", ignoreCase = true)) {
-                    zip.getInputStream(entry).bufferedReader().use { reader ->
-                        val jsonText = reader.readText()
-                        val parsedEntries: List<Entry> = json.decodeFromString(jsonText)
-                        populateEntriesToDatabase(parsedEntries, dbFile)
-                    }
-                }
-            }
-        }
+        EntryJsonToDatabase.importZipToDatabase(zipFile, dbFile)
     }
 }
