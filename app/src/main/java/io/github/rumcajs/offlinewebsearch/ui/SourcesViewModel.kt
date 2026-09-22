@@ -60,18 +60,24 @@ class SourcesViewModel : ViewModel() {
             val query = activeSearchQuery.trim().lowercase()
             sourceItems.filter { item ->
                 item.source.title.lowercase().contains(query) ||
-                    item.source.url.lowercase().contains(query)
+                        item.source.url.lowercase().contains(query)
             }
         }
         when (sourceOrder) {
-            SourceOrder.ByUrl -> base.sortedWith(compareBy<SourceWithOperationalData> { it.source.url.lowercase() }.thenBy { it.source.title.lowercase() })
-            SourceOrder.ByTitle -> base.sortedWith(compareBy<SourceWithOperationalData> { it.source.title.lowercase() }.thenBy { it.source.url.lowercase() })
+            SourceOrder.ByUrl -> base.sortedWith(
+                compareBy<SourceWithOperationalData> { it.source.url.lowercase() }
+                    .thenBy { it.source.title.lowercase() }
+            )
+            SourceOrder.ByTitle -> base.sortedWith(
+                compareBy<SourceWithOperationalData> { it.source.title.lowercase() }
+                    .thenBy { it.source.url.lowercase() }
+            )
             SourceOrder.ByFetchTime -> base.sortedWith(
                 compareBy<SourceWithOperationalData> { it.operationalData?.date_fetched ?: "" }
                     .thenBy { it.source.url.lowercase() }
             )
             SourceOrder.ByConsecutiveErrors -> base.sortedWith(
-                compareBy<SourceWithOperationalData> { it.operationalData?.consecutive_errors ?: "" }
+                compareByDescending<SourceWithOperationalData> { it.operationalData?.consecutive_errors ?: 0 }
                     .thenBy { it.source.url.lowercase() }
             )
         }
