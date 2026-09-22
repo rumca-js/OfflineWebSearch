@@ -33,7 +33,7 @@ data class Source(
  * Sort mode applied to source queries in [SourceRepository].
  */
 @Serializable
-enum class SourceOrder { ByUrl, ByTitle, ByFetchTime }
+enum class SourceOrder { ByUrl, ByTitle, ByFetchTime, ByConsecutiveErrors }
 
 /**
  * Data class representing a [Source] paired with its optional [SourceOperationalData]
@@ -117,6 +117,7 @@ object SourceRepository : RepositoryInterface {
                 SourceOrder.ByUrl -> "s.url ASC, s.title ASC"
                 SourceOrder.ByTitle -> "s.title ASC, s.url ASC"
                 SourceOrder.ByFetchTime -> "sod.date_fetched ASC, s.url ASC"
+                SourceOrder.ByConsecutiveErrors -> "sod.consecutive_errors DESC, s.url ASC"
             }
             val sqlText = "SELECT s.id AS s_id, s.enabled AS s_enabled, s.url AS s_url, s.title AS s_title, " +
                     "s.favicon AS s_favicon, s.source_type AS s_source_type, s.age AS s_age, " +

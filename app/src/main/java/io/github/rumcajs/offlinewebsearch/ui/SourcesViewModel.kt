@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +27,8 @@ const val SOURCE_FILTER_KEY_BY_URL = "by_url"
 const val SOURCE_FILTER_KEY_BY_TITLE = "by_title"
 const val SOURCE_FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
 
+const val SOURCE_FILTER_KEY_BY_CONSECUTIVE_ERRORS = "by_consecutive_errors"
+
 /**
  * Sentinel used by [SourcesViewModel] so the very first config emission always triggers
  * an initial data load, even when [activeDatabaseUrl] starts as null (default database).
@@ -42,6 +45,11 @@ val SOURCE_FILTER_OPTIONS = listOf(
         key = SOURCE_FILTER_KEY_BY_FETCH_TIME,
         label = "By Fetch Time",
         icon = Icons.Default.DateRange
+    ),
+    FilterOption(
+        key = SOURCE_FILTER_KEY_BY_CONSECUTIVE_ERRORS,
+        label = "By Errors",
+        icon = Icons.Default.Error
     ),
     FilterOption(
         key = SOURCE_FILTER_KEY_BY_URL,
@@ -79,6 +87,7 @@ class SourcesViewModel : ViewModel() {
             SourceOrder.ByUrl -> SOURCE_FILTER_KEY_BY_URL
             SourceOrder.ByTitle -> SOURCE_FILTER_KEY_BY_TITLE
             SourceOrder.ByFetchTime -> SOURCE_FILTER_KEY_BY_FETCH_TIME
+            SourceOrder.ByConsecutiveErrors -> SOURCE_FILTER_KEY_BY_CONSECUTIVE_ERRORS
         }
     }
 
@@ -97,6 +106,10 @@ class SourcesViewModel : ViewModel() {
             SourceOrder.ByTitle -> base.sortedWith(compareBy<SourceWithOperationalData> { it.source.title.lowercase() }.thenBy { it.source.url.lowercase() })
             SourceOrder.ByFetchTime -> base.sortedWith(
                 compareBy<SourceWithOperationalData> { it.operationalData?.date_fetched ?: "" }
+                    .thenBy { it.source.url.lowercase() }
+            )
+            SourceOrder.ByConsecutiveErrors -> base.sortedWith(
+                compareBy<SourceWithOperationalData> { it.operationalData?.consecutive_errors ?: "" }
                     .thenBy { it.source.url.lowercase() }
             )
         }
