@@ -2,10 +2,6 @@ package io.github.rumcajs.offlinewebsearch.ui
 
 import android.content.Context
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.SortByAlpha
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,41 +18,12 @@ import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** Filter key constants for [SourcesViewModel] dropdown options. */
-const val SOURCE_FILTER_KEY_BY_URL = "by_url"
-const val SOURCE_FILTER_KEY_BY_TITLE = "by_title"
-const val SOURCE_FILTER_KEY_BY_FETCH_TIME = "by_fetch_time"
-
-const val SOURCE_FILTER_KEY_BY_CONSECUTIVE_ERRORS = "by_consecutive_errors"
-
 /**
  * Sentinel used by [SourcesViewModel] so the very first config emission always triggers
  * an initial data load, even when [activeDatabaseUrl] starts as null (default database).
  */
 private const val SENTINEL_NO_DATABASE = "\$__no_database__"
 
-val SOURCE_FILTER_OPTIONS = listOf(
-    FilterOption(
-        key = SOURCE_FILTER_KEY_BY_TITLE,
-        label = "By Title",
-        icon = Icons.Default.SortByAlpha
-    ),
-    FilterOption(
-        key = SOURCE_FILTER_KEY_BY_FETCH_TIME,
-        label = "By Fetch Time",
-        icon = Icons.Default.DateRange
-    ),
-    FilterOption(
-        key = SOURCE_FILTER_KEY_BY_CONSECUTIVE_ERRORS,
-        label = "By Errors",
-        icon = Icons.Default.Error
-    ),
-    FilterOption(
-        key = SOURCE_FILTER_KEY_BY_URL,
-        label = "By Url",
-        icon = Icons.Default.SortByAlpha
-),
-)
 
 /**
  * ViewModel managing Sources state, querying, filtering, and background refresh progress.
@@ -83,12 +50,7 @@ class SourcesViewModel : ViewModel() {
     }
 
     val activeFilterKey: String? by derivedStateOf {
-        when (sourceOrder) {
-            SourceOrder.ByUrl -> SOURCE_FILTER_KEY_BY_URL
-            SourceOrder.ByTitle -> SOURCE_FILTER_KEY_BY_TITLE
-            SourceOrder.ByFetchTime -> SOURCE_FILTER_KEY_BY_FETCH_TIME
-            SourceOrder.ByConsecutiveErrors -> SOURCE_FILTER_KEY_BY_CONSECUTIVE_ERRORS
-        }
+        orderToKey(sourceOrder)
     }
 
     val filteredSources by derivedStateOf {
@@ -175,14 +137,7 @@ class SourcesViewModel : ViewModel() {
     }
 
     fun setFilter(option: FilterOption) {
-        sourceOrder = when (option.key) {
-            SOURCE_FILTER_KEY_BY_URL -> SourceOrder.ByUrl
-            SOURCE_FILTER_KEY_BY_TITLE ->
-                if (sourceOrder == SourceOrder.ByTitle) SourceOrder.ByUrl else SourceOrder.ByTitle
-            SOURCE_FILTER_KEY_BY_FETCH_TIME ->
-                if (sourceOrder == SourceOrder.ByFetchTime) SourceOrder.ByUrl else SourceOrder.ByFetchTime
-            else -> SourceOrder.ByTitle
-        }
+        sourceOrder = keyToOrder(option.key)
     }
 
     fun refreshAll(context: Context, onMessage: ((String) -> Unit)? = null) {
