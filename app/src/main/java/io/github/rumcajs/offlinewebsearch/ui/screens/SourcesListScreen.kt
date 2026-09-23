@@ -161,7 +161,7 @@ fun SourcesListScreen(
                             searchQuery = viewModel.searchQuery,
                             onSearchQueryChange = { viewModel.searchQuery = it },
                             onClearSearch = {
-                                viewModel.clearSearch(context)
+                                viewModel.clearSearch()
                             },
                             onPerformSearch = {
                                 viewModel.performSearch(context)

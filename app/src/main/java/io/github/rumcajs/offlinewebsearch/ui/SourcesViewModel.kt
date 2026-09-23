@@ -118,14 +118,8 @@ class SourcesViewModel : ViewModel() {
         }
     }
 
-    fun clearSearch(context: Context? = null) {
+    fun clearSearch() {
         searchQuery = ""
-        if (activeSearchQuery.isNotEmpty()) {
-            activeSearchQuery = ""
-            if (context != null) {
-                loadSources(context)
-            }
-        }
     }
 
     fun setFilter(option: FilterOption, context: Context? = null) {

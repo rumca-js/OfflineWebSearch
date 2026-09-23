@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.data.builders
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.ASSET_EMPTY_TABLE
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_FILE
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_NAME
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
@@ -130,9 +131,5 @@ class DefaultDatabaseBuilder(
             tempWorkingFile = null
         } catch (_: Exception) {
         }
-    }
-
-    companion object {
-        const val DEFAULT_DATABASE_FILE = "default.db"
     }
 }
