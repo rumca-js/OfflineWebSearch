@@ -25,18 +25,26 @@ fun formatBytes(bytes: Long): String {
 }
 
 /**
- * Component that displays HTTP response information (status code, content length, content type, error details).
+ * Component that displays HTTP response information (status code, content length, content type, feed entries, error details).
  *
  * @param pageResponse The HTTP response object containing status code, headers, and metadata.
  * @param modifier Modifier for container layout and sizing.
  * @param title Title text for the response info card (defaults to "Response Info").
+ * @param isLoading Whether the response is currently loading (displays progress indicator in header).
+ * @param entriesCount Optional count of feed entries found (for RSS/feed responses).
+ * @param extraContent Optional trailing content to render inside the card column.
  */
 @Composable
 fun UrlResponseInfoPane(
-    pageResponse: PageResponseObject,
+    pageResponse: PageResponseObject?,
     modifier: Modifier = Modifier,
-    title: String = "Response Info"
+    title: String = "Response Info",
+    isLoading: Boolean = false,
+    entriesCount: Int? = null,
+    extraContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
+    if (pageResponse == null && !isLoading) return
+
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
@@ -49,119 +57,162 @@ fun UrlResponseInfoPane(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            val statusWithText = NetworkUtils.statusCodeToText(pageResponse.statusCode)
-
-            val (statusColor, statusText) = when {
-                pageResponse.isValid -> {
-                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success ${statusWithText}"
-                }
-                pageResponse.isInvalid -> {
-                    MaterialTheme.colorScheme.error to "Error ${statusWithText}"
-                }
-                else -> {
-                    MaterialTheme.colorScheme.error to "Unknown ${statusWithText}"
-                }
-            }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(bottom = if (pageResponse != null) 16.dp else 0.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Status Code",
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
                 )
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(statusText) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        labelColor = statusColor
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
                     )
-                )
+                }
             }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
+            if (pageResponse != null) {
+                val statusWithText = NetworkUtils.statusCodeToText(pageResponse.statusCode)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Response Length",
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                val lengthDisplay = pageResponse.length?.let { len ->
-                    "$len bytes (${formatBytes(len)})"
-                } ?: "Unknown"
-                Text(
-                    text = lengthDisplay,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+                val (statusColor, statusText) = when {
+                    pageResponse.isValid -> {
+                        androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success $statusWithText"
+                    }
+                    pageResponse.isInvalid -> {
+                        MaterialTheme.colorScheme.error to "Error $statusWithText"
+                    }
+                    else -> {
+                        MaterialTheme.colorScheme.error to "Unknown $statusWithText"
+                    }
+                }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Status Code",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(statusText) },
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            labelColor = statusColor
+                        )
+                    )
+                }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Content Type",
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = pageResponse.contentType ?: "N/A",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            if (pageResponse.error != null) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 8.dp),
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
 
-                Text(
-                    text = "Error Details",
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    text = pageResponse.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Content Type",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = pageResponse.contentType ?: "N/A",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                pageResponse.length?.let { len ->
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Response Length",
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        val lengthDisplay = "$len bytes (${formatBytes(len)})"
+                        Text(
+                            text = lengthDisplay,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                entriesCount?.let { count ->
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Feed Entries",
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "$count entries found",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                if (pageResponse.error != null) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Text(
+                        text = "Error Details",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        text = pageResponse.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
+
+            extraContent?.invoke(this)
         }
     }
 }
@@ -171,13 +222,19 @@ fun UrlResponseInfoPane(
  */
 @Composable
 fun ResponseInfoPane(
-    pageResponse: PageResponseObject,
+    pageResponse: PageResponseObject?,
     modifier: Modifier = Modifier,
-    title: String = "Response Info"
+    title: String = "Response Info",
+    isLoading: Boolean = false,
+    entriesCount: Int? = null,
+    extraContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     UrlResponseInfoPane(
         pageResponse = pageResponse,
         modifier = modifier,
-        title = title
+        title = title,
+        isLoading = isLoading,
+        entriesCount = entriesCount,
+        extraContent = extraContent
     )
 }

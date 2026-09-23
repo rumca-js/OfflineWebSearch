@@ -19,7 +19,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceFormPane
-import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.ui.components.UrlResponseInfoPane
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
@@ -227,148 +227,13 @@ fun SourceUrlEditPreviewScreen(
             // Preview Info Card displaying status code, content-type, etc.
             if (previewResponseObject != null || isLoadingPreview) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Card(
+                UrlResponseInfoPane(
+                    pageResponse = previewResponseObject,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Feed Info",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            if (isLoadingPreview) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                        }
-
-                        previewResponseObject?.let { resp ->
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            val statusWithText = NetworkUtils.statusCodeToText(resp.statusCode)
-
-                            val (statusColor, statusText) = when {
-                                resp.isValid -> {
-                                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success ${statusWithText}"
-                                }
-                                resp.isInvalid -> {
-                                    MaterialTheme.colorScheme.error to "Error ${statusWithText}"
-                                }
-                                else -> {
-                                    MaterialTheme.colorScheme.error to "Unknown ${statusWithText}"
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Status Code",
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = { Text(statusText) },
-                                    colors = SuggestionChipDefaults.suggestionChipColors(
-                                        labelColor = statusColor
-                                    )
-                                )
-                            }
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Content-Type",
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = resp.contentType ?: "N/A",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-
-                            resp.length?.let { len ->
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Content Length",
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        text = "$len bytes",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            }
-
-                            rssEntryCount?.let { count ->
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Feed Entries",
-                                        fontWeight = FontWeight.SemiBold,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        text = "$count entries found",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-
-                            if (resp.error != null) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                Text(
-                                    text = "Error: ${resp.error}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-                }
+                    title = "Feed Info",
+                    isLoading = isLoadingPreview,
+                    entriesCount = rssEntryCount
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
