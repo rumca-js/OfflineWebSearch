@@ -6,7 +6,7 @@ import io.github.rumcajs.offlinewebsearch.data.ASSET_EMPTY_TABLE
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
-import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
+import io.github.rumcajs.offlinewebsearch.data.converters.FileToDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -16,8 +16,8 @@ import java.io.IOException
  * Database builder for local inputs including filesystem URIs, byte arrays,
  * asset templates, and existing database duplicates.
  *
- * Automatically converts local JSON files and archives into fully-functional,
- * writable SQLite database files using the `table.db` schema template.
+ * Automatically converts local files (.json, .opml) and archives into fully-functional,
+ * writable SQLite database files using the `table.db` schema template via [FileToDatabase].
  */
 class LocalDatabaseBuilder(
     context: Context,
@@ -33,14 +33,14 @@ class LocalDatabaseBuilder(
     private var tempWorkingFile: File? = null
     private var tempZipFile: File? = null
     private var contentBytes: ByteArray? = null
-    private var isJsonInput: Boolean = false
+    private var isConvertibleInput: Boolean = false
     private var isZipInput: Boolean = false
 
     override suspend fun onInit() = withContext(Dispatchers.IO) {
         super.onInit()
 
         isZipInput = url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)
-        isJsonInput = url.endsWith(".json", ignoreCase = true)
+        isConvertibleInput = FileToDatabase.isSupported(url)
 
         // Read content bytes from URI or rawContent if provided
         if (rawContent != null) {
@@ -92,17 +92,16 @@ class LocalDatabaseBuilder(
     }
 
     override suspend fun onPopulatingTable(): Unit = withContext(Dispatchers.IO) {
-        if (isJsonInput && contentBytes != null) {
+        if (isConvertibleInput && contentBytes != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            val entries = EntryJsonToDatabase.parse(String(contentBytes!!, Charsets.UTF_8))
-            populateEntriesToDatabase(entries, tempWorkingFile!!)
+            FileToDatabase.importToDatabase(contentBytes!!, url, tempWorkingFile!!)
         } else if (isZipInput && !url.endsWith(".db.zip", ignoreCase = true) && tempZipFile != null) {
             // General zip containing JSON files
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            EntryJsonToDatabase.importZipToDatabase(tempZipFile!!, tempWorkingFile!!)
-        } else if (contentBytes != null && !isZipInput && !isJsonInput && assetFileName == null) {
+            FileToDatabase.importZipToDatabase(tempZipFile!!, tempWorkingFile!!)
+        } else if (contentBytes != null && !isZipInput && !isConvertibleInput && assetFileName == null) {
             // Direct SQLite file bytes
             tempWorkingFile!!.writeBytes(contentBytes!!)
         }

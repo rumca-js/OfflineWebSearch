@@ -162,6 +162,36 @@ class DatabaseBuildersTest {
     }
 
     @Test
+    fun testLocalDatabaseBuilderFromOpmlBytes() = runBlocking {
+        val opmlContent = """
+            <opml version="1.0">
+                <head><title>My OPML</title></head>
+                <body>
+                    <outline text="My Blog" type="rss" xmlUrl="https://myblog.example.com/rss"/>
+                </body>
+            </opml>
+        """.trimIndent()
+
+        val url = "local://feeds_sample.opml"
+        val builder = LocalDatabaseBuilder.fromBytes(
+            context = context,
+            url = url,
+            content = opmlContent.toByteArray(Charsets.UTF_8)
+        )
+
+        val state = builder.build()
+        assertEquals(DatabaseStatus.READY, state.status)
+        assertFalse(state.isReadOnly)
+        assertTrue(state.isSQLite)
+        assertTrue(state.localFileName.endsWith(".db"))
+
+        val sources = io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository.getAllSourcesWithOperationalData(context, state)
+        assertEquals(1, sources.size)
+        assertEquals("My Blog", sources[0].source.title)
+        assertEquals("https://myblog.example.com/rss", sources[0].source.url)
+    }
+
+    @Test
     fun testInternetDatabaseBuilderFailsWhenNetworkDisabled() = runBlocking {
         AppConfigManager.setNetworkDisabled(true)
 

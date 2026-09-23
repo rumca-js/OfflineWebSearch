@@ -1095,6 +1095,41 @@ class SourceRepositoryTest {
     }
 
     @Test
+    fun `getAllSourcesWithOperationalData filters results using searchQuery`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url1 = "https://tech-news.com/feed.xml"
+        val url2 = "https://cooking-blog.com/rss"
+        val url3 = "https://tech-crunch.com/feed.xml"
+        SourceRepository.insertSource(context, dbState, title = "Tech Daily", url = url1, enabled = true, language = "en")
+        SourceRepository.insertSource(context, dbState, title = "Grandma Cooking", url = url2, enabled = true, language = "pl")
+        SourceRepository.insertSource(context, dbState, title = "Tech Crunch", url = url3, enabled = true, language = "en")
+
+        // Full text search: "tech" matches url1 and url3
+        val techResults = SourceRepository.getAllSourcesWithOperationalData(context, dbState, searchQuery = "tech")
+        assertEquals(2, techResults.size)
+        assertTrue(techResults.all { it.source.title.contains("Tech") || it.source.url.contains("tech") })
+
+        // Exact match by title
+        val exactTitle = SourceRepository.getAllSourcesWithOperationalData(context, dbState, searchQuery = "title==Grandma Cooking")
+        assertEquals(1, exactTitle.size)
+        assertEquals("Grandma Cooking", exactTitle[0].source.title)
+
+        // Exact match by language
+        val langResults = SourceRepository.getAllSourcesWithOperationalData(context, dbState, searchQuery = "language==pl")
+        assertEquals(1, langResults.size)
+        assertEquals("Grandma Cooking", langResults[0].source.title)
+
+        // Contains match by url
+        val urlContains = SourceRepository.getAllSourcesWithOperationalData(context, dbState, searchQuery = "url=cooking")
+        assertEquals(1, urlContains.size)
+        assertEquals("https://cooking-blog.com/rss", urlContains[0].source.url)
+
+        // Search with no match
+        val noMatch = SourceRepository.getAllSourcesWithOperationalData(context, dbState, searchQuery = "astronomy")
+        assertEquals(0, noMatch.size)
+    }
+
+    @Test
     fun `getAllSourcesWithOperationalData returns empty list on null or invalid dbState`() = runBlocking {
         val nullResult = SourceRepository.getAllSourcesWithOperationalData(context, null)
         assertTrue(nullResult.isEmpty())
