@@ -6,7 +6,6 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
-import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
 import io.github.rumcajs.offlinewebsearch.data.repositories.ConfigurationEntry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SearchViewRepository

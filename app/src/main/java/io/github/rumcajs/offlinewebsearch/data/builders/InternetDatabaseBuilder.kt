@@ -4,7 +4,7 @@ import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
-import io.github.rumcajs.offlinewebsearch.data.converters.EntryJsonToDatabase
+import io.github.rumcajs.offlinewebsearch.data.converters.FileToDatabase
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,9 +14,9 @@ import java.io.IOException
 /**
  * Database builder for fetching databases from remote HTTP/HTTPS URLs.
  *
- * Supports remote `.db` files, compressed `.db.zip` archives, and `.json` files
+ * Supports remote `.db` files, compressed `.db.zip` archives, and `.json` or `.opml` files
  * or `.zip` archives containing JSON entries, converting them into local writable
- * SQLite databases.
+ * SQLite databases via [FileToDatabase].
  */
 class InternetDatabaseBuilder(
     context: Context,
@@ -29,7 +29,7 @@ class InternetDatabaseBuilder(
     private var tempZipFile: File? = null
     private var downloadedBytes: ByteArray? = null
     private var isZip: Boolean = false
-    private var isJson: Boolean = false
+    private var isConvertibleFile: Boolean = false
 
     override suspend fun onInit() = withContext(Dispatchers.IO) {
         super.onInit()
@@ -39,10 +39,10 @@ class InternetDatabaseBuilder(
         }
 
         isZip = url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)
-        isJson = url.endsWith(".json", ignoreCase = true)
+        isConvertibleFile = FileToDatabase.isSupported(url)
 
-        if (!isJson && !isZip && !url.endsWith(".db", ignoreCase = true)) {
-            throw IllegalArgumentException("URL must end with .json, .db, .zip, or .db.zip")
+        if (!isConvertibleFile && !isZip && !url.endsWith(".db", ignoreCase = true)) {
+            throw IllegalArgumentException("URL must end with .json, .opml, .db, .zip, or .db.zip")
         }
 
         tempWorkingFile = File.createTempFile("internet_db_", ".db", context.cacheDir)
@@ -83,16 +83,15 @@ class InternetDatabaseBuilder(
     }
 
     override suspend fun onPopulatingTable(): Unit = withContext(Dispatchers.IO) {
-        if (isJson && downloadedBytes != null) {
+        if (isConvertibleFile && downloadedBytes != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            val entries = EntryJsonToDatabase.parse(String(downloadedBytes!!, Charsets.UTF_8))
-            populateEntriesToDatabase(entries, tempWorkingFile!!)
+            FileToDatabase.importToDatabase(downloadedBytes!!, url, tempWorkingFile!!)
         } else if (isZip && !url.endsWith(".db.zip", ignoreCase = true) && tempZipFile != null) {
             updateStatus(DatabaseStatus.POPULATING_TABLE, 0.85f)
             copyAssetTableDb(tempWorkingFile!!)
-            EntryJsonToDatabase.importZipToDatabase(tempZipFile!!, tempWorkingFile!!)
-        } else if (!isZip && !isJson && downloadedBytes != null) {
+            FileToDatabase.importZipToDatabase(tempZipFile!!, tempWorkingFile!!)
+        } else if (!isZip && !isConvertibleFile && downloadedBytes != null) {
             // Direct SQLite .db file downloaded
             tempWorkingFile!!.writeBytes(downloadedBytes!!)
         }
