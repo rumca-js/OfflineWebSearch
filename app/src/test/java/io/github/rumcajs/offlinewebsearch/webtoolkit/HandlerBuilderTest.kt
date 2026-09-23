@@ -255,7 +255,7 @@ class HandlerBuilderTest {
         )
 
         val handler_feeds = HandlerBuilder(redditFeed).build()
-        assertTrue(handler1 is RedditChannelHandler)
+        assertTrue(handler_feeds is RedditChannelHandler)
         org.junit.Assert.assertEquals(
             listOf("https://www.reddit.com/r/kotlin/.rss"),
             handler_feeds?.getFeeds()

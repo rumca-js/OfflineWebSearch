@@ -233,7 +233,7 @@ class RedditChannelHandler(private val link: String) : PageHandler {
     override fun getUrl(): String = link
 
     override fun getChannel(): String {
-        val path = getPath(link)
+        val path = getPath(link).removeSuffix("/").removeSuffix(".rss").removeSuffix("/")
         return when {
             path.startsWith("/r/") -> path.substringAfter("/r/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
             path.startsWith("/user/") -> path.substringAfter("/user/").split("/").firstOrNull { it.isNotEmpty() } ?: ""
@@ -256,7 +256,7 @@ class RedditChannelHandler(private val link: String) : PageHandler {
     override fun getFeeds(): List<String> {
         val domain = UrlLocation(link).getDomain()
         val path = getPath(link)
-        val cleanPath = path.removeSuffix("/")
+        val cleanPath = path.removeSuffix("/").removeSuffix(".rss").removeSuffix("/")
         if (cleanPath.startsWith("/r/") || cleanPath.startsWith("/user/") || cleanPath.startsWith("/u/")) {
             val host = if (domain.isNotEmpty()) domain else "www.reddit.com"
             return listOf("https://$host$cleanPath/.rss")
