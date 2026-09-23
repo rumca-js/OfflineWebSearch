@@ -61,13 +61,13 @@ fun UrlResponseInfoPane(
 
             val (statusColor, statusText) = when {
                 pageResponse.isValid -> {
-                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${statusWithText})"
+                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success ${statusWithText}"
                 }
                 pageResponse.isInvalid -> {
-                    MaterialTheme.colorScheme.error to "Error (${statusWithText})"
+                    MaterialTheme.colorScheme.error to "Error ${statusWithText}"
                 }
                 else -> {
-                    MaterialTheme.colorScheme.error to "Unknown (${statusWithText})"
+                    MaterialTheme.colorScheme.error to "Unknown ${statusWithText}"
                 }
             }
 

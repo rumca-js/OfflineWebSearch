@@ -264,13 +264,13 @@ fun SourceUrlEditPreviewScreen(
 
                             val (statusColor, statusText) = when {
                                 resp.isValid -> {
-                                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${statusWithText})"
+                                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success ${statusWithText}"
                                 }
                                 resp.isInvalid -> {
-                                    MaterialTheme.colorScheme.error to "Error (${statusWithText})"
+                                    MaterialTheme.colorScheme.error to "Error ${statusWithText}"
                                 }
                                 else -> {
-                                    MaterialTheme.colorScheme.error to "Unknown (${statusWithText})"
+                                    MaterialTheme.colorScheme.error to "Unknown ${statusWithText}"
                                 }
                             }
 

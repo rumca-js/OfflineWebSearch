@@ -129,7 +129,7 @@ object NetworkUtils {
                 PageResponseObject(
                     statusCode = response.code,
                     headers = response.headers.toMultimap(),
-                    error = if (response.isSuccessful) null else "HTTP ${response.code}"
+                    error = null
                 )
             }
         } catch (e: Exception) {
