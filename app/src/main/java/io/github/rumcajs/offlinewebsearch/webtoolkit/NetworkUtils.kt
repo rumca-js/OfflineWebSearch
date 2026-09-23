@@ -30,6 +30,50 @@ object NetworkUtils {
         return false;
     }
 
+    fun statusCodeToText(statusCode: Int): String {
+        /**
+         * Converts status code to text
+         */
+        return when (statusCode) {
+            0 -> "HTTP_STATUS_UNKNOWN(0)"
+            200 -> "HTTP_STATUS_OK(200)"
+            201 -> "HTTP_STATUS_CREATED(201)"
+            202 -> "HTTP_STATUS_ACCEPTED(202)"
+            204 -> "HTTP_STATUS_NO_CONTENT(204)"
+
+            301 -> "HTTP_STATUS_MOVED_PERMANENTLY(301)"
+            302 -> "HTTP_STATUS_FOUND(302)"
+            304 -> "HTTP_STATUS_NOT_MODIFIED(304)"
+
+            400 -> "HTTP_STATUS_BAD_REQUEST(400)"
+            401 -> "HTTP_STATUS_UNAUTHORIZED(401)"
+            403 -> "HTTP_STATUS_USER_AGENT(403)"
+            404 -> "HTTP_STATUS_NOT_FOUND(404)"
+            405 -> "HTTP_STATUS_METHOD_NOT_ALLOWED(405)"
+            429 -> "HTTP_STATUS_TOO_MANY_REQUESTS(429)"
+
+            495 -> "HTTP_STATUS_SSL_CERTIFICATE_ERROR(495)"   // Non-standard
+            496 -> "HTTP_STATUS_SSL_HANDSHAKE_FAILED(496)"    // Non-standard
+            499 -> "HTTP_STATUS_CLIENT_CLOSED_REQUEST(499)"   // Non-standard
+
+            500 -> "HTTP_STATUS_INTERNAL_SERVER_ERROR(500)"
+            501 -> "HTTP_STATUS_NOT_IMPLEMENTED(501)"
+            502 -> "HTTP_STATUS_BAD_GATEWAY(502)"
+            503 -> "HTTP_STATUS_SERVICE_UNAVAILABLE(503)"
+            504 -> "HTTP_STATUS_GATEWAY_TIMEOUT(504)"
+
+            // non-standard
+            600 -> "HTTP_STATUS_CODE_EXCEPTION(600)"
+            603 -> "HTTP_STATUS_CODE_CONNECTION_ERROR(603)"
+            604 -> "HTTP_STATUS_CODE_TIMEOUT(604)"
+            612 -> "HTTP_STATUS_CODE_FILE_TOO_BIG(612)"
+            613 -> "HTTP_STATUS_CODE_PAGE_UNSUPPORTED(613)"
+            614 -> "HTTP_STATUS_CODE_SERVER_ERROR(614)"
+            615 -> "HTTP_STATUS_CODE_SERVER_TOO_MANY_REQUESTS(615)"
+            else -> "HTTP_STATUS_UNKNOWN($statusCode)"
+        }
+    }
+
     val client: OkHttpClient by lazy {
         val config = AppConfigManager.config.value
 

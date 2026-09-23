@@ -19,6 +19,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceFormPane
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 import io.github.rumcajs.offlinewebsearch.webtoolkit.RssPage
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
@@ -259,15 +260,17 @@ fun SourceUrlEditPreviewScreen(
                         previewResponseObject?.let { resp ->
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            val statusWithText = NetworkUtils.statusCodeToText(resp.statusCode)
+
                             val (statusColor, statusText) = when {
                                 resp.isValid -> {
-                                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${resp.statusCode})"
+                                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${statusWithText})"
                                 }
                                 resp.isInvalid -> {
-                                    MaterialTheme.colorScheme.error to "Error (${resp.statusCode})"
+                                    MaterialTheme.colorScheme.error to "Error (${statusWithText})"
                                 }
                                 else -> {
-                                    MaterialTheme.colorScheme.error to "Unknown (${resp.statusCode})"
+                                    MaterialTheme.colorScheme.error to "Unknown (${statusWithText})"
                                 }
                             }
 

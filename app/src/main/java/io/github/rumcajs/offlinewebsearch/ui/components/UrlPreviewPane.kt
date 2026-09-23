@@ -30,6 +30,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.HtmlPage
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Page
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
@@ -104,7 +105,8 @@ fun UrlPreviewPane(
                 page = parsedPage
                 onPageLoaded(parsedPage)
             } else {
-                error = resp.error ?: "Failed to download content (${resp.statusCode})"
+                val statusWithText = NetworkUtils.statusCodeToText(resp.statusCode)
+                error = resp.error ?: "Failed to download content (${statusWithText})"
                 page = null
                 onPageLoaded(null)
             }

@@ -7,6 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.PageResponseObject
 import java.util.Locale
 
@@ -56,15 +57,17 @@ fun UrlResponseInfoPane(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
+            val statusWithText = NetworkUtils.statusCodeToText(pageResponse.statusCode)
+
             val (statusColor, statusText) = when {
                 pageResponse.isValid -> {
-                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${pageResponse.statusCode})"
+                    androidx.compose.ui.graphics.Color(0xFF2E7D32) to "Success (${statusWithText})"
                 }
                 pageResponse.isInvalid -> {
-                    MaterialTheme.colorScheme.error to "Error (${pageResponse.statusCode})"
+                    MaterialTheme.colorScheme.error to "Error (${statusWithText})"
                 }
                 else -> {
-                    MaterialTheme.colorScheme.error to "Unknown (${pageResponse.statusCode})"
+                    MaterialTheme.colorScheme.error to "Unknown (${statusWithText})"
                 }
             }
 
