@@ -31,9 +31,11 @@ private const val SENTINEL_NO_DATABASE = "\$__no_database__"
 class SourcesViewModel : ViewModel() {
     var searchQuery by mutableStateOf("")
     var activeSearchQuery by mutableStateOf("")
-    var sourceOrder by mutableStateOf(SourceOrder.ByTitle)
-    var sourceItems by mutableStateOf<List<SourceWithOperationalData>>(emptyList())
+    var sourceOrder by mutableStateOf(SourceOrder.ByUrl)
+    var filteredSources by mutableStateOf<List<SourceWithOperationalData>>(emptyList())
         private set
+    val sourceItems: List<SourceWithOperationalData>
+        get() = filteredSources
     var isLoading by mutableStateOf(true)
         private set
     var isRefreshingAll by mutableStateOf(false)
@@ -51,36 +53,6 @@ class SourcesViewModel : ViewModel() {
 
     val activeFilterKey: String? by derivedStateOf {
         orderToKey(sourceOrder)
-    }
-
-    val filteredSources by derivedStateOf {
-        val base = if (activeSearchQuery.isBlank()) {
-            sourceItems
-        } else {
-            val query = activeSearchQuery.trim().lowercase()
-            sourceItems.filter { item ->
-                item.source.title.lowercase().contains(query) ||
-                        item.source.url.lowercase().contains(query)
-            }
-        }
-        when (sourceOrder) {
-            SourceOrder.ByUrl -> base.sortedWith(
-                compareBy<SourceWithOperationalData> { it.source.url.lowercase() }
-                    .thenBy { it.source.title.lowercase() }
-            )
-            SourceOrder.ByTitle -> base.sortedWith(
-                compareBy<SourceWithOperationalData> { it.source.title.lowercase() }
-                    .thenBy { it.source.url.lowercase() }
-            )
-            SourceOrder.ByFetchTime -> base.sortedWith(
-                compareBy<SourceWithOperationalData> { it.operationalData?.date_fetched ?: "" }
-                    .thenBy { it.source.url.lowercase() }
-            )
-            SourceOrder.ByConsecutiveErrors -> base.sortedWith(
-                compareByDescending<SourceWithOperationalData> { it.operationalData?.consecutive_errors ?: 0 }
-                    .thenBy { it.source.url.lowercase() }
-            )
-        }
     }
 
     /**
@@ -124,7 +96,12 @@ class SourcesViewModel : ViewModel() {
             isLoading = true
             val config = AppConfigManager.config.first()
             val activeDbState = config.activeDatabaseState
-            sourceItems = SourceRepository.getAllSourcesWithOperationalData(context, activeDbState, sourceOrder)
+            filteredSources = SourceRepository.getAllSourcesWithOperationalData(
+                context = context,
+                activeDatabaseState = activeDbState,
+                orderBy = sourceOrder,
+                searchQuery = activeSearchQuery
+            )
             hasOutdatedSources = if (!SourceRefreshWorker.progress.value.isRunning) {
                 SourceRepository.hasOutdatedSources(context, activeDbState)
             } else {
@@ -134,16 +111,29 @@ class SourcesViewModel : ViewModel() {
         }
     }
 
-    fun performSearch() {
+    fun performSearch(context: Context? = null) {
         activeSearchQuery = searchQuery
+        if (context != null) {
+            loadSources(context)
+        }
     }
 
-    fun clearSearch() {
+    fun clearSearch(context: Context? = null) {
         searchQuery = ""
+        if (activeSearchQuery.isNotEmpty()) {
+            activeSearchQuery = ""
+            if (context != null) {
+                loadSources(context)
+            }
+        }
     }
 
-    fun setFilter(option: FilterOption) {
-        sourceOrder = keyToOrder(option.key)
+    fun setFilter(option: FilterOption, context: Context? = null) {
+        val newOrder = keyToOrder(option.key)
+        sourceOrder = if (sourceOrder == newOrder) SourceOrder.ByUrl else newOrder
+        if (context != null) {
+            loadSources(context)
+        }
     }
 
     fun refreshAll(context: Context, onMessage: ((String) -> Unit)? = null) {

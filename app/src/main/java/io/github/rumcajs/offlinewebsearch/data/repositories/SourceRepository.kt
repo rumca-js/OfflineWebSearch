@@ -89,18 +89,59 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Builds a parameterised WHERE clause from [searchQuery] by delegating to
+     * [SourceSearchQueryTranslator]. Returns a pair of (clause string, list of bind args).
+     */
+    fun buildWhereClause(searchQuery: String): Pair<String, List<String>> {
+        if (searchQuery.isBlank()) return "" to emptyList()
+
+        return when (val parsed = SourceSearchQueryTranslator.parse(searchQuery)) {
+            is ParsedQuery.FieldContains -> {
+                val term = "%${parsed.term}%"
+                when (parsed.field) {
+                    "title" -> "s.title LIKE ?" to listOf(term)
+                    "url" -> "s.url LIKE ?" to listOf(term)
+                    "source_type" -> "s.source_type LIKE ?" to listOf(term)
+                    "language" -> "s.language LIKE ?" to listOf(term)
+                    "auto_tag" -> "s.auto_tag LIKE ?" to listOf(term)
+                    "id" -> "s.id LIKE ?" to listOf(term)
+                    else -> "" to emptyList()
+                }
+            }
+            is ParsedQuery.FieldExact -> {
+                when (parsed.field) {
+                    "title" -> "s.title = ?" to listOf(parsed.term)
+                    "url" -> "s.url = ?" to listOf(parsed.term)
+                    "source_type" -> "s.source_type = ?" to listOf(parsed.term)
+                    "language" -> "s.language = ?" to listOf(parsed.term)
+                    "auto_tag" -> "s.auto_tag = ?" to listOf(parsed.term)
+                    "id" -> "s.id = ?" to listOf(parsed.term)
+                    else -> "" to emptyList()
+                }
+            }
+            is ParsedQuery.FullText -> {
+                val term = "%${parsed.term}%"
+                "(s.title LIKE ? OR s.url LIKE ?)" to listOf(term, term)
+            }
+        }
+    }
+
+    /**
      * Retrieves all sources from `sourcedatamodel` joined with their operational metadata
-     * from `sourceoperationaldata` via an outer join (LEFT JOIN).
+     * from `sourceoperationaldata` via an outer join (LEFT JOIN), optionally filtered by [searchQuery]
+     * and ordered by [orderBy] in SQL.
      *
      * @param context Application context.
      * @param activeDatabaseState Current database state.
-     * @param orderBy Sort order applied to the query ([SourceOrder.ByUrl], [SourceOrder.ByTitle], or [SourceOrder.ByFetchTime]).
+     * @param orderBy Sort order applied to the query ([SourceOrder.ByUrl], [SourceOrder.ByTitle], [SourceOrder.ByFetchTime], or [SourceOrder.ByConsecutiveErrors]).
+     * @param searchQuery Optional search query string used to filter sources directly in SQL.
      * @return List of [SourceWithOperationalData] containing each source and its operational data (if present).
      */
     suspend fun getAllSourcesWithOperationalData(
         context: Context,
         activeDatabaseState: DatabaseState?,
-        orderBy: SourceOrder = SourceOrder.ByUrl
+        orderBy: SourceOrder = SourceOrder.ByUrl,
+        searchQuery: String = ""
     ): List<SourceWithOperationalData> = withContext(Dispatchers.IO) {
         val results = mutableListOf<SourceWithOperationalData>()
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
@@ -119,6 +160,8 @@ object SourceRepository : RepositoryInterface {
                 SourceOrder.ByFetchTime -> "sod.date_fetched ASC, s.url ASC"
                 SourceOrder.ByConsecutiveErrors -> "sod.consecutive_errors DESC, s.url ASC"
             }
+            val (whereClause, args) = buildWhereClause(searchQuery)
+            val whereSql = if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""
             val sqlText = "SELECT s.id AS s_id, s.enabled AS s_enabled, s.url AS s_url, s.title AS s_title, " +
                     "s.favicon AS s_favicon, s.source_type AS s_source_type, s.age AS s_age, " +
                     "s.auto_tag AS s_auto_tag, s.language AS s_language, " +
@@ -127,9 +170,10 @@ object SourceRepository : RepositoryInterface {
                     "sod.page_hash AS sod_page_hash, sod.body_hash AS sod_body_hash, " +
                     "sod.consecutive_errors AS sod_consecutive_errors " +
                     "FROM ${getTableName()} AS s " +
-                    "LEFT JOIN ${SourceOperationalDataRepository.getTableName()} AS sod ON s.id = sod.source_id " +
-                    "ORDER BY $orderByClause"
-            val cursor = db.rawQuery(sqlText, null)
+                    "LEFT JOIN ${SourceOperationalDataRepository.getTableName()} AS sod ON s.id = sod.source_id" +
+                    whereSql +
+                    " ORDER BY $orderByClause"
+            val cursor = db.rawQuery(sqlText, if (args.isNotEmpty()) args.toTypedArray() else null)
             cursor.use { c ->
                 while (c.moveToNext()) {
                     val source = cursorToSource(c, prefix = "s_")

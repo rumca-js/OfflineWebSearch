@@ -54,6 +54,6 @@ fun keyToOrder(key: String?): SourceOrder {
         SOURCE_FILTER_KEY_BY_TITLE -> SourceOrder.ByTitle
         SOURCE_FILTER_KEY_BY_FETCH_TIME -> SourceOrder.ByFetchTime
         SOURCE_FILTER_KEY_BY_CONSECUTIVE_ERRORS -> SourceOrder.ByConsecutiveErrors
-        else -> SourceOrder.ByTitle
+        else -> SourceOrder.ByUrl
     }
 }

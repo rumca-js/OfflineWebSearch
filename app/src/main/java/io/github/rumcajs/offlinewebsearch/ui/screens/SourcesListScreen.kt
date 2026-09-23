@@ -161,10 +161,10 @@ fun SourcesListScreen(
                             searchQuery = viewModel.searchQuery,
                             onSearchQueryChange = { viewModel.searchQuery = it },
                             onClearSearch = {
-                                viewModel.clearSearch()
+                                viewModel.clearSearch(context)
                             },
                             onPerformSearch = {
-                                viewModel.performSearch()
+                                viewModel.performSearch(context)
                                 scope.launch {
                                     listState.scrollToItem(0)
                                 }
@@ -173,7 +173,7 @@ fun SourcesListScreen(
                             filterOptions = SOURCE_FILTER_OPTIONS,
                             activeFilterKey = viewModel.activeFilterKey,
                             onFilterSelected = { option ->
-                                viewModel.setFilter(option)
+                                viewModel.setFilter(option, context)
                                 scope.launch {
                                     listState.scrollToItem(0)
                                 }
@@ -200,7 +200,7 @@ fun SourcesListScreen(
                 }
 
                 when {
-                    viewModel.isLoading && viewModel.sourceItems.isEmpty() -> {
+                    viewModel.isLoading && viewModel.filteredSources.isEmpty() -> {
                         item {
                             Box(
                                 modifier = Modifier
@@ -212,10 +212,10 @@ fun SourcesListScreen(
                             }
                         }
                     }
-                    viewModel.sourceItems.isEmpty() -> {
+                    viewModel.filteredSources.isEmpty() && viewModel.activeSearchQuery.isNotBlank() -> {
                         item {
                             Text(
-                                text = getSourcesEmptyText(),
+                                text = "No matching sources found.",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 64.dp),
@@ -227,7 +227,7 @@ fun SourcesListScreen(
                     viewModel.filteredSources.isEmpty() -> {
                         item {
                             Text(
-                                text = "No matching sources found.",
+                                text = getSourcesEmptyText(),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 64.dp),
