@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.SQLException
 import android.database.sqlite.SQLiteDatabase
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_FILE
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.EntryOrderBy
 import kotlinx.coroutines.Dispatchers
@@ -128,11 +129,11 @@ object EntrySqliteRepository : EntryRepository() {
     private fun resolveEffectiveState(context: Context, state: DatabaseState?): DatabaseState {
         val resolved = state ?: DatabaseState(
             url = "",
-            localFileName = io.github.rumcajs.offlinewebsearch.data.builders.DefaultDatabaseBuilder.DEFAULT_DATABASE_FILE,
+            localFileName = DEFAULT_DATABASE_FILE,
             isReadOnly = false
         )
         if (resolved.url.isBlank()) {
-            val fileName = resolved.localFileName.ifBlank { io.github.rumcajs.offlinewebsearch.data.builders.DefaultDatabaseBuilder.DEFAULT_DATABASE_FILE }
+            val fileName = resolved.localFileName.ifBlank { DEFAULT_DATABASE_FILE }
             val file = File(context.filesDir, fileName)
             if (!file.exists()) {
                 kotlinx.coroutines.runBlocking {

@@ -244,6 +244,7 @@ class HandlerBuilderTest {
         val userUrl = "reddit.com/user/some_user/new/"
         val postUrl = "https://www.reddit.com/r/kotlin/comments/12345/some_post"
         val redditRoot = "https://www.reddit.com"
+        val redditFeed = "https://www.reddit.com/r/kotlin/.rss"
 
         // Subreddit matching and feed URL
         val handler1 = HandlerBuilder(subredditUrl).build()
@@ -251,6 +252,13 @@ class HandlerBuilderTest {
         org.junit.Assert.assertEquals(
             listOf("https://www.reddit.com/r/kotlin/.rss"),
             handler1?.getFeeds()
+        )
+
+        val handler_feeds = HandlerBuilder(redditFeed).build()
+        assertTrue(handler1 is RedditChannelHandler)
+        org.junit.Assert.assertEquals(
+            listOf("https://www.reddit.com/r/kotlin/.rss"),
+            handler_feeds?.getFeeds()
         )
 
         // User profile matching and feed URL

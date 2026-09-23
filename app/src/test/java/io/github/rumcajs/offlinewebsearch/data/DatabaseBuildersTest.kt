@@ -152,9 +152,9 @@ class DatabaseBuildersTest {
         val state = builder.build()
 
         assertEquals(DatabaseStatus.READY, state.status)
-        assertEquals(DefaultDatabaseBuilder.DEFAULT_DATABASE_FILE, state.localFileName)
+        assertEquals(DEFAULT_DATABASE_FILE, state.localFileName)
         assertFalse(state.isReadOnly)
-        assertTrue(File(context.filesDir, DefaultDatabaseBuilder.DEFAULT_DATABASE_FILE).exists())
+        assertTrue(File(context.filesDir, DEFAULT_DATABASE_FILE).exists())
 
         // Verify that EntryRepository works when activeDatabaseState is null (default database)
         val count = EntryRepository.countEntries(context, null)
