@@ -982,6 +982,46 @@ class SourceRepositoryTest {
         assertFalse(hasOutdated)
     }
 
+    @Test
+    fun `hasOutdatedSources returns false when source fetch_period not yet elapsed`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://fetch-period-fresh.com/rss.xml"
+        // fetch_period = 300 seconds (5 minutes)
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Short Period Source", url, enabled = true, fetch_period = 300L)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        // Fetched 2 minutes ago — within the 5-minute period, so not outdated
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        val twoMinutesAgoIso = sdf.format(java.util.Date(System.currentTimeMillis() - 2 * 60 * 1000L))
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = twoMinutesAgoIso)
+
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, dbState)
+        assertFalse(hasOutdated)
+    }
+
+    @Test
+    fun `hasOutdatedSources returns true when source fetch_period has elapsed`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://fetch-period-expired.com/rss.xml"
+        // fetch_period = 60 seconds (1 minute)
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Expired Period Source", url, enabled = true, fetch_period = 60L)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        // Fetched 2 minutes ago — past the 1-minute period, so outdated
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        val twoMinutesAgoIso = sdf.format(java.util.Date(System.currentTimeMillis() - 2 * 60 * 1000L))
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = twoMinutesAgoIso)
+
+        val hasOutdated = SourceRepository.hasOutdatedSources(context, dbState)
+        assertTrue(hasOutdated)
+    }
+
     // ── getAllSourcesWithOperationalData ──────────────────────────────────────
 
     @Test

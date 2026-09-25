@@ -7,7 +7,7 @@ const val DATABASES_LIST_INIT: String = "https://raw.githubusercontent.com/rumca
 const val DEFAULT_DATABASE_NAME: String = "Default (Assets)"
 const val DEFAULT_DATABASE_FILE: String = "default.db"
 const val ASSET_EMPTY_TABLE: String = "table.db"
-const val DEFAULT_OUTDATED_FETCH_THRESHOLD_MILLIS: Long = 3600_000L // 1 hour
+const val DEFAULT_OUTDATED_FETCH_THRESHOLD_SECONDS: Long = 3600L // 1 hour
 
 /**
  * The URL key used for the built-in default database in [AppConfiguration.databases].
@@ -46,7 +46,7 @@ data class AppConfiguration(
     // general app configuration, does
     val userAge: Int = 0,
     val networkConfig : NetworkConfig = NetworkConfig(),
-    val outdatedFetchThresholdMillis: Long = DEFAULT_OUTDATED_FETCH_THRESHOLD_MILLIS,
+    val outdatedFetchThresholdSeconds: Long = DEFAULT_OUTDATED_FETCH_THRESHOLD_SECONDS,
 
     // main things
     val databases: Map<String, DatabaseState> = emptyMap(),

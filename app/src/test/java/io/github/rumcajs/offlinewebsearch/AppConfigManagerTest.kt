@@ -217,15 +217,15 @@ class AppConfigManagerTest {
     @Test
     fun testOutdatedFetchThreshold() = runBlocking {
         val initialConfig = AppConfigManager.config.first()
-        assertEquals(3600_000L, initialConfig.outdatedFetchThresholdMillis)
+        assertEquals(3600L, initialConfig.outdatedFetchThresholdSeconds)
 
-        AppConfigManager.setOutdatedFetchThresholdMillis(7200_000L)
+        AppConfigManager.setOutdatedFetchThresholdSeconds(7200L)
         var config = AppConfigManager.config.first()
-        assertEquals(7200_000L, config.outdatedFetchThresholdMillis)
+        assertEquals(7200L, config.outdatedFetchThresholdSeconds)
 
         // Reset to default
-        AppConfigManager.setOutdatedFetchThresholdMillis(3600_000L)
+        AppConfigManager.setOutdatedFetchThresholdSeconds(3600L)
         config = AppConfigManager.config.first()
-        assertEquals(3600_000L, config.outdatedFetchThresholdMillis)
+        assertEquals(3600L, config.outdatedFetchThresholdSeconds)
     }
 }

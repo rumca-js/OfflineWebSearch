@@ -72,7 +72,7 @@ fun SourceListItem(
         mutableStateOf(
             if (operationalData != null) {
                 if (!source.enabled || source.url.isBlank()) false
-                else SourceOperationalDataRepository.isFetchOutdated(operationalData.date_fetched)
+                else SourceOperationalDataRepository.isFetchOutdated(operationalData.date_fetched, fetchPeriodSeconds = source.fetch_period)
             } else false
         )
     }
@@ -86,7 +86,7 @@ fun SourceListItem(
             isFetchRequired = if (!source.enabled || source.url.isBlank()) {
                 false
             } else {
-                SourceOperationalDataRepository.isFetchOutdated(operationalData.date_fetched)
+                SourceOperationalDataRepository.isFetchOutdated(operationalData.date_fetched, fetchPeriodSeconds = source.fetch_period)
             }
         } else if (source.id != null) {
             val opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, source.id)
@@ -94,7 +94,7 @@ fun SourceListItem(
             isFetchRequired = if (!source.enabled || source.url.isBlank()) {
                 false
             } else {
-                SourceOperationalDataRepository.isFetchOutdated(opData?.date_fetched)
+                SourceOperationalDataRepository.isFetchOutdated(opData?.date_fetched, fetchPeriodSeconds = source.fetch_period)
             }
         } else {
             consecutiveErrors = 0

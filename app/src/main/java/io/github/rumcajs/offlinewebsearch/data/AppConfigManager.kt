@@ -317,9 +317,9 @@ object AppConfigManager {
         }
     }
 
-    fun setOutdatedFetchThresholdMillis(millis: Long) {
-        val validMillis = if (millis > 0) millis else DEFAULT_OUTDATED_FETCH_THRESHOLD_MILLIS
-        updateConfig { it.copy(outdatedFetchThresholdMillis = validMillis) }
+    fun setOutdatedFetchThresholdSeconds(seconds: Long) {
+        val validSeconds = if (seconds > 0) seconds else DEFAULT_OUTDATED_FETCH_THRESHOLD_SECONDS
+        updateConfig { it.copy(outdatedFetchThresholdSeconds = validSeconds) }
     }
 
     fun addDatabase(url: String) {

@@ -23,7 +23,7 @@ data class Source(
     val url: String = "",
     val title: String = "",
     val favicon: String = "",
-    val fetch_period: Long = 3600,
+    val fetch_period: Long = 0,
     val source_type: String? = null,
     val age: Int? = 0,
     val auto_tag: String = "",
@@ -1104,7 +1104,9 @@ object SourceRepository : RepositoryInterface {
     /**
      * Checks whether a fetch is required for [source].
      * A fetch is required if the source is enabled, has a non-blank URL, and its
-     * [SourceOperationalData.date_fetched] is outdated (null, unparseable, or older than 1 hour).
+     * [SourceOperationalData.date_fetched] is outdated.
+     * Uses [Source.fetch_period] as the per-source threshold when positive,
+     * otherwise falls back to the global [AppConfiguration.outdatedFetchThresholdSeconds].
      *
      * @param context Application context.
      * @param activeDatabaseState Current database state.
@@ -1125,7 +1127,10 @@ object SourceRepository : RepositoryInterface {
             activeDatabaseState,
             sourceId
         )
-        SourceOperationalDataRepository.isFetchOutdated(data?.date_fetched)
+        SourceOperationalDataRepository.isFetchOutdated(
+            data?.date_fetched,
+            fetchPeriodSeconds = source.fetch_period
+        )
     }
 
     /**
@@ -1190,7 +1195,8 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
-     * Checks if there is at least one enabled source that is outdated (older than 1 hour or never fetched).
+     * Checks if there is at least one enabled source that is outdated (never fetched or older than
+     * its [Source.fetch_period], falling back to the global [AppConfiguration.outdatedFetchThresholdSeconds]).
      *
      * @param context Application context.
      * @param activeDatabaseState Current database state.
@@ -1213,7 +1219,7 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id AS id, sod.date_fetched AS date_fetched " +
+            val sqlText = "SELECT s.id AS id, s.fetch_period AS fetch_period, sod.date_fetched AS date_fetched " +
                     "FROM ${getTableName()} AS s " +
                     "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id " +
                     "WHERE s.enabled = 1 AND s.url != ''"
@@ -1222,7 +1228,9 @@ object SourceRepository : RepositoryInterface {
                 while (it.moveToNext()) {
                     val dateFetchedIndex = it.getColumnIndex("date_fetched")
                     val dateFetched = if (dateFetchedIndex >= 0 && !it.isNull(dateFetchedIndex)) it.getString(dateFetchedIndex) else null
-                    if (SourceOperationalDataRepository.isFetchOutdated(dateFetched)) {
+                    val fetchPeriodIndex = it.getColumnIndex("fetch_period")
+                    val fetchPeriod = if (fetchPeriodIndex >= 0 && !it.isNull(fetchPeriodIndex)) it.getLong(fetchPeriodIndex) else 0L
+                    if (SourceOperationalDataRepository.isFetchOutdated(dateFetched, fetchPeriodSeconds = fetchPeriod)) {
                         db.close()
                         return@withContext true
                     }
