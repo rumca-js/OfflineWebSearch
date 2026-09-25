@@ -100,15 +100,20 @@ object SourceOperationalDataRepository : RepositoryInterface {
      */
     fun parseIsoTimestamp(timestamp: String?): Long? = DateUtils.parseIsoTimestamp(timestamp)
 
-    const val OUTDATED_FETCH_THRESHOLD_MILLIS: Long = 3600_000L // 1 hour
+    const val OUTDATED_FETCH_THRESHOLD_MILLIS: Long = io.github.rumcajs.offlinewebsearch.data.DEFAULT_OUTDATED_FETCH_THRESHOLD_MILLIS
 
     /**
-     * Checks whether a fetch timestamp is considered outdated (i.e. null, unparseable, or older than 1 hour).
+     * Checks whether a fetch timestamp is considered outdated (i.e. null, unparseable, or older than threshold).
+     * @param fetchTime ISO 8601 UTC timestamp string.
+     * @param thresholdMillis Milliseconds threshold after which fetch is outdated (defaults to [AppConfiguration.outdatedFetchThresholdMillis]).
      */
-    fun isFetchOutdated(fetchTime: String?): Boolean {
+    fun isFetchOutdated(
+        fetchTime: String?,
+        thresholdMillis: Long = io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.value.outdatedFetchThresholdMillis
+    ): Boolean {
         val parsedTime = parseIsoTimestamp(fetchTime) ?: return true
         val now = System.currentTimeMillis()
-        return (now - parsedTime) > OUTDATED_FETCH_THRESHOLD_MILLIS
+        return (now - parsedTime) > thresholdMillis
     }
 
     override fun ensureTableExists(db: SQLiteDatabase) {

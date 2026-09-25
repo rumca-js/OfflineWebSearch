@@ -213,4 +213,19 @@ class AppConfigManagerTest {
         val decodedInit = Json.decodeFromString<AppConfiguration>(jsonInit)
         assertTrue(decodedInit.isInitialized)
     }
+
+    @Test
+    fun testOutdatedFetchThreshold() = runBlocking {
+        val initialConfig = AppConfigManager.config.first()
+        assertEquals(3600_000L, initialConfig.outdatedFetchThresholdMillis)
+
+        AppConfigManager.setOutdatedFetchThresholdMillis(7200_000L)
+        var config = AppConfigManager.config.first()
+        assertEquals(7200_000L, config.outdatedFetchThresholdMillis)
+
+        // Reset to default
+        AppConfigManager.setOutdatedFetchThresholdMillis(3600_000L)
+        config = AppConfigManager.config.first()
+        assertEquals(3600_000L, config.outdatedFetchThresholdMillis)
+    }
 }
