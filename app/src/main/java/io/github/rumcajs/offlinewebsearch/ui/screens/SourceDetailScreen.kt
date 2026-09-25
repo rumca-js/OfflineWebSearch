@@ -341,6 +341,7 @@ fun SourceDetailScreen(
                     add(PropertyItem(label = "Auto Tag", value = currentSource.auto_tag.takeIf { it.isNotBlank() } ?: "None"))
                     add(PropertyItem(label = "Default Entry Age", value = (currentSource.age ?: 0).toString()))
                     add(PropertyItem(label = "Favicon", value = currentSource.favicon.takeIf { it.isNotBlank() } ?: "", type= PropertyType.LINK))
+                    add(PropertyItem(label = "Fetch period", value = (currentSource.fetch_period ?: 0).toString()))
                     add(PropertyItem(label = "Last Fetched", value = operationalData?.date_fetched ?: "Never"))
                     add(PropertyItem(label = "Import Duration", value = operationalData?.import_seconds?.let { "${it}s" } ?: "N/A"))
                     add(PropertyItem(label = "Number of Entries", value = operationalData?.number_of_entries?.toString() ?: "N/A"))

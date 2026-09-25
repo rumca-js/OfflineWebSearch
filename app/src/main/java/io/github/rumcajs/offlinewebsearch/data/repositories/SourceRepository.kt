@@ -23,6 +23,7 @@ data class Source(
     val url: String = "",
     val title: String = "",
     val favicon: String = "",
+    val fetch_period: Long = 3600,
     val source_type: String? = null,
     val age: Int? = 0,
     val auto_tag: String = "",
@@ -75,6 +76,8 @@ object SourceRepository : RepositoryInterface {
         val autoTag = if (autoTagIdx != -1 && !cursor.isNull(autoTagIdx)) cursor.getString(autoTagIdx) ?: "" else ""
         val languageIdx = cursor.getColumnIndex(prefix + "language")
         val language = if (languageIdx != -1 && !cursor.isNull(languageIdx)) cursor.getString(languageIdx) else ""
+        val fetchPeriodIdx = cursor.getColumnIndex(prefix + "fetch_period")
+        val fetchPeriod = if (fetchPeriodIdx != -1 && !cursor.isNull(fetchPeriodIdx)) cursor.getLong(fetchPeriodIdx) else 3600L
         return Source(
             id = id,
             enabled = enabledVal == 1,
@@ -84,6 +87,7 @@ object SourceRepository : RepositoryInterface {
             source_type = sourceType,
             age = age,
             auto_tag = autoTag,
+            fetch_period = fetchPeriod,
             language = language
         )
     }
@@ -164,7 +168,7 @@ object SourceRepository : RepositoryInterface {
             val whereSql = if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""
             val sqlText = "SELECT s.id AS s_id, s.enabled AS s_enabled, s.url AS s_url, s.title AS s_title, " +
                     "s.favicon AS s_favicon, s.source_type AS s_source_type, s.age AS s_age, " +
-                    "s.auto_tag AS s_auto_tag, s.language AS s_language, " +
+                    "s.auto_tag AS s_auto_tag, s.language AS s_language, s.fetch_period AS s_fetch_period, " +
                     "sod.id AS sod_id, sod.date_fetched AS sod_date_fetched, sod.source_id AS sod_source_id, " +
                     "sod.import_seconds AS sod_import_seconds, sod.number_of_entries AS sod_number_of_entries, " +
                     "sod.page_hash AS sod_page_hash, sod.body_hash AS sod_body_hash, " +
@@ -213,7 +217,7 @@ object SourceRepository : RepositoryInterface {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             val sqlText = "SELECT s.id AS id, s.enabled AS enabled, s.url AS url, s.title AS title, " +
                     "s.favicon AS favicon, s.source_type AS source_type, s.age AS age, " +
-                    "s.auto_tag AS auto_tag, s.language AS language " +
+                    "s.auto_tag AS auto_tag, s.fetch_period AS fetch_period, s.language AS language " +
                     "FROM ${getTableName()} AS s " +
                     "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id ORDER BY sod.date_fetched ASC"
             val cursor = db.rawQuery(sqlText, null)
@@ -281,7 +285,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} WHERE id = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, fetch_period, language FROM ${getTableName()} WHERE id = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
                 cursor.use { c ->
                     if (c.moveToFirst()) cursorToSource(c) else null
@@ -308,7 +312,7 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, language FROM ${getTableName()} WHERE url = ? LIMIT 1"
+                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, fetch_period, language FROM ${getTableName()} WHERE url = ? LIMIT 1"
                 val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
                 cursor.use { c ->
                     if (c.moveToFirst()) cursorToSource(c) else null
@@ -367,7 +371,7 @@ object SourceRepository : RepositoryInterface {
                     stmt.bindString(10, source.language)
                     stmt.bindLong(11, if ((source.age ?: 0) >= 0) (source.age ?: 0).toLong() else 0L)
                     stmt.bindString(12, source.favicon)
-                    stmt.bindLong(13, 3600L)
+                    stmt.bindLong(13, if (source.fetch_period > 0) source.fetch_period else 3600L)
                     stmt.bindString(14, source.auto_tag.take(1000))
                     stmt.bindDouble(15, 1.0)
                     stmt.bindString(16, "")
@@ -464,6 +468,7 @@ object SourceRepository : RepositoryInterface {
         enabled: Boolean,
         age: Int = 0,
         auto_tag: String = "",
+        fetch_period: Long = 3600L,
         language: String = ""
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
@@ -487,7 +492,7 @@ object SourceRepository : RepositoryInterface {
                 put("language", language)
                 put("age", if (age >= 0) age else 0)
                 put("favicon", "")
-                put("fetch_period", 3600)
+                put("fetch_period", if (fetch_period > 0) fetch_period else 3600L)
                 put("auto_tag", auto_tag.take(1000))
                 put("entries_backgroundcolor_alpha", 1.0)
                 put("entries_backgroundcolor", "")
@@ -523,6 +528,7 @@ object SourceRepository : RepositoryInterface {
         enabled: Boolean,
         age: Int? = null,
         auto_tag: String? = null,
+        fetch_period: Long? = null,
         language: String? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
@@ -543,6 +549,9 @@ object SourceRepository : RepositoryInterface {
                 }
                 if (auto_tag != null) {
                     put("auto_tag", auto_tag.take(1000))
+                }
+                if (fetch_period != null) {
+                    put("fetch_period", if (fetch_period > 0) fetch_period else 3600L)
                 }
                 if (language != null) {
                     put("language", language.take(1000))
@@ -592,6 +601,44 @@ object SourceRepository : RepositoryInterface {
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
             AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $id Exception when updating source auto_tag in $functionName")
+
+            e.printStackTrace()
+            Pair(false, e.message ?: "Unknown SQL error")
+        }
+    }
+
+    /**
+     * Updates the fetch_period setting for a source in `sourcedatamodel`.
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param id ID of the source.
+     * @param fetchPeriod Fetch period in seconds.
+     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
+     */
+    suspend fun updateSourceFetchPeriod(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        id: Long,
+        fetchPeriod: Long
+    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext Pair(false, "Database is not writable")
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext Pair(false, "Database file not found")
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val values = ContentValues().apply {
+                put("fetch_period", if (fetchPeriod > 0) fetchPeriod else 3600L)
+            }
+            val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
+            db.close()
+            if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $id Exception when updating source fetch_period in $functionName")
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
