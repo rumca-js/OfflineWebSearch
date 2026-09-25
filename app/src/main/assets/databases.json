@@ -1,0 +1,38 @@
+[
+  {
+    "url" : "https://rumca-js.github.io/data/feeds.db.zip",
+    "title" : "Feeds"
+  },
+  {
+    "url" : "https://rumca-js.github.io/data/top.db.zip",
+    "title" : "Top domains"
+  },
+  {
+    "url" : "https://github.com/rumca-js/rumca-js.github.io/releases/download/1.0.0/youtube.db.zip",
+    "title" : "YouTube channels"
+  },
+  {
+    "url" : "https://rumca-js.github.io/data/books.db.zip",
+    "title" : "Books"
+  },
+  {
+    "url" : "https://rumca-js.github.io/data/memes.db.zip",
+    "title" : "Memes"
+  },
+  {
+    "url" : "https://rumca-js.github.io/data/movies.db.zip",
+    "title" : "Movies"
+  },
+  {
+    "url" : "https://rumca-js.github.io/data/music.db.zip",
+    "title" : "Music"
+  },
+  {
+    "url" : "https://rumca-js.github.io/data/bookmarks.db.zip",
+    "title" : "Bookmarks"
+  },
+  {
+    "url" : "https://rumca-js.github.io/data/awesomelists.db.zip",
+    "title" : "Awesome lists links"
+  }
+]

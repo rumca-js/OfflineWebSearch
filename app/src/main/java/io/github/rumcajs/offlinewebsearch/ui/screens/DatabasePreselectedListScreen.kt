@@ -20,12 +20,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.DATABASES_LIST
+import io.github.rumcajs.offlinewebsearch.data.DATABASES_LIST_JSON
+import io.github.rumcajs.offlinewebsearch.data.DatabasePreset
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+
+private val presetJsonConfig = Json {
+    ignoreUnknownKeys = true
+    isLenient = true
+}
 
 /**
  * Screen displaying the preselected databases list loaded from GitHub repository.
@@ -47,7 +54,7 @@ fun DatabasePreselectedListScreen(
     val config by AppConfigManager.config.collectAsState()
 
     var filterText by remember { mutableStateOf("") }
-    var presetUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+    var presets by remember { mutableStateOf<List<DatabasePreset>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -55,19 +62,18 @@ fun DatabasePreselectedListScreen(
     suspend fun loadPresets() {
         errorMessage = null
         try {
-            val lines = withContext(Dispatchers.IO) {
-                val response = NetworkUtils.executeRequest(DATABASES_LIST)
+            val loadedPresets = withContext(Dispatchers.IO) {
+                val response = NetworkUtils.executeRequest(DATABASES_LIST_JSON)
                 val text = if (response.isValid) response.text else null
                 if (!text.isNullOrBlank()) {
-                    text.lines()
-                        .map { it.trim() }
-                        .filter { it.startsWith("http://") || it.startsWith("https://") }
+                    presetJsonConfig.decodeFromString<List<DatabasePreset>>(text)
+                        .filter { it.url.isNotBlank() && (it.url.startsWith("http://") || it.url.startsWith("https://")) }
                 } else {
                     null
                 }
             }
-            if (lines != null) {
-                presetUrls = lines
+            if (loadedPresets != null) {
+                presets = loadedPresets
             } else {
                 errorMessage = "Failed to load preselected databases list. Check network connection."
             }
@@ -82,11 +88,15 @@ fun DatabasePreselectedListScreen(
         isLoading = false
     }
 
-    val filteredList = remember(presetUrls, filterText) {
+    val filteredList = remember(presets, filterText) {
         if (filterText.isBlank()) {
-            presetUrls
+            presets
         } else {
-            presetUrls.filter { it.contains(filterText.trim(), ignoreCase = true) }
+            val query = filterText.trim()
+            presets.filter { preset ->
+                preset.url.contains(query, ignoreCase = true) ||
+                    (preset.title?.contains(query, ignoreCase = true) == true)
+            }
         }
     }
 
@@ -184,7 +194,7 @@ fun DatabasePreselectedListScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (presetUrls.isEmpty()) "No preselected databases found." else "No matching databases.",
+                            text = if (presets.isEmpty()) "No preselected databases found." else "No matching databases.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -197,14 +207,16 @@ fun DatabasePreselectedListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        items(filteredList, key = { it }) { dbUrl ->
+                        items(filteredList, key = { it.url }) { preset ->
+                            val dbUrl = preset.url
                             val dbState = remember(dbUrl) { DatabaseState.fromUrl(dbUrl) }
+                            val displayName = preset.title?.takeIf { it.isNotBlank() } ?: dbState.displayName
                             val isConfigured = config.databases.containsKey(dbUrl)
                             val isActive = config.activeDatabaseUrl == dbUrl
 
                             PreselectedDatabasePillItem(
                                 url = dbUrl,
-                                displayName = dbState.displayName,
+                                displayName = displayName,
                                 isConfigured = isConfigured,
                                 isActive = isActive,
                                 onClick = {
