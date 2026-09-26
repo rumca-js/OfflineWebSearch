@@ -1288,6 +1288,92 @@ class SourceRepositoryTest {
         assertTrue("Log should be recorded on insertion failure", logs.isNotEmpty())
         assertTrue(logs.any { it.info_text.contains("Failed to insert source") })
     }
+
+    // ── deleteSource & clear: SourceOperationalData cleanup ───────────────────
+
+    @Test
+    fun `deleteSource clears associated SourceOperationalDataRepository rows`() = runBlocking {
+        val url = "https://delete-op-data.com/feed.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Op Data Source", url, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+        val sourceId = source.id!!
+
+        // Insert operational data for this source
+        val (okFetch, _) = SourceOperationalDataRepository.setSourceFetch(
+            context = context,
+            activeDatabaseState = dbState,
+            sourceObjId = sourceId,
+            fetchTime = "2026-09-20T10:00:00Z",
+            numberOfEntries = 10,
+            isError = false
+        )
+        assertTrue(okFetch)
+        assertNotNull(SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId))
+
+        // Delete source
+        val (okDelete, error) = SourceRepository.deleteSource(context, dbState, sourceId)
+        assertTrue(error ?: "", okDelete)
+
+        // Verify source is deleted
+        assertNull(SourceRepository.getSourceById(context, dbState, sourceId))
+
+        // Verify operational data is also deleted
+        val opData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId)
+        assertNull("Operational data should be deleted when source is deleted", opData)
+    }
+
+    @Test
+    fun `deleteById clears associated SourceOperationalDataRepository rows`() = runBlocking {
+        val url = "https://delete-by-id-op-data.com/feed.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Delete By Id Source", url, enabled = true)
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+        val sourceId = source.id!!
+
+        // Insert operational data
+        SourceOperationalDataRepository.setSourceFetch(
+            context = context,
+            activeDatabaseState = dbState,
+            sourceObjId = sourceId,
+            isError = false
+        )
+        assertNotNull(SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId))
+
+        // Delete by ID
+        val (okDelete, error) = SourceRepository.deleteById(context, dbState, sourceId)
+        assertTrue(error ?: "", okDelete)
+
+        // Verify source and operational data deleted
+        assertNull(SourceRepository.getSourceById(context, dbState, sourceId))
+        assertNull(SourceOperationalDataRepository.getOperationalDataBySourceId(context, dbState, sourceId))
+    }
+
+    @Test
+    fun `clear clears both SourceRepository and SourceOperationalDataRepository rows`() = runBlocking {
+        // Insert multiple sources with operational data
+        val url1 = "https://clear-src1.com/feed.xml"
+        val url2 = "https://clear-src2.com/feed.xml"
+        SourceRepository.insertSource(context, dbState, "Src 1", url1, enabled = true)
+        SourceRepository.insertSource(context, dbState, "Src 2", url2, enabled = true)
+
+        val src1 = SourceRepository.getSourceByUrl(context, dbState, url1)!!
+        val src2 = SourceRepository.getSourceByUrl(context, dbState, url2)!!
+
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, src1.id!!, isError = false)
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, src2.id!!, isError = true)
+
+        assertEquals(2, SourceRepository.count(context, dbState))
+        assertEquals(2, SourceOperationalDataRepository.count(context, dbState))
+
+        // Call SourceRepository.clear()
+        val (okClear, error) = SourceRepository.clear(context, dbState)
+        assertTrue(error ?: "", okClear)
+
+        // Verify both tables are empty
+        assertEquals(0, SourceRepository.count(context, dbState))
+        assertEquals(0, SourceOperationalDataRepository.count(context, dbState))
+    }
 }
 
 
