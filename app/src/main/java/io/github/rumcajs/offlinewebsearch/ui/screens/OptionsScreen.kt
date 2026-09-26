@@ -70,6 +70,31 @@ fun OptionsScreen(
             placeholder = { Text("0") }
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "Outdated Fetch Threshold", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        var thresholdInput by remember(config.outdatedFetchThresholdSeconds) {
+            mutableStateOf(if (config.outdatedFetchThresholdSeconds == 0L) "" else config.outdatedFetchThresholdSeconds.toString())
+        }
+
+        OutlinedTextField(
+            value = thresholdInput,
+            onValueChange = { input ->
+                thresholdInput = input
+                val newThreshold = input.toLongOrNull()
+                if (newThreshold != null && newThreshold > 0) {
+                    AppConfigManager.setOutdatedFetchThresholdSeconds(newThreshold)
+                }
+            },
+            label = { Text("Fetch Threshold (seconds)") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            placeholder = { Text(io.github.rumcajs.offlinewebsearch.data.DEFAULT_OUTDATED_FETCH_THRESHOLD_SECONDS.toString()) }
+        )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(
