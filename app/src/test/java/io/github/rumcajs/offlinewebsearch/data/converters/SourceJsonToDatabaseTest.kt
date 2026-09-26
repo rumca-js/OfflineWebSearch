@@ -95,6 +95,51 @@ class SourceJsonToDatabaseTest {
     }
 
     /**
+     * Parsing a JSON object with a "sources" list must successfully decode all sources.
+     */
+    @Test
+    fun `parse dict with sources array returns parsed sources`() {
+        val json = """{"sources":[{"id":1,"enabled":true,"url":"https://example.com/rss","title":"Test Source"}]}"""
+        val sources = SourceJsonToDatabase.parse(json)
+        assertEquals(1, sources.size)
+        assertEquals("https://example.com/rss", sources[0].url)
+        assertEquals("Test Source", sources[0].title)
+        assertTrue(sources[0].enabled)
+    }
+
+    /**
+     * Parsing a JSON object with "sources" and additional metadata fields must ignore unknown keys and return sources.
+     */
+    @Test
+    fun `parse dict with sources and extra keys returns sources`() {
+        val json = """{"version": 1, "created": "2026-01-01", "sources":[{"url":"https://example.com/1","title":"S1"},{"url":"https://example.com/2","title":"S2"}]}"""
+        val sources = SourceJsonToDatabase.parse(json.byteInputStream())
+        assertEquals(2, sources.size)
+        assertEquals("https://example.com/1", sources[0].url)
+        assertEquals("https://example.com/2", sources[1].url)
+    }
+
+    /**
+     * Parsing a JSON object with an empty "sources" array must return an empty list.
+     */
+    @Test
+    fun `parse dict with empty sources array returns empty list`() {
+        val json = """{"sources":[]}"""
+        val sources = SourceJsonToDatabase.parse(json)
+        assertTrue(sources.isEmpty())
+    }
+
+    /**
+     * Parsing a JSON object without a "sources" key must return an empty list.
+     */
+    @Test
+    fun `parse dict without sources key returns empty list`() {
+        val json = """{"metadata":"some info"}"""
+        val sources = SourceJsonToDatabase.parse(json)
+        assertTrue(sources.isEmpty())
+    }
+
+    /**
      * Parsing malformed JSON must throw a serialization exception.
      */
     @Test(expected = Exception::class)
@@ -295,6 +340,25 @@ class SourceJsonToDatabaseTest {
         assertEquals("Expected 0 sources for empty array", 0, result.sources.size)
         assertEquals("Expected 0 inserted for empty array", 0, result.inserted)
         assertTrue("Expected no errors for empty array", result.errors.isEmpty())
+    }
+
+    /**
+     * Importing a JSON dict with sources must insert all parsed sources into the database.
+     */
+    @Test
+    fun `importToDatabase inserts sources from dict JSON`() = runBlocking {
+        val json = """{"sources":[{"id":1,"enabled":true,"url":"https://example.com/dict-rss","title":"Dict Source"}]}"""
+        val result: SourceJsonImportResult = SourceJsonToDatabase.importToDatabase(
+            context = context,
+            inputStream = json.byteInputStream(),
+            activeDatabaseState = dbState
+        )
+
+        assertTrue("Expected no errors, got: ${result.errors}", result.errors.isEmpty())
+        assertEquals(1, result.sources.size)
+        assertEquals(1, result.inserted)
+        val storedSources = SourceRepository.getAllSourcesWithOperationalData(context, dbState)
+        assertEquals(1, storedSources.size)
     }
 
     // ── importZipToDatabase (suspend) ─────────────────────────────────────────

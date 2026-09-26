@@ -9,6 +9,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipInputStream
@@ -67,14 +70,23 @@ private data class JsonSourceEntry(
 }
 
 /**
+ * Internal container for JSON payloads wrapped in an object with a `"sources"` field.
+ */
+@Serializable
+private data class SourcesContainer(
+    val sources: List<JsonSourceEntry> = emptyList()
+)
+
+/**
  * Converts a JSON source list (the format used by linkarchivetools exports and the application's
  * own asset file `example_sources.json`) into [Source] records and optionally persists them
  * into a SQLite database via [SourceRepository].
  *
  * ### Supported input formats
- * - **Plain JSON** – a JSON array of source objects (`[{…}, …]`), readable from a [File],
+ * - **Plain JSON array** – a JSON array of source objects (`[{…}, …]`), readable from a [File],
  *   [InputStream], or raw [String].
- * - **ZIP archive** – a `.zip` file whose entries are `.json` files in the array format above.
+ * - **JSON object with `sources` key** – a JSON dict containing a `"sources"` array (`{"sources": [{…}, …]}`), e.g. archive exports.
+ * - **ZIP archive** – a `.zip` file whose entries are `.json` files in either format above.
  *   Every `.json` file inside the archive is parsed and merged into a single result.
  *
  * ### Relationship to [OpmlToDatabase]
@@ -91,7 +103,8 @@ object SourceJsonToDatabase : FileToDatabaseInterface<Source, SourceJsonImportRe
     // ── Parsing ───────────────────────────────────────────────────────────────
 
     /**
-     * Parses [inputStream] as a JSON array of sources and returns the resulting list.
+     * Parses [inputStream] as a JSON array of sources or a JSON object with `"sources"`
+     * and returns the resulting list.
      *
      * @param inputStream Readable JSON stream; **not** closed by this function.
      * @return List of [Source] objects decoded from the stream.
@@ -103,22 +116,32 @@ object SourceJsonToDatabase : FileToDatabaseInterface<Source, SourceJsonImportRe
     }
 
     /**
-     * Parses [jsonFile] as a JSON array of sources and returns the resulting list.
+     * Parses [jsonFile] as a JSON array of sources or a JSON object with `"sources"`
+     * and returns the resulting list.
      *
-     * @param jsonFile File containing a JSON array of source objects.
+     * @param jsonFile File containing a JSON array or object with sources.
      * @return List of [Source] objects decoded from the file.
      */
     override fun parse(jsonFile: File): List<Source> =
         jsonFile.inputStream().use { parse(it) }
 
     /**
-     * Parses [jsonText] as a JSON array of sources and returns the resulting list.
+     * Parses [jsonText] as either a JSON array of sources (`[...]`) or a JSON object containing
+     * a `"sources"` array (`{"sources": [...]}`), and returns the resulting list.
      *
-     * @param jsonText Raw JSON string containing an array of source objects.
+     * @param jsonText Raw JSON string containing sources.
      * @return List of [Source] objects decoded from the string.
+     * @throws kotlinx.serialization.SerializationException if the JSON is malformed.
      */
-    fun parse(jsonText: String): List<Source> =
-        jsonConfig.decodeFromString<List<JsonSourceEntry>>(jsonText).map { it.toSource() }
+    fun parse(jsonText: String): List<Source> {
+        val element = jsonConfig.parseToJsonElement(jsonText)
+        val entries: List<JsonSourceEntry> = when (element) {
+            is JsonArray -> jsonConfig.decodeFromJsonElement<List<JsonSourceEntry>>(element)
+            is JsonObject -> jsonConfig.decodeFromJsonElement<SourcesContainer>(element).sources
+            else -> emptyList()
+        }
+        return entries.map { it.toSource() }
+    }
 
     /**
      * Parses all `.json` entries inside [zipInputStream] and returns a merged list of sources.
@@ -136,7 +159,7 @@ object SourceJsonToDatabase : FileToDatabaseInterface<Source, SourceJsonImportRe
                 try {
                     // Read without closing the ZipInputStream between entries.
                     val text = zipInputStream.bufferedReader(Charsets.UTF_8).readText()
-                    results.addAll(jsonConfig.decodeFromString<List<JsonSourceEntry>>(text).map { it.toSource() })
+                    results.addAll(parse(text))
                 } catch (e: Exception) {
                     errors.add("Failed to parse zip entry '${entry.name}': ${e.message}")
                 }

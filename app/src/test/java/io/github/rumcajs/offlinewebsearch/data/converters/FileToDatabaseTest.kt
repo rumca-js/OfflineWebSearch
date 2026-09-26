@@ -131,6 +131,100 @@ class FileToDatabaseTest {
     }
 
     @Test
+    fun testIsSourceJson() {
+        assertTrue(FileToDatabase.isSourceJson("""{"sources":[{"url":"https://example.com"}]}"""))
+        assertFalse(FileToDatabase.isSourceJson("""{"entries":[{"link":"https://example.com"}]}"""))
+        assertTrue(FileToDatabase.isSourceJson("""[{"url":"https://example.com","source_type":"rss"}]"""))
+        assertFalse(FileToDatabase.isSourceJson("""[{"link":"https://example.com","title":"Test"}]"""))
+        assertTrue(FileToDatabase.isSourceJson("[]", "sources.json"))
+        assertFalse(FileToDatabase.isSourceJson("[]", "entries.json"))
+    }
+
+    @Test
+    fun testImportSourceJsonFile() {
+        val jsonContent = """
+            [
+                {
+                    "id": 1,
+                    "url": "https://example.com/feed1.rss",
+                    "title": "Feed One",
+                    "source_type": "BaseRssPlugin"
+                }
+            ]
+        """.trimIndent()
+
+        val jsonFile = File(context.cacheDir, "sources.json")
+        jsonFile.writeText(jsonContent)
+
+        try {
+            FileToDatabase.importToDatabase(jsonFile, dbFile)
+
+            val sources = runBlocking { SourceRepository.getAllSourcesWithOperationalData(context, dbState) }
+            val match = sources.find { it.source.url == "https://example.com/feed1.rss" }
+            assertNotNull(match)
+            assertEquals("Feed One", match!!.source.title)
+        } finally {
+            jsonFile.delete()
+        }
+    }
+
+    @Test
+    fun testImportSourceJsonDictFile() {
+        val jsonContent = """
+            {
+                "sources": [
+                    {
+                        "id": 2,
+                        "url": "https://example.com/feed2.rss",
+                        "title": "Feed Two"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val jsonFile = File(context.cacheDir, "custom.json")
+        jsonFile.writeText(jsonContent)
+
+        try {
+            FileToDatabase.importToDatabase(jsonFile, dbFile)
+
+            val sources = runBlocking { SourceRepository.getAllSourcesWithOperationalData(context, dbState) }
+            val match = sources.find { it.source.url == "https://example.com/feed2.rss" }
+            assertNotNull(match)
+            assertEquals("Feed Two", match!!.source.title)
+        } finally {
+            jsonFile.delete()
+        }
+    }
+
+    @Test
+    fun testImportEntryJsonDictFile() {
+        val jsonContent = """
+            {
+                "entries": [
+                    {
+                        "id": 10,
+                        "link": "https://example.com/dict-article",
+                        "title": "Dict Article"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val jsonFile = File(context.cacheDir, "entries_dict.json")
+        jsonFile.writeText(jsonContent)
+
+        try {
+            FileToDatabase.importToDatabase(jsonFile, dbFile)
+
+            val count = runBlocking { EntryRepository.countEntries(context, dbState) }
+            assertTrue(count >= 1)
+        } finally {
+            jsonFile.delete()
+        }
+    }
+
+    @Test
     fun testUnsupportedExtensionThrowsException() {
         val dummyFile = File(context.cacheDir, "test.unsupported")
         dummyFile.writeText("dummy")

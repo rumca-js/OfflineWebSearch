@@ -93,6 +93,51 @@ class EntryJsonToDatabaseTest {
     }
 
     /**
+     * Parsing a JSON object with an "entries" list must successfully decode all entries.
+     */
+    @Test
+    fun `parse dict with entries array returns parsed entries`() {
+        val json = """{"entries":[{"age":0,"link":"https://example.com/test","title":"Test Entry"}]}"""
+        val entries = EntryJsonToDatabase.parse(json)
+        assertEquals(1, entries.size)
+        assertEquals("https://example.com/test", entries[0].link)
+        assertEquals("Test Entry", entries[0].title)
+        assertEquals(0, entries[0].age)
+    }
+
+    /**
+     * Parsing a JSON object with "entries" and additional metadata fields must ignore unknown keys and return entries.
+     */
+    @Test
+    fun `parse dict with entries and extra keys returns entries`() {
+        val json = """{"version": 1, "created": "2026-01-01", "entries":[{"link":"https://example.com/1"},{"link":"https://example.com/2"}]}"""
+        val entries = EntryJsonToDatabase.parse(json.byteInputStream())
+        assertEquals(2, entries.size)
+        assertEquals("https://example.com/1", entries[0].link)
+        assertEquals("https://example.com/2", entries[1].link)
+    }
+
+    /**
+     * Parsing a JSON object with an empty "entries" array must return an empty list.
+     */
+    @Test
+    fun `parse dict with empty entries array returns empty list`() {
+        val json = """{"entries":[]}"""
+        val entries = EntryJsonToDatabase.parse(json)
+        assertTrue(entries.isEmpty())
+    }
+
+    /**
+     * Parsing a JSON object without an "entries" key must return an empty list.
+     */
+    @Test
+    fun `parse dict without entries key returns empty list`() {
+        val json = """{"metadata":"some info"}"""
+        val entries = EntryJsonToDatabase.parse(json)
+        assertTrue(entries.isEmpty())
+    }
+
+    /**
      * Parsing malformed JSON must throw a serialization exception.
      */
     @Test(expected = Exception::class)
@@ -233,6 +278,25 @@ class EntryJsonToDatabaseTest {
         assertEquals("Expected 0 entries for empty array", 0, result.entries.size)
         assertEquals("Expected 0 inserted for empty array", 0, result.inserted)
         assertTrue("Expected no errors for empty array", result.errors.isEmpty())
+    }
+
+    /**
+     * Importing a JSON dict with entries must insert all parsed entries into the database.
+     */
+    @Test
+    fun `importToDatabase inserts entries from dict JSON`() = runBlocking {
+        val json = """{"entries":[{"age":0,"link":"https://example.com/dict-entry","title":"Dict Entry"}]}"""
+        val result: EntryJsonImportResult = EntryJsonToDatabase.importToDatabase(
+            context = context,
+            inputStream = json.byteInputStream(),
+            activeDatabaseState = dbState
+        )
+
+        assertTrue("Expected no errors, got: ${result.errors}", result.errors.isEmpty())
+        assertEquals(1, result.entries.size)
+        assertEquals(1, result.inserted)
+        val dbCount = EntrySqliteRepository.countEntries(context, dbState)
+        assertEquals(1, dbCount)
     }
 
     // ── importZipToDatabase (suspend) ─────────────────────────────────────────

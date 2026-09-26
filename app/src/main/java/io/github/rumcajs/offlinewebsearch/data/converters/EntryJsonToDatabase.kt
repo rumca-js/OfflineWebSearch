@@ -7,7 +7,11 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipInputStream
@@ -26,13 +30,22 @@ data class EntryJsonImportResult(
 )
 
 /**
+ * Internal container for JSON payloads wrapped in an object with an `"entries"` field.
+ */
+@Serializable
+private data class EntriesContainer(
+    val entries: List<Entry> = emptyList()
+)
+
+/**
  * Converts a JSON entry list (the format used by linkarchivetools exports and the application's
  * own asset files) into [Entry] records and optionally persists them into a SQLite database
  * via [EntrySqliteRepository].
  *
  * ### Supported input formats
- * - **Plain JSON** – a JSON array of entry objects (`[{…}, …]`), readable from a [File] or [InputStream].
- * - **ZIP archive** – a `.zip` file whose entries are `.json` files in the array format above.
+ * - **Plain JSON array** – a JSON array of entry objects (`[{…}, …]`), readable from a [File], [InputStream], or [String].
+ * - **JSON object with `entries` key** – a JSON dict containing an `"entries"` array (`{"entries": [{…}, …]}`), e.g. archive exports.
+ * - **ZIP archive** – a `.zip` file whose entries are `.json` files in either format above.
  *   Every `.json` file inside the archive is parsed and merged into a single result.
  *
  * ### Relationship to [InternetDatabaseBuilder]
@@ -52,7 +65,8 @@ object EntryJsonToDatabase : FileToDatabaseInterface<Entry, EntryJsonImportResul
     // ── Parsing ───────────────────────────────────────────────────────────────
 
     /**
-     * Parses [inputStream] as a JSON array of entries and returns the resulting list.
+     * Parses [inputStream] as a JSON array of entries or a JSON object with `"entries"`
+     * and returns the resulting list.
      *
      * @param inputStream Readable JSON stream; **not** closed by this function.
      * @return List of [Entry] objects decoded from the stream.
@@ -60,26 +74,35 @@ object EntryJsonToDatabase : FileToDatabaseInterface<Entry, EntryJsonImportResul
      */
     override fun parse(inputStream: InputStream): List<Entry> {
         val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
-        return jsonConfig.decodeFromString(text)
+        return parse(text)
     }
 
     /**
-     * Parses [file] as a JSON array of entries and returns the resulting list.
+     * Parses [file] as a JSON array of entries or a JSON object with `"entries"`
+     * and returns the resulting list.
      *
-     * @param file File containing a JSON array of entry objects.
+     * @param file File containing a JSON array or object with entries.
      * @return List of [Entry] objects decoded from the file.
      */
     override fun parse(file: File): List<Entry> =
         file.inputStream().use { parse(it) }
 
     /**
-     * Parses [jsonText] as a JSON array of entries and returns the resulting list.
+     * Parses [jsonText] as either a JSON array of entries (`[...]`) or a JSON object containing
+     * an `"entries"` array (`{"entries": [...]}`), and returns the resulting list.
      *
-     * @param jsonText Raw JSON string containing an array of entry objects.
+     * @param jsonText Raw JSON string containing entries.
      * @return List of [Entry] objects decoded from the string.
+     * @throws kotlinx.serialization.SerializationException if the JSON is malformed.
      */
-    fun parse(jsonText: String): List<Entry> =
-        jsonConfig.decodeFromString(jsonText)
+    fun parse(jsonText: String): List<Entry> {
+        val element = jsonConfig.parseToJsonElement(jsonText)
+        return when (element) {
+            is JsonArray -> jsonConfig.decodeFromJsonElement<List<Entry>>(element)
+            is JsonObject -> jsonConfig.decodeFromJsonElement<EntriesContainer>(element).entries
+            else -> emptyList()
+        }
+    }
 
     /**
      * Parses all `.json` entries inside [zipInputStream] and returns a merged list of entries.
@@ -97,7 +120,7 @@ object EntryJsonToDatabase : FileToDatabaseInterface<Entry, EntryJsonImportResul
                 try {
                     // Read without closing the ZipInputStream between entries.
                     val text = zipInputStream.bufferedReader(Charsets.UTF_8).readText()
-                    results.addAll(jsonConfig.decodeFromString<List<Entry>>(text))
+                    results.addAll(parse(text))
                 } catch (e: Exception) {
                     errors.add("Failed to parse zip entry '${entry.name}': ${e.message}")
                 }
