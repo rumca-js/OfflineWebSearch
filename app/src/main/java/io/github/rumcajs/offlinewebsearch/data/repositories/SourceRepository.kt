@@ -421,6 +421,30 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Checks if there is at least one enabled source with consecutive errors.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @return true if there is at least one enabled source with consecutive errors > 0.
+     */
+    suspend fun hasSourceErrors(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Boolean {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
+            return false
+        }
+
+        val sources = querySourcesWithOperationalData(
+            context = context,
+            activeDatabaseState = activeDatabaseState,
+            whereClause = "s.enabled = 1 AND sod.consecutive_errors > 0"
+        )
+
+        return sources.isNotEmpty()
+    }
+
+    /**
      * Populates a list of [Source] records into the specified [SQLiteDatabase] (`sourcedatamodel`).
      * If an insertion fails, logs an error to [AppLoggingRepository], rolls back the transaction, and throws the exception.
      *

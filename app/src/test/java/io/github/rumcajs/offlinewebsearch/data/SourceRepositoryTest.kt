@@ -970,6 +970,47 @@ class SourceRepositoryTest {
         assertTrue(hasOutdated)
     }
 
+    // ── hasSourceErrors ───────────────────────────────────────────────────────
+
+    @Test
+    fun `hasSourceErrors returns false when there are no sources with errors`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://no-errors.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "No Error Source", url, enabled = true)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, isError = false)
+        val hasErrors = SourceRepository.hasSourceErrors(context, dbState)
+        assertFalse(hasErrors)
+    }
+
+    @Test
+    fun `hasSourceErrors returns true when an enabled source has consecutive errors`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://error-source.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Error Source", url, enabled = true)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, isError = true)
+        val hasErrors = SourceRepository.hasSourceErrors(context, dbState)
+        assertTrue(hasErrors)
+    }
+
+    @Test
+    fun `hasSourceErrors returns false when disabled source has errors`() = runBlocking {
+        SourceRepository.clear(context, dbState)
+        val url = "https://disabled-error.com/rss.xml"
+        val (ok, _) = SourceRepository.insertSource(context, dbState, "Disabled Error", url, enabled = false)
+        assertTrue(ok)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, isError = true)
+        val hasErrors = SourceRepository.hasSourceErrors(context, dbState)
+        assertFalse(hasErrors)
+    }
+
     // ── getAllSourcesWithOperationalData ──────────────────────────────────────
 
     @Test

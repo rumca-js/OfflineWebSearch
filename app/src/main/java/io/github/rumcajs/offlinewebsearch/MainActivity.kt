@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -100,12 +101,15 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 )
                 val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
                 var hasOutdatedSources by remember { mutableStateOf(false) }
+                var hasSourceErrors by remember { mutableStateOf(false) }
 
                 LaunchedEffect(config.activeDatabaseUrl, config.networkConfig.disabled, sourceRefreshProgress.isRunning) {
                     if (!sourceRefreshProgress.isRunning) {
                         hasOutdatedSources = SourceRepository.hasOutdatedSources(context, config.activeDatabaseState)
+                        hasSourceErrors = SourceRepository.hasSourceErrors(context, config.activeDatabaseState)
                     } else {
                         hasOutdatedSources = false
+                        hasSourceErrors = false
                     }
                 }
 
@@ -126,8 +130,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                         } else {
                                             BadgedBox(
                                                 badge = {
-                                                    if (screen == Screen.Sources && hasOutdatedSources) {
-                                                        Badge()
+                                                    if (screen == Screen.Sources) {
+                                                        if (hasSourceErrors) {
+                                                            Badge(
+                                                                containerColor = MaterialTheme.colorScheme.error
+                                                            ) {
+                                                                Text("!", fontWeight = FontWeight.Bold)
+                                                            }
+                                                        } else if (hasOutdatedSources) {
+                                                            Badge()
+                                                        }
                                                     }
                                                 }
                                             ) {
