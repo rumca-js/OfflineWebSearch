@@ -233,6 +233,13 @@ fun DatabaseScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                io.github.rumcajs.offlinewebsearch.ui.components.DatabaseAdvancedConfigPane(
+                    url = url,
+                    dbConfig = dbConfig
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 io.github.rumcajs.offlinewebsearch.ui.components.DatabaseStatePane(
                     state = state,
                     refreshTrigger = refreshTrigger
