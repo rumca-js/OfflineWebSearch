@@ -1,6 +1,1 @@
-Initial open-source release of Offline Web Search.
-- Offline-first web search utilizing local JSON/SQLite databases.
-- Real-time search suggestions and history support.
-- Fully customizable UI layouts (Standard, Search Engine, Gallery).
-- Dynamic RSS and Feed generator for YouTube, Reddit, and GitHub links.
-- Privacy-focused: no tracker libraries, cookies, or remote search queries.
+Changed some things, enhanced some other things. G00d luck y'all.
