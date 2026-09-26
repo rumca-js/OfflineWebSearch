@@ -14,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
+
 
 @Serializable
 data class Source(
@@ -240,39 +240,6 @@ object SourceRepository : RepositoryInterface {
         sources
     }
 
-    private val sourceTitleCache = ConcurrentHashMap<Pair<String, Long>, String?>()
-
-    /**
-     * Clears cached source titles.
-     */
-    fun clearCache() {
-        sourceTitleCache.clear()
-    }
-
-    /**
-     * Looks up the title of a source by [sourceId], caching the result.
-     *
-     * @param context Application context.
-     * @param activeDatabaseState Current database state.
-     * @param sourceId ID of the source in `sourcedatamodel`.
-     * @return Title of the source, or null if not found.
-     */
-    suspend fun getSourceTitleById(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        sourceId: Long
-    ): String? = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext null
-        val cacheKey = Pair(activeDatabaseState.localFileName, sourceId)
-        sourceTitleCache[cacheKey]?.let { return@withContext it }
-
-        val source = getSourceById(context, activeDatabaseState, sourceId)
-        val title = source?.title?.takeIf { it.isNotBlank() }
-        if (title != null) {
-            sourceTitleCache[cacheKey] = title
-        }
-        title
-    }
 
     /**
      * Finds a source in `sourcedatamodel` matching [sourceId].
@@ -325,6 +292,77 @@ object SourceRepository : RepositoryInterface {
             e.printStackTrace()
             null
         }
+    }
+
+    /**
+     * Builds the set of tags to associate with an entry when it is inserted.
+     * Combines tags declared on the entry itself with any auto-tags defined on the source.
+     *
+     * @param entry The entry being inserted.
+     * @param source The source the entry belongs to.
+     * @return Set of non-blank, trimmed tag strings to insert.
+     */
+    fun getSourceTags(entry: Entry, source: Source): Set<String> {
+        val tagsToInsert = mutableSetOf<String>()
+        if (!entry.tags.isNullOrEmpty()) {
+            tagsToInsert.addAll(entry.tags.map { it.trim() }.filter { it.isNotEmpty() })
+        }
+        if (source.auto_tag.isNotBlank()) {
+            tagsToInsert.addAll(source.auto_tag.split(",").map { it.trim() }.filter { it.isNotEmpty() })
+        }
+        return tagsToInsert
+    }
+
+    /**
+     * Checks if there is at least one enabled source that is outdated (never fetched or older than
+     * its [Source.fetch_period], falling back to the global [AppConfiguration.outdatedFetchThresholdSeconds]).
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @return true if there are outdated enabled sources to refresh.
+     */
+    suspend fun hasOutdatedSources(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
+            return@withContext false
+        }
+        val config = AppConfigManager.config.value
+        if (config.networkConfig.disabled) {
+            return@withContext false
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext false
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val sqlText = "SELECT s.id AS id, s.fetch_period AS fetch_period, sod.date_fetched AS date_fetched " +
+                    "FROM ${getTableName()} AS s " +
+                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id " +
+                    "WHERE s.enabled = 1 AND s.url != ''"
+            val cursor = db.rawQuery(sqlText, null)
+            cursor.use {
+                while (it.moveToNext()) {
+                    val dateFetchedIndex = it.getColumnIndex("date_fetched")
+                    val dateFetched = if (dateFetchedIndex >= 0 && !it.isNull(dateFetchedIndex)) it.getString(dateFetchedIndex) else null
+                    val fetchPeriodIndex = it.getColumnIndex("fetch_period")
+                    val fetchPeriod = if (fetchPeriodIndex >= 0 && !it.isNull(fetchPeriodIndex)) it.getLong(fetchPeriodIndex) else 0L
+                    if (SourceOperationalDataRepository.isFetchOutdated(dateFetched, fetchPeriodSeconds = fetchPeriod)) {
+                        db.close()
+                        return@withContext true
+                    }
+                }
+            }
+            db.close()
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception in $functionName")
+            e.printStackTrace()
+        }
+
+        false
     }
 
     /**
@@ -563,82 +601,6 @@ object SourceRepository : RepositoryInterface {
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
             AppLoggingRepository.error(context, activeDatabaseState, "Url: $url Exception when updating source properties in $functionName")
-
-            e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
-        }
-    }
-
-    /**
-     * Updates the auto_tag setting for a source in `sourcedatamodel`.
-     * @param context Application context.
-     * @param activeDatabaseState Current database state.
-     * @param id ID of the source.
-     * @param autoTag Comma-separated tags string to be automatically applied to read entries.
-     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
-     */
-    suspend fun updateSourceAutoTag(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long,
-        autoTag: String
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val values = ContentValues().apply {
-                put("auto_tag", autoTag.take(1000))
-            }
-            val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
-            db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $id Exception when updating source auto_tag in $functionName")
-
-            e.printStackTrace()
-            Pair(false, e.message ?: "Unknown SQL error")
-        }
-    }
-
-    /**
-     * Updates the fetch_period setting for a source in `sourcedatamodel`.
-     * @param context Application context.
-     * @param activeDatabaseState Current database state.
-     * @param id ID of the source.
-     * @param fetchPeriod Fetch period in seconds.
-     * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
-     */
-    suspend fun updateSourceFetchPeriod(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long,
-        fetchPeriod: Long
-    ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
-            return@withContext Pair(false, "Database is not writable")
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext Pair(false, "Database file not found")
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            val values = ContentValues().apply {
-                put("fetch_period", if (fetchPeriod > 0) fetchPeriod else 3600L)
-            }
-            val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
-            db.close()
-            if (rows > 0) Pair(true, null) else Pair(false, "No rows updated; source may not exist")
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $id Exception when updating source fetch_period in $functionName")
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
@@ -942,25 +904,6 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
-     * Builds the set of tags to associate with an entry when it is inserted.
-     * Combines tags declared on the entry itself with any auto-tags defined on the source.
-     *
-     * @param entry The entry being inserted.
-     * @param source The source the entry belongs to.
-     * @return Set of non-blank, trimmed tag strings to insert.
-     */
-    fun getSourceTags(entry: Entry, source: Source): Set<String> {
-        val tagsToInsert = mutableSetOf<String>()
-        if (!entry.tags.isNullOrEmpty()) {
-            tagsToInsert.addAll(entry.tags.map { it.trim() }.filter { it.isNotEmpty() })
-        }
-        if (source.auto_tag.isNotBlank()) {
-            tagsToInsert.addAll(source.auto_tag.split(",").map { it.trim() }.filter { it.isNotEmpty() })
-        }
-        return tagsToInsert
-    }
-
-    /**
      * Inserts new [entries] belonging to a [source] into `linkdatamodel`.
      * Existing entries (matching by link) are skipped to avoid duplicates.
      *
@@ -1162,88 +1105,6 @@ object SourceRepository : RepositoryInterface {
             AppLoggingRepository.error(context, activeDatabaseState, "Failed to fetch source: ${source.url}", "Status code:${response.statusCode} Error:${response.error}")
         }
         updateSourceMetaAndEntries(context, activeDatabaseState, urlObj, source)
-    }
-
-    /**
-     * Checks fetch times of all enabled sources and fetches any sources whose fetch timestamp is older
-     * than 1 hour, or never fetched.
-     * @return number of successfully refreshed sources.
-     */
-    suspend fun updateOutdatedSources(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): Int = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
-            return@withContext 0
-        }
-        val config = AppConfigManager.config.value
-        if (config.networkConfig.disabled) {
-            return@withContext 0
-        }
-
-        val sources = getSourcesByFetchTime(context, activeDatabaseState).filter { it.enabled && it.url.isNotBlank() }
-        if (sources.isEmpty()) return@withContext 0
-
-        var refreshedCount = 0
-        for (source in sources) {
-            val (success, _) = updateSourceMetaAndEntries(context, activeDatabaseState, source)
-            if (success) {
-                refreshedCount++
-            }
-        }
-        refreshedCount
-    }
-
-    /**
-     * Checks if there is at least one enabled source that is outdated (never fetched or older than
-     * its [Source.fetch_period], falling back to the global [AppConfiguration.outdatedFetchThresholdSeconds]).
-     *
-     * @param context Application context.
-     * @param activeDatabaseState Current database state.
-     * @return true if there are outdated enabled sources to refresh.
-     */
-    suspend fun hasOutdatedSources(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): Boolean = withContext(Dispatchers.IO) {
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
-            return@withContext false
-        }
-        val config = AppConfigManager.config.value
-        if (config.networkConfig.disabled) {
-            return@withContext false
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext false
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id AS id, s.fetch_period AS fetch_period, sod.date_fetched AS date_fetched " +
-                    "FROM ${getTableName()} AS s " +
-                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id " +
-                    "WHERE s.enabled = 1 AND s.url != ''"
-            val cursor = db.rawQuery(sqlText, null)
-            cursor.use {
-                while (it.moveToNext()) {
-                    val dateFetchedIndex = it.getColumnIndex("date_fetched")
-                    val dateFetched = if (dateFetchedIndex >= 0 && !it.isNull(dateFetchedIndex)) it.getString(dateFetchedIndex) else null
-                    val fetchPeriodIndex = it.getColumnIndex("fetch_period")
-                    val fetchPeriod = if (fetchPeriodIndex >= 0 && !it.isNull(fetchPeriodIndex)) it.getLong(fetchPeriodIndex) else 0L
-                    if (SourceOperationalDataRepository.isFetchOutdated(dateFetched, fetchPeriodSeconds = fetchPeriod)) {
-                        db.close()
-                        return@withContext true
-                    }
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Exception in $functionName")
-            e.printStackTrace()
-        }
-
-        false
     }
 
     /**

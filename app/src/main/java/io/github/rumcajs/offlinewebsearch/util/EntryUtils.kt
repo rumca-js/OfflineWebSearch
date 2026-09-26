@@ -59,11 +59,11 @@ object EntryUtils {
         val sourceId = entry.source_id
         if (sourceId != null) {
             if (context != null && activeDatabaseState != null) {
-                val sourceTitle = SourceRepository.getSourceTitleById(
+                val sourceTitle = SourceRepository.getSourceById(
                     context,
                     activeDatabaseState,
                     sourceId
-                )
+                )?.title?.takeIf { it.isNotBlank() }
                 if (!sourceTitle.isNullOrBlank()) {
                     return sourceTitle
                 }

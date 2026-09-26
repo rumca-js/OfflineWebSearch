@@ -17,7 +17,9 @@ class HtmlPage(val url: String, val contents: String) : Page {
             val metaTagRegex = """<meta\s+([^>]+)>""".toRegex(RegexOption.IGNORE_CASE)
             metaTagRegex.findAll(contents).forEach { matchResult ->
                 val tag = matchResult.value
-                val property = getAttrValue(tag, "property") ?: getAttrValue(tag, "name")
+                val property = getAttrValue(tag, "property")
+                    ?: getAttrValue(tag, "name")
+                    ?: getAttrValue(tag, "itemprop")
                 val content = getAttrValue(tag, "content")
                 if (property != null && content != null) {
                     val unescapedContent = unescapeHtml(content)
@@ -34,12 +36,19 @@ class HtmlPage(val url: String, val contents: String) : Page {
                         "og:image", "og:image:url", "og:image:secure_url" -> {
                             thumbnails.add(unescapedContent)
                         }
-                        "og:article:published_time", "article:published_time", "og:pubdate", "og:publish_date" -> {
+                        "og:article:published_time", "article:published_time",
+                        "og:pubdate", "og:publish_date",
+                        "datepublished", "uploaddate" -> {
                             if (datePublished == null) datePublished = DateUtils.parseDateString(unescapedContent)
                         }
                     }
                 }
             }
+        }
+
+        // Parse JSON-LD schema datePublished if not already set from meta tags
+        if (datePublished == null) {
+            parseSchemaDatePublished()
         }
     }
 
@@ -57,6 +66,27 @@ class HtmlPage(val url: String, val contents: String) : Page {
             .replace("&#39;", "'")
             .replace("&lt;", "<")
             .replace("&gt;", ">")
+    }
+
+    /**
+     * Parses JSON-LD script blocks for Schema.org `datePublished` or `uploadDate` fields.
+     * `datePublished` is used by Article/BlogPosting; `uploadDate` is used by VideoObject (e.g. YouTube).
+     * Sets [datePublished] to the first valid date found.
+     */
+    private fun parseSchemaDatePublished() {
+        val scriptRegex = """<script\s+type=["']application/ld\+json["'][^>]*>(.*?)</script>""".toRegex(
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
+        val dateFieldRegex = """"(?:datePublished|uploadDate)"\s*:\s*"([^"]+)"""".toRegex(RegexOption.IGNORE_CASE)
+        for (scriptMatch in scriptRegex.findAll(contents)) {
+            val jsonBody = scriptMatch.groupValues[1]
+            val dateMatch = dateFieldRegex.find(jsonBody) ?: continue
+            val parsed = DateUtils.parseDateString(dateMatch.groupValues[1])
+            if (parsed != null) {
+                datePublished = parsed
+                break
+            }
+        }
     }
 
     /**

@@ -116,4 +116,96 @@ class HtmlPageTest {
         val emptyPage = HtmlPage("https://example.com/", "")
         assertTrue(emptyPage.getFeeds().isEmpty())
     }
+
+    @Test
+    fun testSchemaDatePublished() {
+        val html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta property="og:title" content="Article Title"/>
+                <script type="application/ld+json">
+                {
+                  "@context": "https://schema.org",
+                  "@type": "Article",
+                  "datePublished": "2023-06-15T10:30:00Z",
+                  "headline": "Article Title"
+                }
+                </script>
+            </head>
+            <body></body>
+            </html>
+        """.trimIndent()
+
+        val htmlPage = HtmlPage("https://example.com/article.html", html)
+        assertEquals(DateUtils.parseDateString("2023-06-15T10:30:00Z"), htmlPage.getDatePublished())
+    }
+
+    @Test
+    fun testOgMetaDateTakesPriorityOverSchemaDate() {
+        val html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="article:published_time" content="2024-03-01T00:00:00Z"/>
+                <script type="application/ld+json">
+                {
+                  "@type": "Article",
+                  "datePublished": "2020-01-01T00:00:00Z"
+                }
+                </script>
+            </head>
+            <body></body>
+            </html>
+        """.trimIndent()
+
+        val htmlPage = HtmlPage("https://example.com/priority.html", html)
+        // OG meta tag date should win over JSON-LD date
+        assertEquals(DateUtils.parseDateString("2024-03-01T00:00:00Z"), htmlPage.getDatePublished())
+    }
+
+    @Test
+    fun testYouTubeStyleItempropUploadDate() {
+        // YouTube uses <meta itemprop="uploadDate" content="..."> microdata
+        val html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta property="og:title" content="My YouTube Video"/>
+                <meta itemprop="uploadDate" content="2024-07-20"/>
+                <meta itemprop="name" content="My YouTube Video"/>
+            </head>
+            <body></body>
+            </html>
+        """.trimIndent()
+
+        val htmlPage = HtmlPage("https://www.youtube.com/watch?v=abc123", html)
+        assertEquals(DateUtils.parseDateString("2024-07-20"), htmlPage.getDatePublished())
+    }
+
+    @Test
+    fun testYouTubeStyleJsonLdUploadDate() {
+        // YouTube also embeds a VideoObject JSON-LD block with uploadDate
+        val html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta property="og:title" content="My YouTube Video"/>
+                <script type="application/ld+json">
+                {
+                  "@context": "https://schema.org",
+                  "@type": "VideoObject",
+                  "name": "My YouTube Video",
+                  "uploadDate": "2024-07-20T15:00:00+00:00",
+                  "thumbnailUrl": "https://i.ytimg.com/vi/abc123/maxresdefault.jpg"
+                }
+                </script>
+            </head>
+            <body></body>
+            </html>
+        """.trimIndent()
+
+        val htmlPage = HtmlPage("https://www.youtube.com/watch?v=abc123", html)
+        assertEquals(DateUtils.parseDateString("2024-07-20T15:00:00+00:00"), htmlPage.getDatePublished())
+    }
 }
