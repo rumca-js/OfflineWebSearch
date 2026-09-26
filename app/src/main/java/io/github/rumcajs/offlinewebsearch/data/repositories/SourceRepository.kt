@@ -397,45 +397,27 @@ object SourceRepository : RepositoryInterface {
     suspend fun hasOutdatedSources(
         context: Context,
         activeDatabaseState: DatabaseState?
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Boolean {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
-            return@withContext false
+            return false
         }
         val config = AppConfigManager.config.value
         if (config.networkConfig.disabled) {
-            return@withContext false
+            return false
         }
 
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext false
+        val sources = querySourcesWithOperationalData(
+            context = context,
+            activeDatabaseState = activeDatabaseState,
+            whereClause = "s.enabled = 1 AND s.url != ''"
+        )
 
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id AS id, s.fetch_period AS fetch_period, sod.date_fetched AS date_fetched " +
-                    "FROM ${getTableName()} AS s " +
-                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id " +
-                    "WHERE s.enabled = 1 AND s.url != ''"
-            val cursor = db.rawQuery(sqlText, null)
-            cursor.use {
-                while (it.moveToNext()) {
-                    val dateFetchedIndex = it.getColumnIndex("date_fetched")
-                    val dateFetched = if (dateFetchedIndex >= 0 && !it.isNull(dateFetchedIndex)) it.getString(dateFetchedIndex) else null
-                    val fetchPeriodIndex = it.getColumnIndex("fetch_period")
-                    val fetchPeriod = if (fetchPeriodIndex >= 0 && !it.isNull(fetchPeriodIndex)) it.getLong(fetchPeriodIndex) else 0L
-                    if (SourceOperationalDataRepository.isFetchOutdated(dateFetched, fetchPeriodSeconds = fetchPeriod)) {
-                        db.close()
-                        return@withContext true
-                    }
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Exception in $functionName")
-            e.printStackTrace()
+        return sources.any { item ->
+            SourceOperationalDataRepository.isFetchOutdated(
+                fetchTime = item.operationalData?.date_fetched,
+                fetchPeriodSeconds = item.source.fetch_period
+            )
         }
-
-        false
     }
 
     /**
