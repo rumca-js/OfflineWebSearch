@@ -201,45 +201,6 @@ object SourceRepository : RepositoryInterface {
         results
     }
 
-    /**
-     * Source for refresh
-     */
-    suspend fun getSourcesByFetchTime(context: Context, activeDatabaseState: DatabaseState?): List<Source> = withContext(Dispatchers.IO) {
-        val sources = mutableListOf<Source>()
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
-            return@withContext sources
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext sources
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val sqlText = "SELECT s.id AS id, s.enabled AS enabled, s.url AS url, s.title AS title, " +
-                    "s.favicon AS favicon, s.source_type AS source_type, s.age AS age, " +
-                    "s.auto_tag AS auto_tag, s.fetch_period AS fetch_period, s.language AS language " +
-                    "FROM ${getTableName()} AS s " +
-                    "LEFT JOIN sourceoperationaldata sod ON s.id = sod.source_id ORDER BY sod.date_fetched ASC"
-            val cursor = db.rawQuery(sqlText, null)
-            cursor.use {
-                while (it.moveToNext()) {
-                    val source = cursorToSource(it)
-                    if (source.enabled) {
-                        sources.add(source)
-                    }
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting sources in $functionName")
-
-            e.printStackTrace()
-        }
-
-        sources
-    }
-
 
     /**
      * Finds a source in `sourcedatamodel` matching [sourceId].

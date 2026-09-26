@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.workers
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceOrder
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -149,7 +150,8 @@ object SourceRefreshWorker {
                     task.onFinished?.invoke(0)
                     return
                 }
-                val sources = SourceRepository.getSourcesByFetchTime(task.context, task.dbState)
+                val sources = SourceRepository.getAllSourcesWithOperationalData(task.context, task.dbState, SourceOrder.ByFetchTime)
+                    .map { it.source }
                     .filter { it.enabled && it.url.isNotBlank() }
                 val total = sources.size
                 if (total == 0) {
