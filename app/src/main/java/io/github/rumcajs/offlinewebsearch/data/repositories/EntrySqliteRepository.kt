@@ -775,7 +775,8 @@ object EntrySqliteRepository : EntryRepository() {
     }
 
     /**
-     * Clears all records from the `linkdatamodel` table.
+     * Clears all records from the `linkdatamodel` table and all associated records in dependent tables
+     * (tags, social data, visit history, transition history, read later).
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
     override suspend fun clear(
@@ -792,9 +793,20 @@ object EntrySqliteRepository : EntryRepository() {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            db.delete(getTableName(), null, null)
-            db.close()
-            Pair(true, null)
+            db.beginTransaction()
+            try {
+                db.delete(EntryCompactedTagsRepository.getTableName(), null, null)
+                db.delete(SocialDataRepository.getTableName(), null, null)
+                db.delete(EntryVisitHistoryRepository.getTableName(), null, null)
+                db.delete(EntryTransitionHistoryRepository.getTableName(), null, null)
+                db.delete(ReadLaterRepository.getTableName(), null, null)
+                db.delete(getTableName(), null, null)
+                db.setTransactionSuccessful()
+                Pair(true, null)
+            } finally {
+                db.endTransaction()
+                db.close()
+            }
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
             AppLoggingRepository.error(context, state, "Clearing $functionName", e.message)

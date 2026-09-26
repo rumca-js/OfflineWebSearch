@@ -27,6 +27,7 @@ import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
@@ -311,6 +312,7 @@ data class RepoClearItem(
  * together with their display labels.
  */
 fun getRepositoriesToClear(): List<RepoClearItem> = listOf(
+    RepoClearItem("Entries", EntryRepository),
     RepoClearItem("Search History", SearchHistoryRepository),
     RepoClearItem("Entry Transition History", EntryTransitionHistoryRepository),
     RepoClearItem("Entry Visit History", EntryVisitHistoryRepository),

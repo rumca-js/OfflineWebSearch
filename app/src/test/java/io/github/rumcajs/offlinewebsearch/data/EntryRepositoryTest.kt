@@ -8,7 +8,11 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntrySqliteRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
+import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SocialData
+import io.github.rumcajs.offlinewebsearch.data.repositories.SocialDataRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.runBlocking
@@ -584,5 +588,47 @@ class EntryRepositoryTest {
         }
         assertTrue("Log should be recorded on insertion failure", logs.isNotEmpty())
         assertTrue(logs.any { it.info_text.contains("Failed to insert entry") })
+    }
+
+    // ── clear: clears linkdatamodel and dependent tables ───────────────────────
+
+    @Test
+    fun `clear removes all entries and dependent records`() = runBlocking {
+        // Insert entry with tags and socialData
+        val entry = Entry(
+            id = 8001L,
+            link = "https://clear.example.com",
+            title = "Clear Test Entry",
+            tags = listOf("tag1", "tag2"),
+            socialData = SocialData(thumbsUp = 5)
+        )
+        EntrySqliteRepository.populateEntries(dbFile, listOf(entry))
+
+        // Insert visit history, transition history, read later
+        EntryVisitHistoryRepository.recordVisit(context, dbState, 8001L)
+        EntryTransitionHistoryRepository.insertTransition(context, dbState, 8001L, 8002L)
+        ReadLaterRepository.addReadLater(context, dbState, 8001L, 1L)
+
+        // Verify rows exist before clear
+        val countBefore = EntryRepository.countEntries(context, dbState)
+        assertTrue(countBefore > 0)
+        assertEquals(2, queryTags(8001L).size)
+        assertNotNull(querySocialData(8001L))
+        assertTrue(EntryVisitHistoryRepository.count(context, dbState) > 0)
+        assertTrue(EntryTransitionHistoryRepository.count(context, dbState) > 0)
+        assertTrue(ReadLaterRepository.count(context, dbState) > 0)
+
+        // Clear EntryRepository
+        val (ok, error) = EntryRepository.clear(context, dbState)
+        assertTrue("Expected clear to succeed but got: $error", ok)
+
+        // Verify all tables are cleared
+        val countAfter = EntryRepository.countEntries(context, dbState)
+        assertEquals(0, countAfter)
+        assertTrue(queryTags(8001L).isEmpty())
+        assertNull(querySocialData(8001L))
+        assertEquals(0, EntryVisitHistoryRepository.count(context, dbState))
+        assertEquals(0, EntryTransitionHistoryRepository.count(context, dbState))
+        assertEquals(0, ReadLaterRepository.count(context, dbState))
     }
 }
