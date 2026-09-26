@@ -51,7 +51,51 @@ object SourceRepository : RepositoryInterface {
     val SOURCE_TYPE_PARSE = "Parse"
     val SOURCE_TYPE_EMAIL = "Email"
 
+    val COLUMNS = arrayOf(
+        "id", "enabled", "url", "title", "favicon",
+        "source_type", "age", "auto_tag", "fetch_period", "language"
+    )
+
     override fun getTableName(): String = "sourcedatamodel"
+
+    /**
+     * Builds projection column string for SQL queries, supporting optional table alias and column alias prefix.
+     */
+    fun getColumnsProjection(tableAlias: String = "", prefix: String = ""): String {
+        val qualifier = if (tableAlias.isNotEmpty()) "$tableAlias." else ""
+        return COLUMNS.joinToString(", ") { col ->
+            if (prefix.isNotEmpty()) "$qualifier$col AS $prefix$col" else "$qualifier$col"
+        }
+    }
+
+    const val SOURCE_TABLE_ALIAS = "s"
+    const val SOURCE_PREFIX = "s_"
+    const val SOD_TABLE_ALIAS = "sod"
+    const val SOD_PREFIX = "sod_"
+
+    /**
+     * Builds the combined SELECT projection for a JOIN between `sourcedatamodel` and `sourceoperationaldata`.
+     */
+    fun getSourceWithOperationalDataProjection(
+        sourceAlias: String = SOURCE_TABLE_ALIAS,
+        sourcePrefix: String = SOURCE_PREFIX,
+        sodAlias: String = SOD_TABLE_ALIAS,
+        sodPrefix: String = SOD_PREFIX
+    ): String {
+        val sourceCols = getColumnsProjection(tableAlias = sourceAlias, prefix = sourcePrefix)
+        val sodCols = SourceOperationalDataRepository.getColumnsProjection(tableAlias = sodAlias, prefix = sodPrefix)
+        return "$sourceCols, $sodCols"
+    }
+
+    /**
+     * Builds the FROM clause for a LEFT JOIN between `sourcedatamodel` and `sourceoperationaldata`.
+     */
+    fun getSourceWithOperationalDataFromClause(
+        sourceAlias: String = SOURCE_TABLE_ALIAS,
+        sodAlias: String = SOD_TABLE_ALIAS
+    ): String {
+        return "${getTableName()} AS $sourceAlias LEFT JOIN ${SourceOperationalDataRepository.getTableName()} AS $sodAlias ON $sourceAlias.id = $sodAlias.source_id"
+    }
 
     /**
      * Reads the current cursor row and constructs a [Source] from it.
@@ -93,6 +137,29 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Reads the current cursor row and constructs a [SourceWithOperationalData] from it.
+     *
+     * @param cursor SQLite cursor positioned at the target row.
+     * @param sourcePrefix Column prefix used for source table columns (default: [SOURCE_PREFIX]).
+     * @param sodPrefix Column prefix used for operational data table columns (default: [SOD_PREFIX]).
+     * @return [SourceWithOperationalData] instance populated with cursor values.
+     */
+    fun cursorToSourceWithOperationalData(
+        cursor: Cursor,
+        sourcePrefix: String = SOURCE_PREFIX,
+        sodPrefix: String = SOD_PREFIX
+    ): SourceWithOperationalData {
+        val source = cursorToSource(cursor, prefix = sourcePrefix)
+        val sodIdIdx = cursor.getColumnIndex(sodPrefix + "id")
+        val operationalData = if (sodIdIdx != -1 && !cursor.isNull(sodIdIdx)) {
+            SourceOperationalDataRepository.cursorToOperationalData(cursor, prefix = sodPrefix)
+        } else {
+            null
+        }
+        return SourceWithOperationalData(source = source, operationalData = operationalData)
+    }
+
+    /**
      * Builds a parameterised WHERE clause from [searchQuery] by delegating to
      * [SourceSearchQueryTranslator]. Returns a pair of (clause string, list of bind args).
      */
@@ -131,6 +198,48 @@ object SourceRepository : RepositoryInterface {
     }
 
     /**
+     * Executes a query joining `sourcedatamodel` and `sourceoperationaldata` with given WHERE clause, bind args, and ORDER BY clause.
+     */
+    private suspend fun querySourcesWithOperationalData(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        whereClause: String = "",
+        whereArgs: Array<String>? = null,
+        orderBy: String = ""
+    ): List<SourceWithOperationalData> = withContext(Dispatchers.IO) {
+        val results = mutableListOf<SourceWithOperationalData>()
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
+            return@withContext results
+        }
+
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext results
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            SourceOperationalDataRepository.ensureTableExists(db)
+            val projection = getSourceWithOperationalDataProjection()
+            val fromClause = getSourceWithOperationalDataFromClause()
+            val whereSql = if (whereClause.isNotBlank()) " WHERE $whereClause" else ""
+            val orderSql = if (orderBy.isNotBlank()) " ORDER BY $orderBy" else ""
+            val sqlText = "SELECT $projection FROM $fromClause$whereSql$orderSql"
+            val cursor = db.rawQuery(sqlText, whereArgs)
+            cursor.use { c ->
+                while (c.moveToNext()) {
+                    results.add(cursorToSourceWithOperationalData(c))
+                }
+            }
+            db.close()
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, activeDatabaseState, "Exception in $functionName: ${e.message}")
+            e.printStackTrace()
+        }
+
+        results
+    }
+
+    /**
      * Retrieves all sources from `sourcedatamodel` joined with their operational metadata
      * from `sourceoperationaldata` via an outer join (LEFT JOIN), optionally filtered by [searchQuery]
      * and ordered by [orderBy] in SQL.
@@ -146,66 +255,69 @@ object SourceRepository : RepositoryInterface {
         activeDatabaseState: DatabaseState?,
         orderBy: SourceOrder = SourceOrder.ByUrl,
         searchQuery: String = ""
-    ): List<SourceWithOperationalData> = withContext(Dispatchers.IO) {
-        val results = mutableListOf<SourceWithOperationalData>()
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
-            return@withContext results
+    ): List<SourceWithOperationalData> {
+        val orderByClause = when (orderBy) {
+            SourceOrder.ByUrl -> "s.url ASC, s.title ASC"
+            SourceOrder.ByTitle -> "s.title ASC, s.url ASC"
+            SourceOrder.ByFetchTime -> "sod.date_fetched ASC, s.url ASC"
+            SourceOrder.ByConsecutiveErrors -> "sod.consecutive_errors DESC, s.url ASC"
         }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext results
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            SourceOperationalDataRepository.ensureTableExists(db)
-            val orderByClause = when (orderBy) {
-                SourceOrder.ByUrl -> "s.url ASC, s.title ASC"
-                SourceOrder.ByTitle -> "s.title ASC, s.url ASC"
-                SourceOrder.ByFetchTime -> "sod.date_fetched ASC, s.url ASC"
-                SourceOrder.ByConsecutiveErrors -> "sod.consecutive_errors DESC, s.url ASC"
-            }
-            val (whereClause, args) = buildWhereClause(searchQuery)
-            val whereSql = if (whereClause.isNotEmpty()) " WHERE $whereClause" else ""
-            val sqlText = "SELECT s.id AS s_id, s.enabled AS s_enabled, s.url AS s_url, s.title AS s_title, " +
-                    "s.favicon AS s_favicon, s.source_type AS s_source_type, s.age AS s_age, " +
-                    "s.auto_tag AS s_auto_tag, s.language AS s_language, s.fetch_period AS s_fetch_period, " +
-                    "sod.id AS sod_id, sod.date_fetched AS sod_date_fetched, sod.source_id AS sod_source_id, " +
-                    "sod.import_seconds AS sod_import_seconds, sod.number_of_entries AS sod_number_of_entries, " +
-                    "sod.page_hash AS sod_page_hash, sod.body_hash AS sod_body_hash, " +
-                    "sod.consecutive_errors AS sod_consecutive_errors " +
-                    "FROM ${getTableName()} AS s " +
-                    "LEFT JOIN ${SourceOperationalDataRepository.getTableName()} AS sod ON s.id = sod.source_id" +
-                    whereSql +
-                    " ORDER BY $orderByClause"
-            val cursor = db.rawQuery(sqlText, if (args.isNotEmpty()) args.toTypedArray() else null)
-            cursor.use { c ->
-                while (c.moveToNext()) {
-                    val source = cursorToSource(c, prefix = "s_")
-                    val sodIdIdx = c.getColumnIndex("sod_id")
-                    val operationalData = if (sodIdIdx != -1 && !c.isNull(sodIdIdx)) {
-                        SourceOperationalDataRepository.cursorToOperationalData(c, prefix = "sod_")
-                    } else {
-                        null
-                    }
-                    results.add(SourceWithOperationalData(source = source, operationalData = operationalData))
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Exception when getting all sources with operational data in $functionName")
-
-            e.printStackTrace()
-        }
-
-        results
+        val (whereClause, args) = buildWhereClause(searchQuery)
+        val argsArray = if (args.isNotEmpty()) args.toTypedArray() else null
+        return querySourcesWithOperationalData(
+            context = context,
+            activeDatabaseState = activeDatabaseState,
+            whereClause = whereClause,
+            whereArgs = argsArray,
+            orderBy = orderByClause
+        )
     }
 
+    /**
+     * Finds a source with operational data in `sourcedatamodel` matching [sourceId].
+     */
+    suspend fun getSourceWithOperationalDataById(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceId: Long
+    ): SourceWithOperationalData? {
+        return querySourcesWithOperationalData(
+            context = context,
+            activeDatabaseState = activeDatabaseState,
+            whereClause = "s.id = ?",
+            whereArgs = arrayOf(sourceId.toString()),
+            orderBy = ""
+        ).firstOrNull()
+    }
 
     /**
-     * Finds a source in `sourcedatamodel` matching [sourceId].
+     * Finds a source with operational data in `sourcedatamodel` matching [sourceUrl].
      */
-    suspend fun getSourceById(context: Context, activeDatabaseState: DatabaseState?, sourceId: Long): Source? = withContext(Dispatchers.IO) {
+    suspend fun getSourceWithOperationalDataByUrl(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        sourceUrl: String
+    ): SourceWithOperationalData? {
+        if (sourceUrl.isBlank()) return null
+        return querySourcesWithOperationalData(
+            context = context,
+            activeDatabaseState = activeDatabaseState,
+            whereClause = "s.url = ?",
+            whereArgs = arrayOf(sourceUrl),
+            orderBy = ""
+        ).firstOrNull()
+    }
+
+    /**
+     * Executes a single-source query with the specified [whereClause] and [whereArgs].
+     */
+    private suspend fun getSourceWhere(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        whereClause: String,
+        whereArgs: Array<String>,
+        logIdentifier: String
+    ): Source? = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext null
         val file = File(context.filesDir, activeDatabaseState.localFileName)
         if (!file.exists()) return@withContext null
@@ -213,46 +325,46 @@ object SourceRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, fetch_period, language FROM ${getTableName()} WHERE id = ? LIMIT 1"
-                val cursor = it.rawQuery(sqlText, arrayOf(sourceId.toString()))
+                val sqlText = "SELECT ${getColumnsProjection()} FROM ${getTableName()} WHERE $whereClause LIMIT 1"
+                val cursor = it.rawQuery(sqlText, whereArgs)
                 cursor.use { c ->
                     if (c.moveToFirst()) cursorToSource(c) else null
                 }
             }
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Source ID: $sourceId Exception when getting source properties in $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "$logIdentifier Exception when getting source properties in $functionName")
 
             e.printStackTrace()
             null
         }
+    }
+
+    /**
+     * Finds a source in `sourcedatamodel` matching [sourceId].
+     */
+    suspend fun getSourceById(context: Context, activeDatabaseState: DatabaseState?, sourceId: Long): Source? {
+        return getSourceWhere(
+            context = context,
+            activeDatabaseState = activeDatabaseState,
+            whereClause = "id = ?",
+            whereArgs = arrayOf(sourceId.toString()),
+            logIdentifier = "Source ID: $sourceId"
+        )
     }
 
     /**
      * Finds a source in `sourcedatamodel` matching [sourceUrl].
      */
-    suspend fun getSourceByUrl(context: Context, activeDatabaseState: DatabaseState?, sourceUrl: String): Source? = withContext(Dispatchers.IO) {
-        if (sourceUrl.isBlank()) return@withContext null
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext null
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext null
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            db.use {
-                val sqlText = "SELECT id, enabled, url, title, favicon, source_type, age, auto_tag, fetch_period, language FROM ${getTableName()} WHERE url = ? LIMIT 1"
-                val cursor = it.rawQuery(sqlText, arrayOf(sourceUrl))
-                cursor.use { c ->
-                    if (c.moveToFirst()) cursorToSource(c) else null
-                }
-            }
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Url: $sourceUrl Exception when getting source properties in $functionName")
-
-            e.printStackTrace()
-            null
-        }
+    suspend fun getSourceByUrl(context: Context, activeDatabaseState: DatabaseState?, sourceUrl: String): Source? {
+        if (sourceUrl.isBlank()) return null
+        return getSourceWhere(
+            context = context,
+            activeDatabaseState = activeDatabaseState,
+            whereClause = "url = ?",
+            whereArgs = arrayOf(sourceUrl),
+            logIdentifier = "Url: $sourceUrl"
+        )
     }
 
     /**

@@ -88,7 +88,22 @@ data class SourceOperationalData(
  */
 object SourceOperationalDataRepository : RepositoryInterface {
 
+    val COLUMNS = arrayOf(
+        "id", "date_fetched", "source_id", "import_seconds",
+        "number_of_entries", "page_hash", "body_hash", "consecutive_errors"
+    )
+
     override fun getTableName(): String = "sourceoperationaldata"
+
+    /**
+     * Builds projection column string for SQL queries, supporting optional table alias and column alias prefix.
+     */
+    fun getColumnsProjection(tableAlias: String = "", prefix: String = ""): String {
+        val qualifier = if (tableAlias.isNotEmpty()) "$tableAlias." else ""
+        return COLUMNS.joinToString(", ") { col ->
+            if (prefix.isNotEmpty()) "$qualifier$col AS $prefix$col" else "$qualifier$col"
+        }
+    }
 
     /**
      * Generates a current UTC ISO 8601 timestamp string.
@@ -195,7 +210,7 @@ object SourceOperationalDataRepository : RepositoryInterface {
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
-            val sqlText = "SELECT id, date_fetched, source_id, import_seconds, number_of_entries, page_hash, body_hash, consecutive_errors FROM ${getTableName()} WHERE source_id = ? LIMIT 1"
+            val sqlText = "SELECT ${getColumnsProjection()} FROM ${getTableName()} WHERE source_id = ? LIMIT 1"
             var result: SourceOperationalData? = null
             val cursor = db.rawQuery(sqlText, arrayOf(sourceObjId.toString()))
             cursor.use { c ->

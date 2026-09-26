@@ -98,16 +98,14 @@ fun SourceDetailScreen(
                     scope.launch {
                         if (success) {
                             val sourceId = currentSource.id
-                            val updated = if (sourceId != null) {
-                                SourceRepository.getSourceById(context, activeDbState, sourceId)
+                            val updatedWithOp = if (sourceId != null) {
+                                SourceRepository.getSourceWithOperationalDataById(context, activeDbState, sourceId)
                             } else {
-                                SourceRepository.getSourceByUrl(context, activeDbState, currentSource.url)
+                                SourceRepository.getSourceWithOperationalDataByUrl(context, activeDbState, currentSource.url)
                             }
-                            if (updated != null) {
-                                currentSource = updated
-                            }
-                            currentSource.id?.let { id ->
-                                operationalData = SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDbState, id)
+                            if (updatedWithOp != null) {
+                                currentSource = updatedWithOp.source
+                                operationalData = updatedWithOp.operationalData
                             }
                             onRefreshSuccess?.invoke()
                         }
