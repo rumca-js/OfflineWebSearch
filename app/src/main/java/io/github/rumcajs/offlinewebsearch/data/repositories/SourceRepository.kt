@@ -1154,18 +1154,20 @@ object SourceRepository : RepositoryInterface {
                 EntrySqliteRepository.deleteEntriesForSource(db, id, sourceUrl)
             }
 
+            SourceOperationalDataRepository.ensureTableExists(db)
+            db.delete(SourceOperationalDataRepository.getTableName(), "source_id = ?", arrayOf(id.toString()))
+
             val rows = db.delete(getTableName(), "id = ?", arrayOf(id.toString()))
             db.close()
 
             if (rows > 0) {
-                SourceOperationalDataRepository.deleteOperationalDataBySourceId(context, activeDatabaseState, id)
                 Pair(true, null)
             } else {
                 Pair(false, "No rows deleted; source may not exist")
             }
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Source:$id}. Error on Inserting source entries $functionName")
+            AppLoggingRepository.error(context, activeDatabaseState, "Source:$id. Error on deleting source in $functionName")
 
             e.printStackTrace()
             Pair(false, e.message ?: "Unknown SQL error")
@@ -1174,7 +1176,10 @@ object SourceRepository : RepositoryInterface {
 
 
     /**
-     * Clears all records from the `sourcedatamodel` table.
+     * Clears all records from the `sourcedatamodel` table and associated `sourceoperationaldata` records.
+     * dependant tables:
+     *  - sourceoperationaldata
+     *
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
     override suspend fun clear(
@@ -1190,6 +1195,8 @@ object SourceRepository : RepositoryInterface {
 
         try {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            SourceOperationalDataRepository.ensureTableExists(db)
+            db.delete(SourceOperationalDataRepository.getTableName(), null, null)
             db.delete(getTableName(), null, null)
             db.close()
             Pair(true, null)

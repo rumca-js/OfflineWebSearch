@@ -777,6 +777,14 @@ object EntrySqliteRepository : EntryRepository() {
     /**
      * Clears all records from the `linkdatamodel` table and all associated records in dependent tables
      * (tags, social data, visit history, transition history, read later).
+     *
+     * dependant tables:
+     *  - EntryCompactedTagsRepository
+     *  - SocialDataRepository
+     *  - EntryVisitHistoryRepository
+     *  - EntryTransitionHistoryRepository
+     *  - ReadLaterRepository
+     *
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */
     override suspend fun clear(
