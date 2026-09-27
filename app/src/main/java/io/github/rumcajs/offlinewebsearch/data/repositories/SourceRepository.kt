@@ -942,21 +942,6 @@ object SourceRepository : RepositoryInterface {
         }
     }
 
-    /**
-     * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [urlObj].
-     * [source] is associated with inserted entries.
-     * @return Pair(success, resultMessage)
-     */
-    suspend fun updateSourceMetaAndEntries(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        urlObj: Url,
-        source: Source
-    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        updateSourceMetadata(context, activeDatabaseState, urlObj)
-        fetchAndInsertSourceEntries(context, activeDatabaseState, urlObj, source)
-        updateFetchData(context, activeDatabaseState, urlObj, source)
-    }
 
     /**
      * Updates operational fetch data for [source] from [urlObj].
@@ -1079,36 +1064,6 @@ object SourceRepository : RepositoryInterface {
         )
     }
 
-    /**
-     * Updates source metadata (title, favicon) and inserts new entries into `linkdatamodel` from [source].
-     * Uses [Source.url] for the fetch and [Source.id] for `source_id` on inserted entries.
-     * Skips fetch if source is disabled or if last fetch was less than an hour ago.
-     * @return Pair(success, resultMessage)
-     */
-    suspend fun updateSourceMetaAndEntries(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        source: Source
-    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (source.url.isBlank()) {
-            return@withContext Pair(false, "Source URL is empty")
-        }
-        if (!source.enabled) {
-            return@withContext Pair(false, "Source is disabled")
-        }
-
-        if (!isFetchRequired(context, activeDatabaseState, source)) {
-            return@withContext Pair(false, "Source was fetched recently (less than 1 hour ago)")
-        }
-
-        val urlObj = Url(source.url)
-        val response = urlObj.getResponse();
-        if (!response.isValid)
-        {
-            AppLoggingRepository.error(context, activeDatabaseState, "Failed to fetch source: ${source.url}", "Status code:${response.statusCode} Error:${response.error}")
-        }
-        updateSourceMetaAndEntries(context, activeDatabaseState, urlObj, source)
-    }
 
     /**
      * Deletes a source by ID from `sourcedatamodel` and cleans up associated operational data.

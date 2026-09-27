@@ -110,7 +110,7 @@ object SourceRefreshWorker {
                 }
 
                 _progress.value = WorkerProgress(total = 1, done = 0, isRunning = true, currentItem = task.source.title)
-                val (success, msg) = SourceRepository.updateSourceMetaAndEntries(task.context, task.dbState, task.source)
+                val (success, msg) = SourceUpdater.updateSource(task.context, task.dbState, task.source)
                 _progress.value = WorkerProgress(total = 1, done = 1, isRunning = false, currentItem = null)
                 task.onFinished?.invoke(success, msg)
             }
@@ -133,7 +133,7 @@ object SourceRefreshWorker {
                         continue
                     }
 
-                    val (success, _) = SourceRepository.updateSourceMetaAndEntries(
+                    val (success, _) = SourceUpdater.updateSource(
                         context = task.context,
                         activeDatabaseState = task.dbState,
                         source = src
@@ -169,7 +169,7 @@ object SourceRefreshWorker {
                         continue
                     }
 
-                    val (success, _) = SourceRepository.updateSourceMetaAndEntries(
+                    val (success, _) = SourceUpdater.updateSource(
                         context = task.context,
                         activeDatabaseState = task.dbState,
                         source = src
