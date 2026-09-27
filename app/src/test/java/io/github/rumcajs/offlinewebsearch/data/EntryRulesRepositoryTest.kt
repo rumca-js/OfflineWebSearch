@@ -44,7 +44,6 @@ class EntryRulesRepositoryTest {
             enabled = true,
             priority = 10,
             rule_name = "Block Ads",
-            trigger_rule_name = "ad_detector",
             trigger_rule_url = "https://ads.*",
             trigger_text = "sponsor",
             trigger_text_hits = 5,
