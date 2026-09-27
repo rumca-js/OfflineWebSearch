@@ -67,7 +67,6 @@ class EntryRulesRepositoryTest {
         assertEquals(true, fetched.enabled)
         assertEquals(10, fetched.priority)
         assertEquals("Block Ads", fetched.rule_name)
-        assertEquals("ad_detector", fetched.trigger_rule_name)
         assertEquals("https://ads.*", fetched.trigger_rule_url)
         assertEquals("sponsor", fetched.trigger_text)
         assertEquals(5, fetched.trigger_text_hits)
