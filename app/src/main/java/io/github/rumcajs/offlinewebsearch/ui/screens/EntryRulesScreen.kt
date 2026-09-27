@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +35,7 @@ import kotlinx.coroutines.launch
  * - `trigger_rule_url`: the URL pattern that triggers the rule
  * - `block`: whether matches for this rule should be blocked
  *
- * Provides ability to add new entry rules when the database is writable.
+ * Supports adding, viewing, editing, and deleting entry rules.
  *
  * @param onBack Callback invoked when navigating back.
  */
@@ -50,6 +51,7 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
     var isLoading by remember { mutableStateOf(true) }
     var selectedRule by remember { mutableStateOf<EntryRule?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingRule by remember { mutableStateOf<EntryRule?>(null) }
 
     fun loadRules() {
         scope.launch {
@@ -64,9 +66,10 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
     }
 
     if (showAddDialog) {
-        AddRuleDialog(
+        RuleFormDialog(
+            initialRule = null,
             onDismiss = { showAddDialog = false },
-            onAddRule = { newRule ->
+            onSaveRule = { newRule ->
                 scope.launch {
                     val (rowId, err) = EntryRulesRepository.insertRule(context, config.activeDatabaseState, newRule)
                     if (rowId != null) {
@@ -81,11 +84,35 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
         )
     }
 
+    if (editingRule != null) {
+        RuleFormDialog(
+            initialRule = editingRule,
+            onDismiss = { editingRule = null },
+            onSaveRule = { updatedRule ->
+                scope.launch {
+                    val (success, err) = EntryRulesRepository.updateRule(context, config.activeDatabaseState, updatedRule)
+                    if (success) {
+                        Toast.makeText(context, "Entry rule updated", Toast.LENGTH_SHORT).show()
+                        editingRule = null
+                        loadRules()
+                    } else {
+                        Toast.makeText(context, err ?: "Failed to update rule", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        )
+    }
+
     if (selectedRule != null) {
         RuleDetailDialog(
             rule = selectedRule!!,
             isWritable = isWritable,
             onDismiss = { selectedRule = null },
+            onEdit = { ruleToEdit ->
+                val rule = ruleToEdit
+                selectedRule = null
+                editingRule = rule
+            },
             onDelete = { ruleToDelete ->
                 ruleToDelete.id?.let { ruleId ->
                     scope.launch {
@@ -171,6 +198,7 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
                                         }
                                     }
                                 },
+                                onEdit = { editingRule = rule },
                                 onClick = { selectedRule = rule }
                             )
                         }
@@ -189,6 +217,7 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
  * @param rule The entry rule to display.
  * @param isWritable True if the active database is writable.
  * @param onToggleEnabled Callback when the user toggles the enabled switch.
+ * @param onEdit Callback when the user clicks the edit button.
  * @param onClick Callback when the user clicks the card to view full details.
  */
 @Composable
@@ -196,6 +225,7 @@ private fun EntryRuleCard(
     rule: EntryRule,
     isWritable: Boolean,
     onToggleEnabled: (Boolean) -> Unit,
+    onEdit: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -238,6 +268,16 @@ private fun EntryRuleCard(
                                 labelColor = MaterialTheme.colorScheme.onErrorContainer
                             )
                         )
+                    }
+
+                    if (isWritable) {
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                Icons.Filled.Edit,
+                                contentDescription = "Edit Rule",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
 
                     Switch(
@@ -297,33 +337,39 @@ private fun EntryRuleCard(
 }
 
 /**
- * Dialog for adding a new [EntryRule].
+ * Dialog for adding or editing an [EntryRule].
  *
+ * @param initialRule Rule to edit, or null when adding a new rule.
  * @param onDismiss Callback to dismiss the dialog.
- * @param onAddRule Callback with the new rule to add.
+ * @param onSaveRule Callback with the new or updated rule.
  */
 @Composable
-private fun AddRuleDialog(
+private fun RuleFormDialog(
+    initialRule: EntryRule?,
     onDismiss: () -> Unit,
-    onAddRule: (EntryRule) -> Unit
+    onSaveRule: (EntryRule) -> Unit
 ) {
-    var ruleName by remember { mutableStateOf("") }
-    var triggerRuleUrl by remember { mutableStateOf("") }
-    var triggerText by remember { mutableStateOf("") }
-    var triggerTextFields by remember { mutableStateOf("") }
-    var triggerRuleName by remember { mutableStateOf("") }
-    var autoTag by remember { mutableStateOf("") }
-    var priorityStr by remember { mutableStateOf("0") }
-    var applyAgeLimitStr by remember { mutableStateOf("0") }
-    var block by remember { mutableStateOf(false) }
-    var trust by remember { mutableStateOf(false) }
-    var enabled by remember { mutableStateOf(true) }
+    val isEditing = initialRule != null
+
+    var ruleName by remember { mutableStateOf(initialRule?.rule_name ?: "") }
+    var triggerRuleUrl by remember { mutableStateOf(initialRule?.trigger_rule_url ?: "") }
+    var triggerText by remember { mutableStateOf(initialRule?.trigger_text ?: "") }
+    var triggerTextFields by remember { mutableStateOf(initialRule?.trigger_text_fields ?: "") }
+    var triggerRuleName by remember { mutableStateOf(initialRule?.trigger_rule_name ?: "") }
+    var autoTag by remember { mutableStateOf(initialRule?.auto_tag ?: "") }
+    var priorityStr by remember { mutableStateOf(initialRule?.priority?.toString() ?: "0") }
+    var applyAgeLimitStr by remember { mutableStateOf(initialRule?.apply_age_limit?.toString() ?: "0") }
+    var browserIdStr by remember { mutableStateOf(initialRule?.browser_id?.toString() ?: "0") }
+    var script by remember { mutableStateOf(initialRule?.script ?: "") }
+    var block by remember { mutableStateOf(initialRule?.block ?: false) }
+    var trust by remember { mutableStateOf(initialRule?.trust ?: false) }
+    var enabled by remember { mutableStateOf(initialRule?.enabled ?: true) }
 
     val scrollState = rememberScrollState()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Entry Rule") },
+        title = { Text(if (isEditing) "Edit Entry Rule" else "Add Entry Rule") },
         text = {
             Column(
                 modifier = Modifier
@@ -406,6 +452,29 @@ private fun AddRuleDialog(
                 }
 
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = browserIdStr,
+                        onValueChange = { browserIdStr = it },
+                        label = { Text("Browser ID") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                OutlinedTextField(
+                    value = script,
+                    onValueChange = { script = it },
+                    label = { Text("Script") },
+                    singleLine = false,
+                    maxLines = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -440,7 +509,7 @@ private fun AddRuleDialog(
                     if (finalRuleName.isEmpty() && triggerRuleUrl.trim().isEmpty() && triggerText.trim().isEmpty()) {
                         return@Button
                     }
-                    val newRule = EntryRule(
+                    val ruleToSave = (initialRule ?: EntryRule()).copy(
                         enabled = enabled,
                         priority = priorityStr.toIntOrNull() ?: 0,
                         rule_name = finalRuleName.ifEmpty { "Rule" },
@@ -451,12 +520,14 @@ private fun AddRuleDialog(
                         block = block,
                         trust = trust,
                         auto_tag = autoTag.trim(),
-                        apply_age_limit = applyAgeLimitStr.toIntOrNull() ?: 0
+                        apply_age_limit = applyAgeLimitStr.toIntOrNull() ?: 0,
+                        browser_id = browserIdStr.toIntOrNull() ?: 0,
+                        script = script.trim()
                     )
-                    onAddRule(newRule)
+                    onSaveRule(ruleToSave)
                 }
             ) {
-                Text("Add")
+                Text(if (isEditing) "Save" else "Add")
             }
         },
         dismissButton = {
@@ -473,6 +544,7 @@ private fun AddRuleDialog(
  * @param rule The rule to show.
  * @param isWritable True if the active database is writable.
  * @param onDismiss Callback to dismiss the dialog.
+ * @param onEdit Callback when the user decides to edit the rule.
  * @param onDelete Callback when the user decides to delete the rule.
  */
 @Composable
@@ -480,6 +552,7 @@ private fun RuleDetailDialog(
     rule: EntryRule,
     isWritable: Boolean,
     onDismiss: () -> Unit,
+    onEdit: (EntryRule) -> Unit,
     onDelete: (EntryRule) -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -563,6 +636,9 @@ private fun RuleDetailDialog(
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (isWritable && rule.id != null) {
+                    TextButton(onClick = { onEdit(rule) }) {
+                        Text("Edit")
+                    }
                     TextButton(
                         onClick = { showDeleteConfirm = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
