@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.RepositoryTestHelper
+import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRule
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRulesRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
@@ -120,16 +121,25 @@ class SourceUpdaterTest {
             </rss>
         """.trimIndent()
 
+        val fakeResponse = PageResponseObject(
+            statusCode = 200,
+            headers = mapOf("Content-Type" to listOf("application/rss+xml")),
+            text = rssXml
+        )
+        val rssPage = RssPage(url, rssXml)
+
         val fakeUrl = object : Url(url) {
             override suspend fun getResponse(acceptHeader: String?): PageResponseObject {
-                return PageResponseObject(
-                    statusCode = 200,
-                    headers = mapOf("Content-Type" to listOf("application/rss+xml")),
-                    text = rssXml
-                )
+                return fakeResponse
+            }
+            override fun getCachedResponse(): PageResponseObject {
+                return fakeResponse
             }
             override suspend fun getPage(): Page {
-                return RssPage(url, rssXml)
+                return rssPage
+            }
+            override suspend fun getEntries(): List<Entry> {
+                return rssPage.getEntries()
             }
             override suspend fun getTitle(): String? = "Updated Feed Title"
         }
