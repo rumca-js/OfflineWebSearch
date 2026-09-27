@@ -30,7 +30,6 @@ import java.io.File
  *     trust: Mapped[bool] = mapped_column(default=False)
  *     auto_tag: Mapped[str] = mapped_column(String(1000))
  *     apply_age_limit: Mapped[int] = mapped_column(default=0)
- *     script: Mapped[str] = mapped_column(String(1000), default="")
  *     browser_id: Mapped[int] = mapped_column(default=0)
  * ```
  */
@@ -48,7 +47,6 @@ data class EntryRule(
     val trust: Boolean = false,
     val auto_tag: String = "",
     val apply_age_limit: Int = 0,
-    val script: String = "",
     val browser_id: Int = 0
 )
 
@@ -66,7 +64,7 @@ object EntryRulesRepository : RepositoryInterface {
         "id", "enabled", "priority", "rule_name",
         "trigger_rule_url", "trigger_text", "trigger_text_hits",
         "trigger_text_fields", "block", "trust", "auto_tag",
-        "apply_age_limit", "script", "browser_id"
+        "apply_age_limit", "browser_id"
     )
 
     override fun getTableName(): String = "entryrules"
@@ -91,7 +89,6 @@ object EntryRulesRepository : RepositoryInterface {
                 trust INTEGER NOT NULL DEFAULT 0,
                 auto_tag TEXT,
                 apply_age_limit INTEGER NOT NULL DEFAULT 0,
-                script TEXT NOT NULL DEFAULT '',
                 browser_id INTEGER NOT NULL DEFAULT 0
             )
         """.trimIndent()
@@ -135,7 +132,6 @@ object EntryRulesRepository : RepositoryInterface {
             trust = getBool("trust", false),
             auto_tag = getString("auto_tag"),
             apply_age_limit = getInt("apply_age_limit", 0),
-            script = getString("script", ""),
             browser_id = getInt("browser_id", 0)
         )
     }
@@ -159,7 +155,6 @@ object EntryRulesRepository : RepositoryInterface {
             put("trust", if (rule.trust) 1 else 0)
             put("auto_tag", rule.auto_tag.take(1000))
             put("apply_age_limit", rule.apply_age_limit)
-            put("script", rule.script.take(1000))
             put("browser_id", rule.browser_id)
         }
     }

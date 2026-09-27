@@ -359,7 +359,6 @@ private fun RuleFormDialog(
     var priorityStr by remember { mutableStateOf(initialRule?.priority?.toString() ?: "0") }
     var applyAgeLimitStr by remember { mutableStateOf(initialRule?.apply_age_limit?.toString() ?: "0") }
     var browserIdStr by remember { mutableStateOf(initialRule?.browser_id?.toString() ?: "0") }
-    var script by remember { mutableStateOf(initialRule?.script ?: "") }
     var block by remember { mutableStateOf(initialRule?.block ?: false) }
     var trust by remember { mutableStateOf(initialRule?.trust ?: false) }
     var enabled by remember { mutableStateOf(initialRule?.enabled ?: true) }
@@ -456,15 +455,6 @@ private fun RuleFormDialog(
                     )
                 }
 
-                OutlinedTextField(
-                    value = script,
-                    onValueChange = { script = it },
-                    label = { Text("Script") },
-                    singleLine = false,
-                    maxLines = 3,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -512,7 +502,6 @@ private fun RuleFormDialog(
                         auto_tag = autoTag.trim(),
                         apply_age_limit = applyAgeLimitStr.toIntOrNull() ?: 0,
                         browser_id = browserIdStr.toIntOrNull() ?: 0,
-                        script = script.trim()
                     )
                     onSaveRule(ruleToSave)
                 }
@@ -613,9 +602,6 @@ private fun RuleDetailDialog(
                     }
                     if (rule.browser_id > 0) {
                         RuleDetailRow("Browser ID", rule.browser_id.toString())
-                    }
-                    if (rule.script.isNotEmpty()) {
-                        RuleDetailRow("Script", rule.script)
                     }
                 }
             }

@@ -52,7 +52,6 @@ class EntryRulesRepositoryTest {
             trust = false,
             auto_tag = "advertisement",
             apply_age_limit = 18,
-            script = "console.log('hit');",
             browser_id = 2
         )
 
@@ -75,7 +74,6 @@ class EntryRulesRepositoryTest {
         assertEquals(false, fetched.trust)
         assertEquals("advertisement", fetched.auto_tag)
         assertEquals(18, fetched.apply_age_limit)
-        assertEquals("console.log('hit');", fetched.script)
         assertEquals(2, fetched.browser_id)
     }
 
