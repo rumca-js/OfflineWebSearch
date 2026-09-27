@@ -22,7 +22,6 @@ import java.io.File
  *     enabled: Mapped[bool] = mapped_column(default=True)
  *     priority: Mapped[int] = mapped_column(default=0)
  *     rule_name: Mapped[str] = mapped_column(String(1000))
- *     trigger_rule_name: Mapped[str] = mapped_column(String(1000))
  *     trigger_rule_url: Mapped[str] = mapped_column(String(1000))
  *     trigger_text: Mapped[str] = mapped_column(String(1000))
  *     trigger_text_hits: Mapped[int] = mapped_column(default=0)
@@ -41,7 +40,6 @@ data class EntryRule(
     val enabled: Boolean = true,
     val priority: Int = 0,
     val rule_name: String = "",
-    val trigger_rule_name: String = "",
     val trigger_rule_url: String = "",
     val trigger_text: String = "",
     val trigger_text_hits: Int = 0,
@@ -65,7 +63,7 @@ typealias EntryRules = EntryRule
 object EntryRulesRepository : RepositoryInterface {
 
     val COLUMNS = arrayOf(
-        "id", "enabled", "priority", "rule_name", "trigger_rule_name",
+        "id", "enabled", "priority", "rule_name",
         "trigger_rule_url", "trigger_text", "trigger_text_hits",
         "trigger_text_fields", "block", "trust", "auto_tag",
         "apply_age_limit", "script", "browser_id"
@@ -85,7 +83,6 @@ object EntryRulesRepository : RepositoryInterface {
                 enabled INTEGER NOT NULL DEFAULT 1,
                 priority INTEGER NOT NULL DEFAULT 0,
                 rule_name TEXT,
-                trigger_rule_name TEXT,
                 trigger_rule_url TEXT,
                 trigger_text TEXT,
                 trigger_text_hits INTEGER NOT NULL DEFAULT 0,
@@ -130,7 +127,6 @@ object EntryRulesRepository : RepositoryInterface {
             enabled = getBool("enabled", true),
             priority = getInt("priority", 0),
             rule_name = getString("rule_name"),
-            trigger_rule_name = getString("trigger_rule_name"),
             trigger_rule_url = getString("trigger_rule_url"),
             trigger_text = getString("trigger_text"),
             trigger_text_hits = getInt("trigger_text_hits", 0),
@@ -155,7 +151,6 @@ object EntryRulesRepository : RepositoryInterface {
             put("enabled", if (rule.enabled) 1 else 0)
             put("priority", rule.priority)
             put("rule_name", rule.rule_name.take(1000))
-            put("trigger_rule_name", rule.trigger_rule_name.take(1000))
             put("trigger_rule_url", rule.trigger_rule_url.take(1000))
             put("trigger_text", rule.trigger_text.take(1000))
             put("trigger_text_hits", rule.trigger_text_hits)
