@@ -3,6 +3,7 @@ package io.github.rumcajs.offlinewebsearch.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,9 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_OUTDATED_FETCH_THRESHOLD_SECONDS
 
 /**
  * Screen displaying advanced settings and troubleshooting options.
@@ -78,6 +81,31 @@ fun OptionsAdvancedScreen(onBack: () -> Unit = {}) {
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
+            Text(text = "Outdated Fetch Threshold", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            var thresholdInput by remember(config.outdatedFetchThresholdSeconds) {
+                mutableStateOf(if (config.outdatedFetchThresholdSeconds == 0L) "" else config.outdatedFetchThresholdSeconds.toString())
+            }
+
+            OutlinedTextField(
+                value = thresholdInput,
+                onValueChange = { input ->
+                    thresholdInput = input
+                    val newThreshold = input.toLongOrNull()
+                    if (newThreshold != null && newThreshold > 0) {
+                        AppConfigManager.setOutdatedFetchThresholdSeconds(newThreshold)
+                    }
+                },
+                label = { Text("Fetch Threshold (seconds)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                placeholder = { Text(DEFAULT_OUTDATED_FETCH_THRESHOLD_SECONDS.toString()) }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
                 text = "Setup & Initialization",
                 fontSize = 20.sp,

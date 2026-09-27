@@ -19,6 +19,7 @@ object RepositoryList {
             SocialDataRepository,
             SourceOperationalDataRepository,
             EntryCompactedTagsRepository,
+            EntryRulesRepository,
             AppLoggingRepository
         )
     }
