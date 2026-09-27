@@ -1,19 +1,23 @@
 package io.github.rumcajs.offlinewebsearch.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
@@ -30,6 +34,8 @@ import kotlinx.coroutines.launch
  * - `trigger_rule_url`: the URL pattern that triggers the rule
  * - `block`: whether matches for this rule should be blocked
  *
+ * Provides ability to add new entry rules when the database is writable.
+ *
  * @param onBack Callback invoked when navigating back.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,10 +44,12 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val config by AppConfigManager.config.collectAsState()
     val scope = rememberCoroutineScope()
+    val isWritable = config.activeDatabaseState?.isSQLite == true && config.activeDatabaseState?.isReadOnly != true
 
     var rules by remember { mutableStateOf<List<EntryRule>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var selectedRule by remember { mutableStateOf<EntryRule?>(null) }
+    var showAddDialog by remember { mutableStateOf(false) }
 
     fun loadRules() {
         scope.launch {
@@ -55,10 +63,43 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
         loadRules()
     }
 
+    if (showAddDialog) {
+        AddRuleDialog(
+            onDismiss = { showAddDialog = false },
+            onAddRule = { newRule ->
+                scope.launch {
+                    val (rowId, err) = EntryRulesRepository.insertRule(context, config.activeDatabaseState, newRule)
+                    if (rowId != null) {
+                        Toast.makeText(context, "Entry rule added", Toast.LENGTH_SHORT).show()
+                        showAddDialog = false
+                        loadRules()
+                    } else {
+                        Toast.makeText(context, err ?: "Failed to add rule", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        )
+    }
+
     if (selectedRule != null) {
         RuleDetailDialog(
             rule = selectedRule!!,
-            onDismiss = { selectedRule = null }
+            isWritable = isWritable,
+            onDismiss = { selectedRule = null },
+            onDelete = { ruleToDelete ->
+                ruleToDelete.id?.let { ruleId ->
+                    scope.launch {
+                        val (success, err) = EntryRulesRepository.deleteById(context, config.activeDatabaseState, ruleId)
+                        if (success) {
+                            Toast.makeText(context, "Rule deleted", Toast.LENGTH_SHORT).show()
+                            selectedRule = null
+                            loadRules()
+                        } else {
+                            Toast.makeText(context, err ?: "Failed to delete rule", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
         )
     }
 
@@ -70,8 +111,22 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (isWritable) {
+                        IconButton(onClick = { showAddDialog = true }) {
+                            Icon(Icons.Filled.Add, contentDescription = "Add Entry Rule")
+                        }
+                    }
                 }
             )
+        },
+        floatingActionButton = {
+            if (isWritable) {
+                FloatingActionButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add Entry Rule")
+                }
+            }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
@@ -86,7 +141,7 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
                 }
                 rules.isEmpty() -> {
                     Text(
-                        text = "No entry rules defined.",
+                        text = if (isWritable) "No entry rules defined. Tap + to add one." else "No entry rules defined.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.Center)
@@ -95,13 +150,18 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            top = 12.dp,
+                            end = 16.dp,
+                            bottom = 88.dp
+                        ),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(rules, key = { it.id ?: it.hashCode() }) { rule ->
                             EntryRuleCard(
                                 rule = rule,
-                                isWritable = config.activeDatabaseState?.isSQLite == true && config.activeDatabaseState?.isReadOnly != true,
+                                isWritable = isWritable,
                                 onToggleEnabled = { newEnabled ->
                                     scope.launch {
                                         val updated = rule.copy(enabled = newEnabled)
@@ -237,17 +297,217 @@ private fun EntryRuleCard(
 }
 
 /**
+ * Dialog for adding a new [EntryRule].
+ *
+ * @param onDismiss Callback to dismiss the dialog.
+ * @param onAddRule Callback with the new rule to add.
+ */
+@Composable
+private fun AddRuleDialog(
+    onDismiss: () -> Unit,
+    onAddRule: (EntryRule) -> Unit
+) {
+    var ruleName by remember { mutableStateOf("") }
+    var triggerRuleUrl by remember { mutableStateOf("") }
+    var triggerText by remember { mutableStateOf("") }
+    var triggerTextFields by remember { mutableStateOf("") }
+    var triggerRuleName by remember { mutableStateOf("") }
+    var autoTag by remember { mutableStateOf("") }
+    var priorityStr by remember { mutableStateOf("0") }
+    var applyAgeLimitStr by remember { mutableStateOf("0") }
+    var block by remember { mutableStateOf(false) }
+    var trust by remember { mutableStateOf(false) }
+    var enabled by remember { mutableStateOf(true) }
+
+    val scrollState = rememberScrollState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Entry Rule") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = ruleName,
+                    onValueChange = { ruleName = it },
+                    label = { Text("Rule Name *") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = triggerRuleUrl,
+                    onValueChange = { triggerRuleUrl = it },
+                    label = { Text("Trigger Rule URL") },
+                    placeholder = { Text("e.g. https://example.com/*") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = triggerText,
+                    onValueChange = { triggerText = it },
+                    label = { Text("Trigger Text") },
+                    placeholder = { Text("Text keyword to match") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = triggerTextFields,
+                    onValueChange = { triggerTextFields = it },
+                    label = { Text("Trigger Text Fields") },
+                    placeholder = { Text("title, description") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = triggerRuleName,
+                    onValueChange = { triggerRuleName = it },
+                    label = { Text("Trigger Rule Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = autoTag,
+                    onValueChange = { autoTag = it },
+                    label = { Text("Auto Tag") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = priorityStr,
+                        onValueChange = { priorityStr = it },
+                        label = { Text("Priority") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    OutlinedTextField(
+                        value = applyAgeLimitStr,
+                        onValueChange = { applyAgeLimitStr = it },
+                        label = { Text("Age Limit") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(checked = block, onCheckedChange = { block = it })
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Block matching entries")
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(checked = trust, onCheckedChange = { trust = it })
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Trust matching entries")
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Switch(checked = enabled, onCheckedChange = { enabled = it })
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Enabled")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val finalRuleName = ruleName.trim()
+                    if (finalRuleName.isEmpty() && triggerRuleUrl.trim().isEmpty() && triggerText.trim().isEmpty()) {
+                        return@Button
+                    }
+                    val newRule = EntryRule(
+                        enabled = enabled,
+                        priority = priorityStr.toIntOrNull() ?: 0,
+                        rule_name = finalRuleName.ifEmpty { "Rule" },
+                        trigger_rule_name = triggerRuleName.trim(),
+                        trigger_rule_url = triggerRuleUrl.trim(),
+                        trigger_text = triggerText.trim(),
+                        trigger_text_fields = triggerTextFields.trim(),
+                        block = block,
+                        trust = trust,
+                        auto_tag = autoTag.trim(),
+                        apply_age_limit = applyAgeLimitStr.toIntOrNull() ?: 0
+                    )
+                    onAddRule(newRule)
+                }
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+/**
  * Dialog displaying full information for a selected [EntryRule].
  *
  * @param rule The rule to show.
+ * @param isWritable True if the active database is writable.
  * @param onDismiss Callback to dismiss the dialog.
+ * @param onDelete Callback when the user decides to delete the rule.
  */
 @Composable
 private fun RuleDetailDialog(
     rule: EntryRule,
-    onDismiss: () -> Unit
+    isWritable: Boolean,
+    onDismiss: () -> Unit,
+    onDelete: (EntryRule) -> Unit
 ) {
     val scrollState = rememberScrollState()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Rule") },
+            text = { Text("Are you sure you want to delete rule '${rule.rule_name.ifEmpty { "Unnamed" }}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete(rule)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -301,8 +561,18 @@ private fun RuleDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isWritable && rule.id != null) {
+                    TextButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Close")
+                }
             }
         }
     )

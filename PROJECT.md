@@ -92,6 +92,7 @@ Screens:
  - DatabaseScreen - Shows information and actions for a database.
  - AboutScreen - Shows information about the application.
  - AppLoggingScreen - shows log information
+ - EntryRulesScreen - Displays and configures entry rules.
  - UrlPreviewScreen - shows preview for page data (title, description, meta properties). Should apply similar style as EntryDetailScreen for title, link, etc.
  - UrlLinkCheckerScreen - provides url input, and same display as in UrlPreviewScreen
  - UrlStatusScreen - shows entry status (status code, content-type)
@@ -278,6 +279,7 @@ The screen displays, where available:
 - single tap on database makes it's active
 - long press transitions to DatabaseScreen
 - Provides button to navigate to Logs.
+- Provides button to navigate to Entry rules.
 - Provides button to navigate to Advanced options.
 - Provides button to navigate to Link checker (UrlLinkChecker).
 - Provides button to navigate to AboutScreen.
