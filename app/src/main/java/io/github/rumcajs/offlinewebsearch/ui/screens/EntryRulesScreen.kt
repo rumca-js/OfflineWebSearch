@@ -355,7 +355,6 @@ private fun RuleFormDialog(
     var triggerRuleUrl by remember { mutableStateOf(initialRule?.trigger_rule_url ?: "") }
     var triggerText by remember { mutableStateOf(initialRule?.trigger_text ?: "") }
     var triggerTextFields by remember { mutableStateOf(initialRule?.trigger_text_fields ?: "") }
-    var triggerRuleName by remember { mutableStateOf(initialRule?.trigger_rule_name ?: "") }
     var autoTag by remember { mutableStateOf(initialRule?.auto_tag ?: "") }
     var priorityStr by remember { mutableStateOf(initialRule?.priority?.toString() ?: "0") }
     var applyAgeLimitStr by remember { mutableStateOf(initialRule?.apply_age_limit?.toString() ?: "0") }
@@ -408,14 +407,6 @@ private fun RuleFormDialog(
                     onValueChange = { triggerTextFields = it },
                     label = { Text("Trigger Text Fields") },
                     placeholder = { Text("title, description") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = triggerRuleName,
-                    onValueChange = { triggerRuleName = it },
-                    label = { Text("Trigger Rule Name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -513,7 +504,6 @@ private fun RuleFormDialog(
                         enabled = enabled,
                         priority = priorityStr.toIntOrNull() ?: 0,
                         rule_name = finalRuleName.ifEmpty { "Rule" },
-                        trigger_rule_name = triggerRuleName.trim(),
                         trigger_rule_url = triggerRuleUrl.trim(),
                         trigger_text = triggerText.trim(),
                         trigger_text_fields = triggerTextFields.trim(),
@@ -604,9 +594,6 @@ private fun RuleDetailDialog(
                     RuleDetailRow("Block", if (rule.block) "Yes" else "No")
                     RuleDetailRow("Trust", if (rule.trust) "Yes" else "No")
 
-                    if (rule.trigger_rule_name.isNotEmpty()) {
-                        RuleDetailRow("Trigger Rule Name", rule.trigger_rule_name)
-                    }
                     if (rule.trigger_rule_url.isNotEmpty()) {
                         RuleDetailRow("Trigger URL", rule.trigger_rule_url)
                     }
