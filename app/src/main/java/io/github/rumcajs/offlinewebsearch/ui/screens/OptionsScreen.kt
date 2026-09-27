@@ -25,6 +25,7 @@ import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
  * @param onNavigateToPreselectedList Callback to navigate to preselected database list screen.
  * @param onNavigateToAbout Callback to navigate to About screen.
  * @param onNavigateToLogs Callback to navigate to Logs screen.
+ * @param onNavigateToEntryRules Callback to navigate to Entry Rules screen.
  * @param onNavigateToAdvanced Callback to navigate to Advanced settings screen.
  * @param onNavigateToLinkChecker Callback to navigate to Link Checker screen.
  * @param onSetActive Callback to set an active database.
@@ -37,6 +38,7 @@ fun OptionsScreen(
     onNavigateToPreselectedList: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
+    onNavigateToEntryRules: () -> Unit = {},
     onNavigateToAdvanced: () -> Unit = {},
     onNavigateToLinkChecker: () -> Unit = {},
     onSetActive: (String?) -> Unit
@@ -122,6 +124,15 @@ fun OptionsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Logs")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = onNavigateToEntryRules,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Entry Rules")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
