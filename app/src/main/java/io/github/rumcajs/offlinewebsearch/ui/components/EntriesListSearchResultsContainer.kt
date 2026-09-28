@@ -75,7 +75,8 @@ fun EntriesListSearchResultsContainer(
                             }
                         )
                     },
-                state = listState
+                state = listState,
+                contentPadding = PaddingValues(bottom = 88.dp)
             ) {
                 if (searchWidget != null) {
                     item(key = "search_widget") {

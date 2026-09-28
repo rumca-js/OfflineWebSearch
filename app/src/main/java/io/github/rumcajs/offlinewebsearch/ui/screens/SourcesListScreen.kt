@@ -153,7 +153,7 @@ fun SourcesListScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                contentPadding = PaddingValues(bottom = 88.dp)
             ) {
                 if (isEditable) {
                     item(key = "search_widget") {
