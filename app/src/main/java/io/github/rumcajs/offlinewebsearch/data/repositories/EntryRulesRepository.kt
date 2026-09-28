@@ -181,7 +181,7 @@ object EntryRulesRepository : RepositoryInterface {
         if (!file.exists()) return@withContext rules
 
         try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
             val selection = if (enabledOnly) "enabled = 1" else null
             val cursor = db.query(
@@ -229,7 +229,7 @@ object EntryRulesRepository : RepositoryInterface {
         if (!file.exists()) return@withContext null
 
         try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
             val cursor = db.query(
                 getTableName(),

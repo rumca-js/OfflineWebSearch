@@ -25,17 +25,19 @@ import java.util.regex.PatternSyntaxException
  * @param activeDatabaseState Current database state.
  * @param source The source to be updated.
  * @param urlFactory Optional factory to create [Url] instances (useful for testing and mocking).
+ * @param force If true, skips the outdated/fetch-period check and forces a fetch.
  */
 class SourceUpdater(
     private val context: Context,
     private val activeDatabaseState: DatabaseState?,
     private val source: Source,
-    private val urlFactory: ((String) -> Url)? = null
+    private val urlFactory: ((String) -> Url)? = null,
+    private val force: Boolean = false
 ) {
 
     /**
      * Executes the update sequence for the source:
-     * 1. Validates source readiness and fetch requirement via [SourceRepository.isFetchRequired].
+     * 1. Validates source readiness and fetch requirement via [SourceRepository.isFetchRequired] (unless [force] is true).
      * 2. Creates [Url] object and fetches feed response.
      * 3. Calls [SourceRepository.updateSourceMetadata] to update title and favicon.
      * 4. Obtains [Entry] list from [Url.getEntries].
@@ -52,7 +54,7 @@ class SourceUpdater(
         if (!source.enabled) {
             return@withContext Pair(false, "Source is disabled")
         }
-        if (!SourceRepository.isFetchRequired(context, activeDatabaseState, source)) {
+        if (!force && !SourceRepository.isFetchRequired(context, activeDatabaseState, source)) {
             return@withContext Pair(false, "Source was fetched recently (less than 1 hour ago)")
         }
 
@@ -184,15 +186,17 @@ class SourceUpdater(
          * @param activeDatabaseState Current database state.
          * @param source The source to update.
          * @param urlFactory Optional factory to supply custom [Url] instances.
+         * @param force If true, forces the source update even if not outdated.
          * @return Pair(success, resultMessage).
          */
         suspend fun updateSource(
             context: Context,
             activeDatabaseState: DatabaseState?,
             source: Source,
-            urlFactory: ((String) -> Url)? = null
+            urlFactory: ((String) -> Url)? = null,
+            force: Boolean = false
         ): Pair<Boolean, String> {
-            return SourceUpdater(context, activeDatabaseState, source, urlFactory).update()
+            return SourceUpdater(context, activeDatabaseState, source, urlFactory, force).update()
         }
     }
 }

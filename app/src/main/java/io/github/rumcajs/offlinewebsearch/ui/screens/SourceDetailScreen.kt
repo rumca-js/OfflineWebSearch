@@ -70,6 +70,7 @@ fun SourceDetailScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deleteEntriesWithSource by remember { mutableStateOf(false) }
+    var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showAgeDialog by remember { mutableStateOf(false) }
     var ageInput by remember(currentSource.age) { mutableStateOf((currentSource.age ?: 0).toString()) }
     var isSavingAge by remember { mutableStateOf(false) }
@@ -81,7 +82,7 @@ fun SourceDetailScreen(
         }
     }
 
-    val performRefresh: () -> Unit = {
+    val performRefresh: (force: Boolean) -> Unit = { force ->
         if (currentSource.url.isBlank()) {
             Toast.makeText(context, "Source URL is empty", Toast.LENGTH_SHORT).show()
         } else if (config.networkConfig.disabled) {
@@ -94,6 +95,7 @@ fun SourceDetailScreen(
                 context = context,
                 dbState = activeDbState,
                 source = currentSource,
+                force = force,
                 onFinished = { success, msg ->
                     scope.launch {
                         if (success) {
@@ -106,6 +108,7 @@ fun SourceDetailScreen(
                             if (updatedWithOp != null) {
                                 currentSource = updatedWithOp.source
                                 operationalData = updatedWithOp.operationalData
+                                onSourceUpdated?.invoke(updatedWithOp.source)
                             }
                             onRefreshSuccess?.invoke()
                         }
@@ -115,6 +118,54 @@ fun SourceDetailScreen(
                 }
             )
         }
+    }
+
+    val onRefreshClick: () -> Unit = {
+        if (currentSource.url.isBlank()) {
+            Toast.makeText(context, "Source URL is empty", Toast.LENGTH_SHORT).show()
+        } else if (config.networkConfig.disabled) {
+            Toast.makeText(context, "Network operations are disabled", Toast.LENGTH_SHORT).show()
+        } else if (activeDbState == null || activeDbState.isReadOnly || activeDbState.extension != ".db") {
+            Toast.makeText(context, "Active database is read-only or not writable", Toast.LENGTH_SHORT).show()
+        } else {
+            scope.launch {
+                val isRequired = SourceRepository.isFetchRequired(context, activeDbState, currentSource)
+                if (isRequired) {
+                    performRefresh(false)
+                } else {
+                    showRefreshConfirmDialog = true
+                }
+            }
+        }
+    }
+
+    if (showRefreshConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showRefreshConfirmDialog = false
+            },
+            title = { Text("Refresh Source") },
+            text = {
+                Text("Not enough time has passed since the last refresh. Are you sure you want to refresh this source?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showRefreshConfirmDialog = false
+                        performRefresh(true)
+                    }
+                ) {
+                    Text("Refresh")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showRefreshConfirmDialog = false
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showDeleteDialog && onDelete != null) {
@@ -183,7 +234,7 @@ fun SourceDetailScreen(
                 actions = {
                     if (currentSource.url.isNotBlank() && !config.networkConfig.disabled) {
                         IconButton(
-                            onClick = performRefresh,
+                            onClick = onRefreshClick,
                             enabled = !isRefreshing
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh Source")

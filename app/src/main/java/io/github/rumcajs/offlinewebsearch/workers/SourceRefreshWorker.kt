@@ -36,6 +36,7 @@ object SourceRefreshWorker {
             val context: Context,
             val dbState: DatabaseState,
             val source: Source,
+            val force: Boolean = false,
             val onFinished: ((Boolean, String?) -> Unit)? = null
         ) : RefreshTask()
         data class OutdatedSources(val context: Context, val dbState: DatabaseState, val onFinished: ((Int) -> Unit)? = null) : RefreshTask()
@@ -55,32 +56,22 @@ object SourceRefreshWorker {
     }
 
     /**
-     * Enqueues a list of sources for sequential background refresh.
-     */
-    fun enqueueSources(
-        context: Context,
-        dbState: DatabaseState,
-        sources: List<Source>,
-        onFinished: ((Int) -> Unit)? = null
-    ) {
-        val enabledSources = sources.filter { it.enabled && it.url.isNotBlank() }
-        if (enabledSources.isEmpty()) {
-            onFinished?.invoke(0)
-            return
-        }
-        taskChannel.trySend(RefreshTask.BatchSources(context.applicationContext, dbState, enabledSources, onFinished))
-    }
-
-    /**
      * Enqueues a single source for background refresh.
+     *
+     * @param context Application context.
+     * @param dbState Target database state.
+     * @param source Source to refresh.
+     * @param force If true, forces the refresh even if the source was fetched recently.
+     * @param onFinished Callback invoked upon completion with success flag and message.
      */
     fun enqueueSource(
         context: Context,
         dbState: DatabaseState,
         source: Source,
+        force: Boolean = false,
         onFinished: ((Boolean, String?) -> Unit)? = null
     ) {
-        taskChannel.trySend(RefreshTask.SingleSource(context.applicationContext, dbState, source, onFinished))
+        taskChannel.trySend(RefreshTask.SingleSource(context.applicationContext, dbState, source, force, onFinished))
     }
 
     /**
@@ -110,7 +101,7 @@ object SourceRefreshWorker {
                 }
 
                 _progress.value = WorkerProgress(total = 1, done = 0, isRunning = true, currentItem = task.source.title)
-                val (success, msg) = SourceUpdater.updateSource(task.context, task.dbState, task.source)
+                val (success, msg) = SourceUpdater.updateSource(task.context, task.dbState, task.source, force = task.force)
                 _progress.value = WorkerProgress(total = 1, done = 1, isRunning = false, currentItem = null)
                 task.onFinished?.invoke(success, msg)
             }
