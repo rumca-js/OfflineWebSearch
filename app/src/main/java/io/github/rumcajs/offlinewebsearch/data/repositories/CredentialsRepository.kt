@@ -121,31 +121,11 @@ object CredentialsRepository : RepositoryInterface {
     fun credentialsToContentValues(credential: Credentials): ContentValues {
         return ContentValues().apply {
             put("name", credential.name.take(1000))
-            if (credential.credential_type != null) {
-                put("credential_type", credential.credential_type.take(1000))
-            } else {
-                putNull("credential_type")
-            }
-            if (credential.username != null) {
-                put("username", credential.username.take(1000))
-            } else {
-                putNull("username")
-            }
-            if (credential.password != null) {
-                put("password", credential.password.take(1000))
-            } else {
-                putNull("password")
-            }
-            if (credential.secret != null) {
-                put("secret", credential.secret.take(1000))
-            } else {
-                putNull("secret")
-            }
-            if (credential.token != null) {
-                put("token", credential.token.take(1000))
-            } else {
-                putNull("token")
-            }
+            put("credential_type", (credential.credential_type ?: "").take(1000))
+            put("username", (credential.username ?: "").take(1000))
+            put("password", (credential.password ?: "").take(1000))
+            put("secret", (credential.secret ?: "").take(1000))
+            put("token", (credential.token ?: "").take(1000))
             put("user_id", credential.user_id)
         }
     }
@@ -364,9 +344,9 @@ object CredentialsRepository : RepositoryInterface {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
             val values = credentialsToContentValues(credential)
-            val rowId = db.insert(getTableName(), null, values)
+            val rowId = db.insertOrThrow(getTableName(), null, values)
             db.close()
-            if (rowId != -1L) Pair(rowId, null) else Pair(null, "Failed to insert credential (name may already exist)")
+            Pair(rowId, null)
         } catch (e: Exception) {
             val functionName = object {}.javaClass.enclosingMethod?.name
             AppLoggingRepository.error(context, activeDatabaseState, "Credential Name: ${credential.name} Exception in $functionName", e.message)
