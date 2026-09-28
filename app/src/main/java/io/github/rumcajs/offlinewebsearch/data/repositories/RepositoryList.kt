@@ -20,6 +20,7 @@ object RepositoryList {
             SourceOperationalDataRepository,
             EntryCompactedTagsRepository,
             EntryRulesRepository,
+            CredentialsRepository,
             AppLoggingRepository
         )
     }

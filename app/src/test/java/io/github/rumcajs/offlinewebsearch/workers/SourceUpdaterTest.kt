@@ -280,4 +280,26 @@ class SourceUpdaterTest {
         val r2 = EntryRulesRepository.getRuleById(context, dbState, rule2Id!!)
         assertEquals(2, r2?.trigger_text_hits)
     }
+
+    @Test
+    fun `createUpdater selects SourceUpdaterEmail for Email source type`() = runBlocking {
+        val emailSource = Source(id = 1L, title = "Email Newsletter", source_type = SourceRepository.SOURCE_TYPE_EMAIL, enabled = true)
+        val updater = SourceUpdater.createUpdater(context, dbState, emailSource)
+        assertTrue(updater is SourceUpdaterEmail)
+
+        val (ok, msg) = updater.process()
+        assertTrue(ok)
+        assertTrue(msg.contains("Email source updater"))
+    }
+
+    @Test
+    fun `createUpdater selects SourceUpdaterRss by default or for RSS source type`() = runBlocking {
+        val rssSource = Source(id = 1L, title = "RSS Feed", source_type = SourceRepository.SOURCE_TYPE_RSS, url = "https://example.com/rss", enabled = true)
+        val updater1 = SourceUpdater.createUpdater(context, dbState, rssSource)
+        assertTrue(updater1 is SourceUpdaterRss)
+
+        val defaultSource = Source(id = 2L, title = "Default Feed", source_type = null, url = "https://example.com/feed", enabled = true)
+        val updater2 = SourceUpdater.createUpdater(context, dbState, defaultSource)
+        assertTrue(updater2 is SourceUpdaterRss)
+    }
 }

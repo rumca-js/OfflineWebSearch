@@ -37,6 +37,7 @@ Users can provide databases from:
  - Visited Entries History - entryvisithistory
  - Entry Transitions History - entrytransitionhistory
  - Read Later - readlater
+ - Credentials - credentials (used for email source type)
 
 # Database handling
  - any internet database is downloaded to application storage, and used from there
