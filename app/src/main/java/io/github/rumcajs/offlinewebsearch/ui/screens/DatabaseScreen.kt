@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.data.repositories.CredentialsRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryCompactedTagsRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHistoryRepository
@@ -328,7 +329,8 @@ fun getRepositoriesToClear(): List<RepoClearItem> = listOf(
     RepoClearItem("Social Data", SocialDataRepository),
     RepoClearItem("Source Operational Data", SourceOperationalDataRepository),
     RepoClearItem("Entry Compacted Tags", EntryCompactedTagsRepository),
-    RepoClearItem("Read later", ReadLaterRepository)
+    RepoClearItem("Read later", ReadLaterRepository),
+    RepoClearItem("Credentials", CredentialsRepository)
 )
 
 /**
