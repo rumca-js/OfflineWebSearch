@@ -27,7 +27,9 @@ data class Source(
     val source_type: String? = null,
     val age: Int? = 0,
     val auto_tag: String = "",
-    val language: String = ""
+    val language: String = "",
+    /** Foreign key referencing the `credentials` table; null when no credential is associated. */
+    val credentials_id: Long? = null
 )
 
 /**
@@ -53,7 +55,8 @@ object SourceRepository : RepositoryInterface {
 
     val COLUMNS = arrayOf(
         "id", "enabled", "url", "title", "favicon",
-        "source_type", "age", "auto_tag", "fetch_period", "language"
+        "source_type", "age", "auto_tag", "fetch_period", "language",
+        "credentials_id"
     )
 
     override fun getTableName(): String = "sourcedatamodel"
@@ -99,7 +102,8 @@ object SourceRepository : RepositoryInterface {
 
     /**
      * Reads the current cursor row and constructs a [Source] from it.
-     * Assumes columns: id, enabled, url, title, favicon, source_type, age, auto_tag, language (optionally prefixed).
+     * Assumes columns: id, enabled, url, title, favicon, source_type, age, auto_tag,
+     * language, fetch_period, credentials_id (optionally prefixed).
      */
     fun cursorToSource(cursor: Cursor, prefix: String = ""): Source {
         val idIdx = cursor.getColumnIndex(prefix + "id")
@@ -122,6 +126,8 @@ object SourceRepository : RepositoryInterface {
         val language = if (languageIdx != -1 && !cursor.isNull(languageIdx)) cursor.getString(languageIdx) else ""
         val fetchPeriodIdx = cursor.getColumnIndex(prefix + "fetch_period")
         val fetchPeriod = if (fetchPeriodIdx != -1 && !cursor.isNull(fetchPeriodIdx)) cursor.getLong(fetchPeriodIdx) else 3600L
+        val credentialsIdIdx = cursor.getColumnIndex(prefix + "credentials_id")
+        val credentialsId = if (credentialsIdIdx != -1 && !cursor.isNull(credentialsIdIdx)) cursor.getLong(credentialsIdIdx) else null
         return Source(
             id = id,
             enabled = enabledVal == 1,
@@ -132,7 +138,8 @@ object SourceRepository : RepositoryInterface {
             age = age,
             auto_tag = autoTag,
             fetch_period = fetchPeriod,
-            language = language
+            language = language,
+            credentials_id = credentialsId
         )
     }
 
@@ -586,7 +593,8 @@ object SourceRepository : RepositoryInterface {
         age: Int = 0,
         auto_tag: String = "",
         fetch_period: Long = 3600L,
-        language: String = ""
+        language: String = "",
+        credentials_id: Long? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -619,6 +627,7 @@ object SourceRepository : RepositoryInterface {
                 put("category_id", 0)
                 put("subcategory_id", 0)
                 put("xpath", "")
+                if (credentials_id != null) put("credentials_id", credentials_id) else putNull("credentials_id")
             }
             val newId = db.insert(getTableName(), null, values)
             db.close()
@@ -646,7 +655,8 @@ object SourceRepository : RepositoryInterface {
         age: Int? = null,
         auto_tag: String? = null,
         fetch_period: Long? = null,
-        language: String? = null
+        language: String? = null,
+        credentials_id: Long? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -672,6 +682,11 @@ object SourceRepository : RepositoryInterface {
                 }
                 if (language != null) {
                     put("language", language.take(1000))
+                }
+                if (credentials_id != null) {
+                    put("credentials_id", credentials_id)
+                } else {
+                    putNull("credentials_id")
                 }
             }
             val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))
