@@ -216,11 +216,68 @@ class SourceUpdaterTest {
     }
 
     @Test
-    fun `matchesRuleUrl tests regex and wildcard matching`() {
+    fun `matchesRuleUrl tests regex, wildcard, and comma-separated matching`() {
         assertTrue(SourceUpdater.matchesRuleUrl("https://example.com/ads/123", ".*ads.*"))
         assertFalse(SourceUpdater.matchesRuleUrl("https://example.com/news/123", ".*ads.*"))
         assertTrue(SourceUpdater.matchesRuleUrl("https://example.com/track", "*track*"))
         assertFalse(SourceUpdater.matchesRuleUrl("", ".*"))
         assertFalse(SourceUpdater.matchesRuleUrl("https://example.com", ""))
+
+        // Multiple comma-separated URLs
+        val multipleUrlsPattern = ".*bit\\.ly.*, .*\\.link\\.to.*, *tinyurl*"
+        assertTrue(SourceUpdater.matchesRuleUrl("https://bit.ly/xyz", multipleUrlsPattern))
+        assertTrue(SourceUpdater.matchesRuleUrl("https://sub.link.to/abc", multipleUrlsPattern))
+        assertTrue(SourceUpdater.matchesRuleUrl("https://tinyurl.com/123", multipleUrlsPattern))
+        assertFalse(SourceUpdater.matchesRuleUrl("https://example.com/regular", multipleUrlsPattern))
+    }
+
+    @Test
+    fun `filterEntries handles multiple comma-separated urls and non-blocking rules`() = runBlocking {
+        val (rule1Id, _) = EntryRulesRepository.insertRule(
+            context = context,
+            activeDatabaseState = dbState,
+            rule = EntryRule(
+                rule_name = "Track Links (Non-blocking)",
+                trigger_rule_url = ".*track.*, .*analytics.*",
+                block = false,
+                enabled = true
+            )
+        )
+
+        val (rule2Id, _) = EntryRulesRepository.insertRule(
+            context = context,
+            activeDatabaseState = dbState,
+            rule = EntryRule(
+                rule_name = "Block Shorteners",
+                trigger_rule_url = ".*bit\\.ly.*, .*\\.link\\.to.*",
+                block = true,
+                enabled = true
+            )
+        )
+
+        val rules = EntryRulesRepository.getRules(context, dbState, enabledOnly = true)
+
+        val entries = listOf(
+            Entry(link = "https://example.com/track/event1", title = "Tracked Item"),
+            Entry(link = "https://bit.ly/short1", title = "Blocked Bitly Item"),
+            Entry(link = "https://sub.link.to/short2", title = "Blocked LinkTo Item"),
+            Entry(link = "https://example.com/clean/item", title = "Clean Item")
+        )
+
+        val updater = SourceUpdater(context, dbState, Source(url = "https://example.com/feed"))
+        val allowed = updater.filterEntries(entries, rules)
+
+        // 2 items should remain: "Tracked Item" (non-blocking) and "Clean Item"
+        assertEquals(2, allowed.size)
+        assertEquals("https://example.com/track/event1", allowed[0].link)
+        assertEquals("https://example.com/clean/item", allowed[1].link)
+
+        // Verify rule 1 (non-blocking) received 1 hit
+        val r1 = EntryRulesRepository.getRuleById(context, dbState, rule1Id!!)
+        assertEquals(1, r1?.trigger_text_hits)
+
+        // Verify rule 2 (blocking) received 2 hits (for bit.ly and link.to)
+        val r2 = EntryRulesRepository.getRuleById(context, dbState, rule2Id!!)
+        assertEquals(2, r2?.trigger_text_hits)
     }
 }

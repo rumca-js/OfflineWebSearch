@@ -8,6 +8,7 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRule
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryRulesRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
+import io.github.rumcajs.offlinewebsearch.util.EntryRuleUtils
 import io.github.rumcajs.offlinewebsearch.webtoolkit.Url
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -109,9 +110,10 @@ class SourceUpdater(
     }
 
     /**
-     * Filters [entries] against active [rules].
-     * If an entry matches an enabled rule with a non-blank `trigger_rule_url` regular expression
-     * and `rule.block == true`, the entry is discarded and the rule's hit counter is incremented.
+     * Filters [entries] against active [rules] using [EntryRuleUtils].
+     * For each entry matching enabled rules:
+     * - The matching rules' hit counters are incremented.
+     * - If any matching rule has `block == true`, the entry is discarded.
      *
      * @param entries List of candidate entries.
      * @param rules List of active entry rules.
@@ -131,19 +133,14 @@ class SourceUpdater(
                 continue
             }
 
-            var blocked = false
-            for (rule in activeUrlRules) {
-                if (matchesRuleUrl(link, rule.trigger_rule_url)) {
-                    if (rule.block) {
-                        blocked = true
-                        rule.id?.let { ruleId ->
-                            EntryRulesRepository.incrementTriggerHits(context, activeDatabaseState, ruleId)
-                        }
-                        break
-                    }
+            val matchingRules = EntryRuleUtils.getMatchingRulesForLink(link, activeUrlRules)
+            for (rule in matchingRules) {
+                rule.id?.let { ruleId ->
+                    EntryRulesRepository.incrementTriggerHits(context, activeDatabaseState, ruleId)
                 }
             }
-            if (!blocked) {
+
+            if (!matchingRules.any { it.block }) {
                 allowed.add(entry)
             }
         }
@@ -152,32 +149,14 @@ class SourceUpdater(
 
     companion object {
         /**
-         * Matches [link] against a [pattern] using regular expression matching.
-         * Supports standard regex patterns, with fallback to wildcard and substring matches.
+         * Matches [link] against [pattern] using regular expression matching by delegating to [EntryRuleUtils.matchesRuleUrl].
+         * Supports comma-separated patterns, standard regex, wildcard, and substring matching.
          *
          * @param link The entry URL string to test.
-         * @param pattern Regular expression pattern from [EntryRule.trigger_rule_url].
-         * @return True if the link matches the pattern.
+         * @param pattern Regular expression pattern(s) from [EntryRule.trigger_rule_url].
+         * @return True if the link matches any pattern.
          */
-        fun matchesRuleUrl(link: String, pattern: String): Boolean {
-            if (pattern.isBlank() || link.isBlank()) return false
-            return try {
-                val regex = Regex(pattern, RegexOption.IGNORE_CASE)
-                regex.containsMatchIn(link) || regex.matches(link)
-            } catch (e: PatternSyntaxException) {
-                val wildcardRegex = pattern
-                    .replace(".", "\\.")
-                    .replace("*", ".*")
-                    .replace("?", ".")
-                try {
-                    Regex(wildcardRegex, RegexOption.IGNORE_CASE).containsMatchIn(link)
-                } catch (e2: Exception) {
-                    link.contains(pattern, ignoreCase = true)
-                }
-            } catch (e: Exception) {
-                link.contains(pattern, ignoreCase = true)
-            }
-        }
+        fun matchesRuleUrl(link: String, pattern: String): Boolean = EntryRuleUtils.matchesRuleUrl(link, pattern)
 
         /**
          * Convenience static method to update a source using [SourceUpdater].
