@@ -159,9 +159,20 @@ fun SourcesListScreen(
                     item(key = "search_widget") {
                         SearchContainer(
                             searchQuery = viewModel.searchQuery,
-                            onSearchQueryChange = { viewModel.searchQuery = it },
+                            onSearchQueryChange = {
+                                viewModel.searchQuery = it
+                                if (it.isEmpty() && viewModel.activeSearchQuery.isNotEmpty()) {
+                                    viewModel.clearSearch(context)
+                                    scope.launch {
+                                        listState.scrollToItem(0)
+                                    }
+                                }
+                            },
                             onClearSearch = {
-                                viewModel.clearSearch()
+                                viewModel.clearSearch(context)
+                                scope.launch {
+                                    listState.scrollToItem(0)
+                                }
                             },
                             onPerformSearch = {
                                 viewModel.performSearch(context)

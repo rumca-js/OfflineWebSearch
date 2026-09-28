@@ -306,6 +306,18 @@ fun SourceDetailScreen(
                 )
             }
 
+            if (onBrowseEntries != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { onBrowseEntries(currentSource) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Browse entries")
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Source properties displayed as a unified properties list
@@ -327,18 +339,6 @@ fun SourceDetailScreen(
                     add(PropertyItem(label = "Body Hash", value = operationalData?.body_hash?.joinToString("") { "%02x".format(it) }?.takeIf { it.isNotBlank() } ?: "N/A"))
                 }
             )
-
-            if (onBrowseEntries != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { onBrowseEntries(currentSource) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Browse entries")
-                }
-            }
         }
     }
 }

@@ -28,11 +28,10 @@ class SourcesViewModelTest {
         viewModel.searchQuery = "blog"
         assertTrue(viewModel.isSearchButtonEnabled)
 
-        // Clear query
+        // Clear query resets search query and active search query
         viewModel.clearSearch()
-        assertTrue(viewModel.isSearchButtonEnabled)
-        viewModel.performSearch()
         assertFalse(viewModel.isSearchButtonEnabled)
+        assertEquals("", viewModel.searchQuery)
         assertEquals("", viewModel.activeSearchQuery)
     }
 
