@@ -93,6 +93,38 @@ object EntryRulesRepository : RepositoryInterface {
             )
         """.trimIndent()
         db.execSQL(createSql)
+
+        val cursor = db.rawQuery("PRAGMA table_info(${getTableName()})", null)
+        val existingColumns = mutableSetOf<String>()
+        cursor.use { c ->
+            val nameIdx = c.getColumnIndex("name")
+            while (c.moveToNext()) {
+                if (nameIdx != -1) {
+                    existingColumns.add(c.getString(nameIdx))
+                }
+            }
+        }
+        val columnDefs = mapOf(
+            "enabled" to "INTEGER NOT NULL DEFAULT 1",
+            "priority" to "INTEGER NOT NULL DEFAULT 0",
+            "rule_name" to "TEXT",
+            "trigger_rule_url" to "TEXT",
+            "trigger_text" to "TEXT",
+            "trigger_text_hits" to "INTEGER NOT NULL DEFAULT 0",
+            "trigger_text_fields" to "TEXT",
+            "block" to "INTEGER NOT NULL DEFAULT 0",
+            "trust" to "INTEGER NOT NULL DEFAULT 0",
+            "auto_tag" to "TEXT",
+            "apply_age_limit" to "INTEGER NOT NULL DEFAULT 0",
+            "browser_id" to "INTEGER NOT NULL DEFAULT 0"
+        )
+        for ((col, def) in columnDefs) {
+            if (!existingColumns.contains(col)) {
+                try {
+                    db.execSQL("ALTER TABLE ${getTableName()} ADD COLUMN $col $def")
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     /**
@@ -156,6 +188,7 @@ object EntryRulesRepository : RepositoryInterface {
             put("auto_tag", rule.auto_tag.take(1000))
             put("apply_age_limit", rule.apply_age_limit)
             put("browser_id", rule.browser_id)
+            put("script", "")
         }
     }
 
@@ -279,7 +312,7 @@ object EntryRulesRepository : RepositoryInterface {
             val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             ensureTableExists(db)
             val values = ruleToContentValues(rule)
-            val rowId = db.insert(getTableName(), null, values)
+            val rowId = db.insertOrThrow(getTableName(), null, values)
             db.close()
             if (rowId != -1L) Pair(rowId, null) else Pair(null, "Failed to insert into ${getTableName()}")
         } catch (e: Exception) {
