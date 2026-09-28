@@ -82,6 +82,57 @@ class SourceUpdaterTest {
     }
 
     @Test
+    fun `update with force=true proceeds even when source was fetched recently`() = runBlocking {
+        val url = "https://forced.test/rss.xml"
+        val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Forced Source", url, enabled = true)
+        assertTrue(okInsert)
+        val inserted = SourceRepository.getSourceByUrl(context, dbState, url)
+        assertNotNull(inserted)
+
+        val nowIso = SourceOperationalDataRepository.getCurrentIsoTimestamp()
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, inserted!!.id!!, nowIso)
+
+        val rssXml = """
+            <rss version="2.0">
+              <channel>
+                <title>Forced Feed Title</title>
+                <link>https://forced.test</link>
+                <item>
+                  <title>Forced Item 1</title>
+                  <link>https://forced.test/item1</link>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val fakeResponse = PageResponseObject(
+            statusCode = 200,
+            headers = mapOf("Content-Type" to listOf("application/rss+xml")),
+            text = rssXml
+        )
+        val rssPage = RssPage(url, rssXml)
+
+        val fakeUrl = object : Url(url) {
+            override suspend fun getResponse(acceptHeader: String?): PageResponseObject = fakeResponse
+            override fun getCachedResponse(): PageResponseObject = fakeResponse
+            override suspend fun getPage(): Page = rssPage
+            override suspend fun getEntries(): List<Entry> = rssPage.getEntries()
+            override suspend fun getTitle(): String? = "Forced Feed Title"
+        }
+
+        val (ok, msg) = SourceUpdater(
+            context = context,
+            activeDatabaseState = dbState,
+            source = inserted,
+            urlFactory = { fakeUrl },
+            force = true
+        ).update()
+
+        assertTrue(msg, ok)
+        assertTrue(msg.contains("1 entries"))
+    }
+
+    @Test
     fun `update successfully fetches and inserts entries with rules filtering`() = runBlocking {
         val url = "https://feed.test/rss.xml"
         val (okInsert, _) = SourceRepository.insertSource(context, dbState, "Test Feed", url, enabled = true)
