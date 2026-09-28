@@ -94,6 +94,7 @@ Screens:
  - AboutScreen - Shows information about the application.
  - AppLoggingScreen - shows log information
  - EntryRulesScreen - Displays and configures entry rules.
+ - CredentialsScreen - Displays and manages credentials (add, edit, remove).
  - UrlPreviewScreen - shows preview for page data (title, description, meta properties). Should apply similar style as EntryDetailScreen for title, link, etc.
  - UrlLinkCheckerScreen - provides url input, and same display as in UrlPreviewScreen
  - UrlStatusScreen - shows entry status (status code, content-type)

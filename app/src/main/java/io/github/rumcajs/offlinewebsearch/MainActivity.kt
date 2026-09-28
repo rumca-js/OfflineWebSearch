@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -54,6 +55,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)
     object AppLogging : Screen("app_logging", "Logs", Icons.AutoMirrored.Filled.List)
     object EntryRules : Screen("entry_rules", "Entry Rules", Icons.AutoMirrored.Filled.List)
+    object Credentials : Screen("credentials", "Credentials", Icons.Filled.Key)
     object OptionsAdvanced : Screen("options_advanced", "Advanced", Icons.Filled.Settings)
     object LinkChecker : Screen("link_checker", "Link Checker", Icons.AutoMirrored.Filled.List)
 }
@@ -320,6 +322,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToEntryRules = {
                                     navController.navigate(Screen.EntryRules.route)
                                 },
+                                onNavigateToCredentials = {
+                                    navController.navigate(Screen.Credentials.route)
+                                },
                                 onNavigateToAdvanced = {
                                     navController.navigate(Screen.OptionsAdvanced.route)
                                 },
@@ -338,6 +343,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
                         }
                         composable(Screen.EntryRules.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.EntryRulesScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(Screen.Credentials.route) {
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.CredentialsScreen(
                                 onBack = { navController.popBackStack() }
                             )
                         }
