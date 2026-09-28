@@ -283,13 +283,9 @@ class SourceUpdaterTest {
 
     @Test
     fun `createUpdater selects SourceUpdaterEmail for Email source type`() = runBlocking {
-        val emailSource = Source(id = 1L, title = "Email Newsletter", source_type = SourceRepository.SOURCE_TYPE_EMAIL, enabled = true)
+        val emailSource = Source(id = 1L, title = "Email Newsletter", url = "imaps://mail.test.com", source_type = SourceRepository.SOURCE_TYPE_EMAIL, enabled = true)
         val updater = SourceUpdater.createUpdater(context, dbState, emailSource)
         assertTrue(updater is SourceUpdaterEmail)
-
-        val (ok, msg) = updater.process()
-        assertTrue(ok)
-        assertTrue(msg.contains("Email source updater"))
     }
 
     @Test

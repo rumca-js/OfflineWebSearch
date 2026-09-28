@@ -188,7 +188,6 @@ object EntryRulesRepository : RepositoryInterface {
             put("auto_tag", rule.auto_tag.take(1000))
             put("apply_age_limit", rule.apply_age_limit)
             put("browser_id", rule.browser_id)
-            put("script", "")
         }
     }
 
