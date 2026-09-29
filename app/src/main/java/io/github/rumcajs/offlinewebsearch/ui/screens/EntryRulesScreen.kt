@@ -35,7 +35,12 @@ import kotlinx.coroutines.launch
  * - `trigger_rule_url`: the URL pattern that triggers the rule
  * - `block`: whether matches for this rule should be blocked
  *
+ * does not support yet:
+ *  - trigger text
+ *  - browsers (browser id)
+ *
  * Supports adding, viewing, editing, and deleting entry rules.
+ *  - when adding rule is added enabled
  *
  * @param onBack Callback invoked when navigating back.
  */
@@ -393,24 +398,6 @@ private fun RuleFormDialog(
                 )
 
                 OutlinedTextField(
-                    value = triggerText,
-                    onValueChange = { triggerText = it },
-                    label = { Text("Trigger Text") },
-                    placeholder = { Text("Text keyword to match") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = triggerTextFields,
-                    onValueChange = { triggerTextFields = it },
-                    label = { Text("Trigger Text Fields") },
-                    placeholder = { Text("title, description") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
                     value = autoTag,
                     onValueChange = { autoTag = it },
                     label = { Text("Auto Tag") },
@@ -442,20 +429,6 @@ private fun RuleFormDialog(
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = browserIdStr,
-                        onValueChange = { browserIdStr = it },
-                        label = { Text("Browser ID") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -471,15 +444,6 @@ private fun RuleFormDialog(
                     Checkbox(checked = trust, onCheckedChange = { trust = it })
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Trust matching entries")
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Switch(checked = enabled, onCheckedChange = { enabled = it })
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Enabled")
                 }
             }
         },
