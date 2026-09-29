@@ -47,30 +47,35 @@ object EntryUtils {
 
     /**
      * Returns the author or source name to display for an entry.
-     * If [context] and [activeDatabaseState] are provided and [entry] has a `source_id`,
-     * attempts to resolve the source's name/title from `sourcedatamodel`.
-     * Otherwise, falls back to `source_id` string, or `entry.author` if non-blank.
+     *
+     * Priority:
+     * 1. [entry.author] if non-blank (e.g. email sender from the "From" header).
+     * 2. Source title resolved via [source_id] from `sourcedatamodel`.
+     * 3. Raw [source_id] string as last resort.
+     *
+     * Checking [entry.author] first ensures that email entries show the actual
+     * sender instead of the email source's title.
      */
     suspend fun getDisplayAuthor(
         entry: Entry,
         context: android.content.Context? = null,
         activeDatabaseState: io.github.rumcajs.offlinewebsearch.data.DatabaseState? = null
     ): String? {
-        val sourceId = entry.source_id
-        if (sourceId != null) {
-            if (context != null && activeDatabaseState != null) {
-                val sourceTitle = SourceRepository.getSourceById(
-                    context,
-                    activeDatabaseState,
-                    sourceId
-                )?.title?.takeIf { it.isNotBlank() }
-                if (!sourceTitle.isNullOrBlank()) {
-                    return sourceTitle
-                }
+        // Prefer an explicitly set author (e.g. email "From" field) over source metadata.
+        entry.author?.takeIf { it.isNotBlank() }?.let { return it }
+
+        val sourceId = entry.source_id ?: return null
+        if (context != null && activeDatabaseState != null) {
+            val sourceTitle = SourceRepository.getSourceById(
+                context,
+                activeDatabaseState,
+                sourceId
+            )?.title?.takeIf { it.isNotBlank() }
+            if (!sourceTitle.isNullOrBlank()) {
+                return sourceTitle
             }
-            return sourceId.toString()
         }
-        return entry.author?.takeIf { it.isNotBlank() }
+        return sourceId.toString()
     }
 
 
