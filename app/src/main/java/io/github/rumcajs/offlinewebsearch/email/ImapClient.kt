@@ -125,8 +125,22 @@ class ImapClient(
 
                 val response = readCommandResponse(tag)
                 if (response.isOk) {
-                    val fullRawText = response.rawPayload.ifBlank { response.lines.joinToString("\r\n") }
-                    val emailMsg = EmailMimeParser.parseRawMessage(fullRawText, uid = seq.toLong())
+                    val rawText = if (response.rawPayload.isNotBlank()) {
+                        response.rawPayload
+                    } else {
+                        // Fallback for servers that send BODY[] content inline without a literal block.
+                        // Strip leading IMAP envelope lines (e.g. "* N FETCH (BODY[] ...)") and
+                        // trailing IMAP tag/status lines so only the raw RFC 822 message remains.
+                        response.lines
+                            .dropWhile { line ->
+                                line.startsWith("*") && line.uppercase().contains("FETCH")
+                            }
+                            .dropLastWhile { line ->
+                                line.startsWith(tag, ignoreCase = true) || line == ")"
+                            }
+                            .joinToString("\r\n")
+                    }
+                    val emailMsg = EmailMimeParser.parseRawMessage(rawText, uid = seq.toLong())
 
                     if (sinceDate != null && emailMsg.date != null && emailMsg.date.time <= sinceDate.time) {
                         // Encountered email older than or equal to last fetched date; stop processing older messages

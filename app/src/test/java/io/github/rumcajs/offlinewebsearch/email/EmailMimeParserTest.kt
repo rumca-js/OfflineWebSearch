@@ -80,9 +80,110 @@ class EmailMimeParserTest {
 
         val msg = EmailMimeParser.parseRawMessage(raw, uid = 2L)
         assertEquals("<multi-789@example.com>", msg.messageId)
-        assertEquals("\"Alice Smith\" <alice@example.com>", msg.from)
+        // parseAddr strips surrounding quotes from display name
+        assertEquals("Alice Smith <alice@example.com>", msg.from)
         assertEquals("Multipart Newsletter", msg.subject)
         assertEquals("Plain text version of newsletter.", msg.body)
         assertNotNull(msg.date)
+    }
+
+    // --- parseAddr ---
+
+    @Test
+    fun `parseAddr display name and angle address`() {
+        val (name, addr) = EmailMimeParser.parseAddr("John Doe <john@example.com>")
+        assertEquals("John Doe", name)
+        assertEquals("john@example.com", addr)
+    }
+
+    @Test
+    fun `parseAddr quoted display name strips quotes`() {
+        val (name, addr) = EmailMimeParser.parseAddr("\"Alice Smith\" <alice@example.com>")
+        assertEquals("Alice Smith", name)
+        assertEquals("alice@example.com", addr)
+    }
+
+    @Test
+    fun `parseAddr bare address no display name`() {
+        val (name, addr) = EmailMimeParser.parseAddr("user@example.com")
+        assertEquals("", name)
+        assertEquals("user@example.com", addr)
+    }
+
+    @Test
+    fun `parseAddr angle address only`() {
+        val (name, addr) = EmailMimeParser.parseAddr("<user@example.com>")
+        assertEquals("", name)
+        assertEquals("user@example.com", addr)
+    }
+
+    @Test
+    fun `parseAddr RFC2047 encoded display name is decoded`() {
+        // "John Smith" Base64-encoded
+        val (name, addr) = EmailMimeParser.parseAddr("=?UTF-8?B?Sm9obiBTbWl0aA==?= <john.smith@example.com>")
+        assertEquals("John Smith", name)
+        assertEquals("john.smith@example.com", addr)
+    }
+
+    // --- extractEmailAuthor ---
+
+    @Test
+    fun `extractEmailAuthor uses From header when present`() {
+        val headers = mapOf("from" to "Jane Doe <jane@example.com>", "sender" to "relay@example.com")
+        assertEquals("Jane Doe <jane@example.com>", EmailMimeParser.extractEmailAuthor(headers))
+    }
+
+    @Test
+    fun `extractEmailAuthor falls back to Sender when From is absent`() {
+        val headers = mapOf("sender" to "relay <relay@example.com>")
+        assertEquals("relay <relay@example.com>", EmailMimeParser.extractEmailAuthor(headers))
+    }
+
+    @Test
+    fun `extractEmailAuthor returns bare address when no display name`() {
+        val headers = mapOf("from" to "plain@example.com")
+        assertEquals("plain@example.com", EmailMimeParser.extractEmailAuthor(headers))
+    }
+
+    @Test
+    fun `extractEmailAuthor returns blank when neither From nor Sender present`() {
+        assertEquals("", EmailMimeParser.extractEmailAuthor(emptyMap()))
+    }
+
+    @Test
+    fun `parseRawMessage uses Sender header as fallback when From is absent`() {
+        val raw = "To: me@example.com\r\nSender: relay <relay@example.com>\r\nSubject: Via Sender\r\nDate: Mon, 28 Sep 2026 10:00:00 +0000\r\nMessage-ID: <sender-only@example.com>\r\n\r\nBody."
+
+        val msg = EmailMimeParser.parseRawMessage(raw, uid = 20L)
+        assertEquals("relay <relay@example.com>", msg.from)
+    }
+
+    @Test
+    fun `parseRawMessage correctly parses From header as sender not author alias`() {
+        val raw = """
+            From: John Sender <john@sender.com>
+            To: recipient@example.com
+            Subject: Sender Test
+            Date: Mon, 28 Sep 2026 10:00:00 +0000
+            Message-ID: <sender-test@example.com>
+            Content-Type: text/plain; charset=UTF-8
+
+            Body text.
+        """.trimIndent()
+
+        val msg = EmailMimeParser.parseRawMessage(raw, uid = 10L)
+        assertEquals("John Sender <john@sender.com>", msg.from)
+        assertEquals("Sender Test", msg.subject)
+        assertEquals("<sender-test@example.com>", msg.messageId)
+    }
+
+    @Test
+    fun `parseRawMessage From header with RFC2047 encoded display name is decoded correctly`() {
+        // Real-world case: display name is encoded, angle-address follows
+        val encodedFrom = "=?UTF-8?B?Sm9obiBTbWl0aA==?= <john.smith@example.com>"
+        val raw = "From: $encodedFrom\r\nTo: me@example.com\r\nSubject: Hi\r\nDate: Mon, 28 Sep 2026 10:00:00 +0000\r\nMessage-ID: <rfc2047-from@example.com>\r\n\r\nBody."
+
+        val msg = EmailMimeParser.parseRawMessage(raw, uid = 11L)
+        assertEquals("John Smith <john.smith@example.com>", msg.from)
     }
 }

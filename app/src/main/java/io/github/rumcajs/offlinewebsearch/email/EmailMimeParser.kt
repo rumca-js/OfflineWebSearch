@@ -147,7 +147,7 @@ object EmailMimeParser {
         val headers = parseHeaders(headerPart)
 
         val messageId = headers["message-id"] ?: ""
-        val from = decodeRfc2047(headers["from"] ?: "")
+        val from = extractEmailAuthor(headers)
         val to = decodeRfc2047(headers["to"] ?: "")
         val subject = decodeRfc2047(headers["subject"] ?: "")
         val dateHeader = headers["date"]
@@ -167,6 +167,55 @@ object EmailMimeParser {
             body = body.trim(),
             uid = uid
         )
+    }
+
+    /**
+     * Splits an email address header value into a `(displayName, address)` pair,
+     * mirroring Python's `email.utils.parseaddr`.
+     *
+     * Handles the following common formats:
+     * - `Display Name <user@host>` → `("Display Name", "user@host")`
+     * - `<user@host>` → `("", "user@host")`
+     * - `user@host` → `("", "user@host")`
+     * - `"Quoted Name" <user@host>` → `("Quoted Name", "user@host")`
+     *
+     * @param raw Raw header value (not yet RFC 2047 decoded).
+     * @return Pair of (decoded display name, bare email address). Either may be blank.
+     */
+    fun parseAddr(raw: String): Pair<String, String> {
+        val angleStart = raw.lastIndexOf('<')
+        val angleEnd = raw.indexOf('>', angleStart.coerceAtLeast(0))
+        return if (angleStart != -1 && angleEnd != -1 && angleEnd > angleStart) {
+            val addr = raw.substring(angleStart + 1, angleEnd).trim()
+            val namePart = raw.substring(0, angleStart).trim().trimStart('"').trimEnd('"').trim()
+            val name = decodeRfc2047(namePart)
+            Pair(name, addr)
+        } else {
+            // No angle brackets — treat the whole value as a bare address
+            Pair("", raw.trim())
+        }
+    }
+
+    /**
+     * Extracts the sender display string from [headers], trying `From` first then `Sender` as
+     * a fallback — mirroring the Python reference:
+     * ```python
+     * name, addr = parseaddr(msg.get("From") or msg.get("Sender"))
+     * return f"{name} <{addr}>" if name else addr
+     * ```
+     *
+     * @param headers Lowercase-keyed map of parsed email headers.
+     * @return Formatted sender string (`"Name <addr>"` or bare `addr`), or blank if neither header is present.
+     */
+    fun extractEmailAuthor(headers: Map<String, String>): String {
+        for (headerKey in listOf("from", "sender")) {
+            val raw = headers[headerKey]?.takeIf { it.isNotBlank() } ?: continue
+            val (name, addr) = parseAddr(raw)
+            if (addr.isNotBlank()) {
+                return if (name.isNotBlank()) "$name <$addr>" else addr
+            }
+        }
+        return ""
     }
 
     /**
