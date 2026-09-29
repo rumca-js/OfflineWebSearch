@@ -23,8 +23,8 @@ import java.util.Date
  * Source updater for Email sources (IMAP/IMAPS).
  *
  * Connects to the configured email server without OAuth (using standard username/password credentials),
- * fetches new email messages up to [SourceOperationalData.date_fetched], converts each message into an [Entry],
- * applies active [EntryRule] filters, and persists entries into the database.
+ * fetches new email messages with a 24-hour lookback window from [SourceOperationalData.date_fetched],
+ * converts each message into an [Entry], applies active [EntryRule] filters, and persists entries into the database.
  *
  * @param context Application context.
  * @param activeDatabaseState Current database state.
@@ -40,12 +40,20 @@ class SourceUpdaterEmail(
     private val clientFactory: ((EmailConnectionConfig) -> EmailClient)? = null
 ) : SourceUpdaterInterface {
 
+    companion object {
+        /**
+         * Lookback window duration (24 hours) subtracted when calculating `sinceDate` from `date_fetched`
+         * so that older emails from the last 24 hours have a chance to be fetched and retried.
+         */
+        const val EMAIL_LOOKBACK_WINDOW_MS = 24 * 60 * 60 * 1000L
+    }
+
     /**
      * Executes the update sequence for the Email source:
      * 1. Validates source enabled status and fetch requirement.
      * 2. Resolves email credentials from [CredentialsRepository].
-     * 3. Retrieves the last fetched timestamp from [SourceOperationalData.date_fetched].
-     * 4. Connects to the email server, authenticates, and reads messages newer than `date_fetched`.
+     * 3. Retrieves the last fetched timestamp from [SourceOperationalData.date_fetched] with a 24-hour lookback window.
+     * 4. Connects to the email server, authenticates, and reads messages newer than `sinceDate`.
      * 5. Converts messages into [Entry] instances with fake links (`email://{source.url}/{source.id}/{message.id}`).
      * 6. Filters entries against active [EntryRule]s.
      * 7. Inserts entries into `linkdatamodel` and updates operational fetch metadata.
@@ -86,14 +94,15 @@ class SourceUpdaterEmail(
             return@withContext Pair(false, errorMsg)
         }
 
-        // 2. Resolve sinceDate from SourceOperationalData.date_fetched
+        // 2. Resolve sinceDate from SourceOperationalData.date_fetched with 24-hour lookback window
         val opData = source.id?.let {
             SourceOperationalDataRepository.getOperationalDataBySourceId(context, activeDatabaseState, it)
         }
         val dateFetchedStr = opData?.date_fetched
         val sinceDate: Date? = dateFetchedStr?.let {
-            DateUtils.parseIsoTimestamp(it)?.let { millis -> Date(millis) }
-                ?: DateUtils.parseDateString(it)
+            val fetchMillis = DateUtils.parseIsoTimestamp(it)
+                ?: DateUtils.parseDateString(it)?.time
+            fetchMillis?.let { millis -> Date(maxOf(0L, millis - EMAIL_LOOKBACK_WINDOW_MS)) }
         }
 
         // 3. Connect to email server and fetch messages

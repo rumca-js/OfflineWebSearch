@@ -168,7 +168,7 @@ class SourceUpdaterEmailTest {
     }
 
     @Test
-    fun `process reads emails up to SourceWithOperationalData date_fetched`() = runBlocking {
+    fun `process reads emails with 24-hour lookback from SourceWithOperationalData date_fetched`() = runBlocking {
         // Setup credentials & source
         val (credId, _) = CredentialsRepository.insertCredential(
             context = context,
@@ -188,25 +188,36 @@ class SourceUpdaterEmailTest {
         val previousFetchIso = DateUtils.toIsoString(previousFetchDate)
         SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = previousFetchIso)
 
-        // Mock messages: one newer than date_fetched, one older than date_fetched
+        // Mock messages:
+        // 1. Newer than date_fetched
         val newerMsg = EmailMessage(
             messageId = "<newer@example.com>",
             from = "new@example.com",
             subject = "Newer Email",
-            date = Date(1700006000000L), // Newer
+            date = Date(1700006000000L),
             body = "New message body",
             uid = 201L
         )
-        val olderMsg = EmailMessage(
-            messageId = "<older@example.com>",
-            from = "old@example.com",
-            subject = "Older Email",
-            date = Date(1700004000000L), // Older
-            body = "Old message body",
+        // 2. Older than date_fetched, but within 24-hour lookback window (1 hour older)
+        val lookbackMsg = EmailMessage(
+            messageId = "<lookback@example.com>",
+            from = "lookback@example.com",
+            subject = "Lookback Email from earlier today",
+            date = Date(1700001400000L), // ~1 hour older than date_fetched
+            body = "Lookback message body",
             uid = 202L
         )
+        // 3. Older than 24 hours prior to date_fetched (outside lookback window)
+        val tooOldMsg = EmailMessage(
+            messageId = "<tooold@example.com>",
+            from = "old@example.com",
+            subject = "Too Old Email",
+            date = Date(1700005000000L - SourceUpdaterEmail.EMAIL_LOOKBACK_WINDOW_MS - 10000L),
+            body = "Too old message body",
+            uid = 203L
+        )
 
-        val mockClient = MockEmailClient(messages = listOf(newerMsg, olderMsg))
+        val mockClient = MockEmailClient(messages = listOf(newerMsg, lookbackMsg, tooOldMsg))
 
         val updater = SourceUpdaterEmail(
             context = context,
@@ -218,12 +229,74 @@ class SourceUpdaterEmailTest {
 
         val (ok, msg) = updater.process()
         assertTrue(msg, ok)
+        assertTrue(msg.contains("2 entries"))
+
+        // newerMsg and lookbackMsg should be inserted; tooOldMsg should be skipped
+        val entries = EntrySqliteRepository.getEntriesPage(context, dbState)
+        assertEquals(2, entries.size)
+        assertTrue(entries.any { it.title == "Newer Email" })
+        assertTrue(entries.any { it.title == "Lookback Email from earlier today" })
+        assertFalse(entries.any { it.title == "Too Old Email" })
+    }
+
+    @Test
+    fun `process does not duplicate existing emails during 24-hour lookback retry`() = runBlocking {
+        // Setup credentials & source
+        val (credId, _) = CredentialsRepository.insertCredential(
+            context = context,
+            activeDatabaseState = dbState,
+            credential = Credentials(
+                name = "mail_account_dedup",
+                username = "user@example.com",
+                password = "secretpassword"
+            )
+        )
+        val sourceUrl = "imaps://mail.dedup.com"
+        SourceRepository.insertSource(context, dbState, "Dedup Source", sourceUrl, enabled = true, credentials_id = credId)
+        val source = SourceRepository.getSourceByUrl(context, dbState, sourceUrl)!!
+
+        val existingMsg = EmailMessage(
+            messageId = "<already_inserted@example.com>",
+            from = "sender@example.com",
+            subject = "Already In DB",
+            date = Date(1700004000000L),
+            body = "Already in DB body",
+            uid = 210L
+        )
+        val newDelayedMsg = EmailMessage(
+            messageId = "<delayed@example.com>",
+            from = "sender@example.com",
+            subject = "Delayed Email from earlier today",
+            date = Date(1700003000000L),
+            body = "Delayed message body",
+            uid = 211L
+        )
+
+        // Pre-insert existingMsg entry into linkdatamodel
+        SourceRepository.insertSourceEntries(context, dbState, listOf(existingMsg.toEntry(source)), source)
+        assertEquals(1, EntrySqliteRepository.countEntries(context, dbState))
+
+        // Set date_fetched to epoch 1700005000000L
+        val previousFetchIso = DateUtils.toIsoString(Date(1700005000000L))
+        SourceOperationalDataRepository.setSourceFetch(context, dbState, source.id!!, fetchTime = previousFetchIso)
+
+        val mockClient = MockEmailClient(messages = listOf(existingMsg, newDelayedMsg))
+
+        val updater = SourceUpdaterEmail(
+            context = context,
+            activeDatabaseState = dbState,
+            source = source,
+            force = true,
+            clientFactory = { mockClient }
+        )
+
+        val (ok, msg) = updater.process()
+        assertTrue(msg, ok)
+        // Only 1 new entry was inserted (newDelayedMsg), existingMsg was skipped as duplicate
         assertTrue(msg.contains("1 entries"))
 
-        // Only newer email should be inserted
-        val entries = EntrySqliteRepository.getEntriesPage(context, dbState)
-        assertEquals(1, entries.size)
-        assertEquals("Newer Email", entries[0].title)
+        val totalCount = EntrySqliteRepository.countEntries(context, dbState)
+        assertEquals(2, totalCount)
     }
 
     @Test
