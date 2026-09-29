@@ -594,7 +594,8 @@ object SourceRepository : RepositoryInterface {
         auto_tag: String = "",
         fetch_period: Long = 3600L,
         language: String = "",
-        credentials_id: Long? = null
+        credentials_id: Long? = null,
+        source_type: String? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -609,7 +610,7 @@ object SourceRepository : RepositoryInterface {
                 put("title", title)
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
-                put("source_type", "")
+                put("source_type", source_type ?: "")
                 put("category_name", "")
                 put("subcategory_name", "")
                 put("export_to_cms", false)
@@ -656,7 +657,8 @@ object SourceRepository : RepositoryInterface {
         auto_tag: String? = null,
         fetch_period: Long? = null,
         language: String? = null,
-        credentials_id: Long? = null
+        credentials_id: Long? = null,
+        source_type: String? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -671,6 +673,9 @@ object SourceRepository : RepositoryInterface {
                 put("title", title)
                 put("url", url)
                 put("enabled", if (enabled) 1 else 0)
+                if (source_type != null) {
+                    put("source_type", source_type)
+                }
                 if (age != null) {
                     put("age", if (age >= 0) age else 0)
                 }

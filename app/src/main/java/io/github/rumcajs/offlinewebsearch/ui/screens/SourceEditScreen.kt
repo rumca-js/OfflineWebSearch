@@ -68,7 +68,8 @@ fun SourceEditScreen(
                 enabled = enabled,
                 age = finalAge,
                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
-                language = language.trim()
+                language = language.trim(),
+                source_type = source.source_type ?: SourceRepository.SOURCE_TYPE_RSS
             )
             errorMessage = if (!success) err else null
             success
@@ -82,7 +83,8 @@ fun SourceEditScreen(
                 enabled = enabled,
                 age = finalAge,
                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
-                language = language.trim()
+                language = language.trim(),
+                source_type = source.source_type
             )
             errorMessage = if (!success) err else null
             success

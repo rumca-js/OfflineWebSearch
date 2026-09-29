@@ -88,6 +88,7 @@ Screens:
  - SourcesListScreen - Shows the list of configured sources.
  - SourceDetailScreen - Shows information and actions for a source.
  - SourceEditScreen - Adds or edits a source.
+ - SourceEmailEditScreen - Adds or edits an email source (IMAP server, credentials).
  - SourceUrlEditPreviewScreen - Preview screen shown when adding a source by URL. Fetches RSS feed data to pre-populate fields.
  - OptionsScreen - Configures databases and application settings.
  - DatabaseScreen - Shows information and actions for a database.
@@ -221,7 +222,7 @@ The screen displays, where available:
 
 ## SourcesListScreen
  - Provides floating buttons on right bottom:
-    - add
+    - add - prompts user to select source type (SOURCE_TYPE_RSS or SOURCE_TYPE_EMAIL)
     - fetch - visible when any sources is outdated and can be refreshed
     - navigate to top - available when user scrolls
  - Selecting source opens SourceDetailScreen.
@@ -260,8 +261,15 @@ The screen displays, where available:
  - Saves changes to the sourcedatamodel table in the active database.
  - Only accessible when the active database is writable.
 
+## SourceEmailEditScreen
+ - Allows adding a new Email source or editing an existing Email source.
+ - Provides input fields for IMAP server URL, username, and password.
+ - Automatically persists credentials into the credentials table and sets Source.credentials_id.
+ - Saves changes to the sourcedatamodel table in the active database.
+ - Only accessible when the active database is writable.
+
 ## SourceUrlEditPreviewScreen
- - Shown when the user taps the Add (+) button in SourcesScreen.
+ - Preview screen shown when adding a source by URL.
  - Fetches RSS/feed data from the given URL using Url.kt in the background.
  - Auto-populates title from the feed once loaded.
  - Shares same form fields (title, URL, enabled) with SourceEditScreen via SourceFormPane.

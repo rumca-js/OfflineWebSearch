@@ -1347,6 +1347,127 @@ class SourceRepositoryTest {
         assertEquals(0, SourceRepository.count(context, dbState))
         assertEquals(0, SourceOperationalDataRepository.count(context, dbState))
     }
+
+    // ── source_type and credentials_id tests ──────────────────────────────────
+
+    @Test
+    fun `insertSource with SOURCE_TYPE_RSS sets source_type correctly`() = runBlocking {
+        val url = "https://rss-test.com/feed.xml"
+        val (ok, err) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "RSS Feed Source",
+            url = url,
+            enabled = true,
+            source_type = SourceRepository.SOURCE_TYPE_RSS
+        )
+        assertTrue(err ?: "", ok)
+
+        val found = SourceRepository.getSourceByUrl(context, dbState, url)
+        assertNotNull(found)
+        assertEquals(SourceRepository.SOURCE_TYPE_RSS, found!!.source_type)
+        assertNull(found.credentials_id)
+    }
+
+    @Test
+    fun `insertSource with SOURCE_TYPE_EMAIL and credentials_id sets both correctly`() = runBlocking {
+        val url = "imaps://mail.example.com:993"
+        val credId = 123L
+        val (ok, err) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Email Source",
+            url = url,
+            enabled = true,
+            credentials_id = credId,
+            source_type = SourceRepository.SOURCE_TYPE_EMAIL
+        )
+        assertTrue(err ?: "", ok)
+
+        val found = SourceRepository.getSourceByUrl(context, dbState, url)
+        assertNotNull(found)
+        assertEquals(SourceRepository.SOURCE_TYPE_EMAIL, found!!.source_type)
+        assertEquals(credId, found.credentials_id)
+    }
+
+    @Test
+    fun `updateSourceProperties updates source_type and credentials_id`() = runBlocking {
+        val url = "https://update-test.com/source"
+        val (okInsert, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Original Source",
+            url = url,
+            enabled = true,
+            source_type = SourceRepository.SOURCE_TYPE_RSS
+        )
+        assertTrue(okInsert)
+        val source = SourceRepository.getSourceByUrl(context, dbState, url)!!
+
+        val (okUpdate, errUpdate) = SourceRepository.updateSourceProperties(
+            context = context,
+            activeDatabaseState = dbState,
+            id = source.id!!,
+            title = "Updated Email Source",
+            url = url,
+            enabled = true,
+            credentials_id = 456L,
+            source_type = SourceRepository.SOURCE_TYPE_EMAIL
+        )
+        assertTrue(errUpdate ?: "", okUpdate)
+
+        val updated = SourceRepository.getSourceById(context, dbState, source.id)
+        assertNotNull(updated)
+        assertEquals("Updated Email Source", updated!!.title)
+        assertEquals(SourceRepository.SOURCE_TYPE_EMAIL, updated.source_type)
+        assertEquals(456L, updated.credentials_id)
+    }
+
+    @Test
+    fun `email source add workflow creates credential and correctly sets Source credentials_id`() = runBlocking {
+        val username = "user@example.com"
+        val password = "secretpassword123"
+        val imapUrl = "imaps://imap.example.com:993"
+
+        // 1. Insert credential
+        val credential = io.github.rumcajs.offlinewebsearch.data.repositories.Credentials(
+            name = "email_${username}@imap.example.com",
+            credential_type = "email",
+            username = username,
+            password = password,
+            user_id = 0L
+        )
+        val (credId, credErr) = io.github.rumcajs.offlinewebsearch.data.repositories.CredentialsRepository.insertCredential(
+            context, dbState, credential
+        )
+        assertNotNull("Insert credential error: $credErr", credId)
+        assertTrue(credId!! > 0)
+
+        // 2. Insert source with credentials_id
+        val (srcOk, srcErr) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = username,
+            url = imapUrl,
+            enabled = true,
+            credentials_id = credId,
+            source_type = SourceRepository.SOURCE_TYPE_EMAIL
+        )
+        assertTrue("Insert source error: $srcErr", srcOk)
+
+        // 3. Verify Source and linked Credential
+        val savedSource = SourceRepository.getSourceByUrl(context, dbState, imapUrl)
+        assertNotNull(savedSource)
+        assertEquals(SourceRepository.SOURCE_TYPE_EMAIL, savedSource!!.source_type)
+        assertEquals(credId, savedSource.credentials_id)
+
+        val savedCred = io.github.rumcajs.offlinewebsearch.data.repositories.CredentialsRepository.getCredentialById(
+            context, dbState, savedSource.credentials_id!!
+        )
+        assertNotNull(savedCred)
+        assertEquals(username, savedCred!!.username)
+        assertEquals(password, savedCred.password)
+    }
 }
 
 

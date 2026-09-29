@@ -28,6 +28,11 @@ import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
 import io.github.rumcajs.offlinewebsearch.ui.components.SourceListItem
 import kotlinx.coroutines.launch
 
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.ui.text.font.FontWeight
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
+
 /**
  * Screen displaying the list of RSS/feed sources from `sourcedatamodel`.
  *
@@ -48,6 +53,8 @@ fun SourcesListScreen(
     onNavigateToSource: (Source) -> Unit,
     onNavigateToEditSource: (Source) -> Unit,
     onNavigateToAddSource: (() -> Unit)? = null,
+    onNavigateToAddRssSource: (() -> Unit)? = null,
+    onNavigateToAddEmailSource: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     /** Called when a source refresh worker run finishes with at least one fetched source. */
     onRefreshSuccess: (() -> Unit)? = null
@@ -61,6 +68,7 @@ fun SourcesListScreen(
     val listState = viewModel.listState
     var sourceToDelete by remember { mutableStateOf<Source?>(null) }
     var deleteEntriesWithSource by remember { mutableStateOf(false) }
+    var showAddSourceTypeDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadDataIfNeeded(context)
@@ -266,11 +274,108 @@ fun SourcesListScreen(
                 }
             }
 
-            val showAddSource = isEditable && onNavigateToAddSource != null
+            val showAddSource = isEditable && (onNavigateToAddSource != null || onNavigateToAddRssSource != null || onNavigateToAddEmailSource != null)
             val showScrollToTop by remember {
                 derivedStateOf {
                     listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
                 }
+            }
+
+            if (showAddSourceTypeDialog) {
+                AlertDialog(
+                    onDismissRequest = { showAddSourceTypeDialog = false },
+                    title = { Text("Select Source Type") },
+                    text = {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "What kind of source would you like to add?",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            OutlinedCard(
+                                onClick = {
+                                    showAddSourceTypeDialog = false
+                                    if (onNavigateToAddRssSource != null) {
+                                        onNavigateToAddRssSource()
+                                    } else {
+                                        onNavigateToAddSource?.invoke()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.List,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = SourceRepository.SOURCE_TYPE_RSS,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "RSS / Atom / Web Feed",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedCard(
+                                onClick = {
+                                    showAddSourceTypeDialog = false
+                                    onNavigateToAddEmailSource?.invoke()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Email,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = SourceRepository.SOURCE_TYPE_EMAIL,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "IMAP Email Server",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showAddSourceTypeDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             Column(
@@ -298,7 +403,7 @@ fun SourcesListScreen(
 
                 if (showAddSource) {
                     FloatingActionButton(
-                        onClick = onNavigateToAddSource!!,
+                        onClick = { showAddSourceTypeDialog = true },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ) {

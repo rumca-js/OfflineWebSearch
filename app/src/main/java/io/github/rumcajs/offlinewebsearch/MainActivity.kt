@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -30,6 +31,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
+import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.StartupWizardDialog
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
@@ -50,6 +52,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object EntryAdd : Screen("entry_add", "Add Entry", Icons.Filled.Edit)
     object SourceDetail : Screen("source_detail", "Source Detail", Icons.AutoMirrored.Filled.List)
     object SourceEdit : Screen("source_edit", "Source Edit", Icons.Filled.Edit)
+    object SourceEmailEdit : Screen("source_email_edit", "Edit Email Source", Icons.Filled.Email)
     object SourceUrlEditPreview : Screen("source_url_edit_preview", "Add Source Preview", Icons.Filled.Edit)
     object Visited : Screen("visited", "Visited", Icons.AutoMirrored.Filled.List)
     object ReadLater : Screen("read_later", "Read Later", Icons.Filled.Bookmark)
@@ -190,6 +193,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             )
                         }
                         composable(Screen.Sources.route) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourcesListScreen(
                                 viewModel = sourcesViewModel,
                                 onNavigateToSource = { source ->
@@ -198,10 +202,23 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 },
                                 onNavigateToEditSource = { source ->
                                     sourcesViewModel.selectedSource = source
-                                    navController.navigate(Screen.SourceEdit.route)
+                                    if (source.source_type.equals(SourceRepository.SOURCE_TYPE_EMAIL, ignoreCase = true)) {
+                                        navController.navigate(Screen.SourceEmailEdit.route)
+                                    } else {
+                                        navController.navigate(Screen.SourceEdit.route)
+                                    }
                                 },
                                 onNavigateToAddSource = {
-                                    navController.navigate(Screen.SourceUrlEditPreview.route)
+                                    sourcesViewModel.selectedSource = Source(source_type = SourceRepository.SOURCE_TYPE_RSS)
+                                    navController.navigate(Screen.SourceEdit.route)
+                                },
+                                onNavigateToAddRssSource = {
+                                    sourcesViewModel.selectedSource = Source(source_type = SourceRepository.SOURCE_TYPE_RSS)
+                                    navController.navigate(Screen.SourceEdit.route)
+                                },
+                                onNavigateToAddEmailSource = {
+                                    sourcesViewModel.selectedSource = Source(source_type = SourceRepository.SOURCE_TYPE_EMAIL)
+                                    navController.navigate(Screen.SourceEmailEdit.route)
                                 },
                                 onRefreshSuccess = {
                                     entriesViewModel.refreshPage(context)
@@ -216,7 +233,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceDetailScreen(
                                     source = source,
                                     onNavigateToEdit = {
-                                        navController.navigate(Screen.SourceEdit.route)
+                                        if (source.source_type.equals(SourceRepository.SOURCE_TYPE_EMAIL, ignoreCase = true)) {
+                                            navController.navigate(Screen.SourceEmailEdit.route)
+                                        } else {
+                                            navController.navigate(Screen.SourceEdit.route)
+                                        }
                                     },
                                     onDelete = { deleteEntries ->
                                         source.id?.let { sourceId ->
@@ -254,21 +275,36 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             }
                         }
                         composable(Screen.SourceEdit.route) {
-                            sourcesViewModel.selectedSource?.let { source ->
-                                _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceEditScreen(
-                                    source = source,
-                                    onSourceUpdated = { updatedSource ->
-                                        sourcesViewModel.selectedSource = updatedSource
-                                        navController.popBackStack()
-                                    },
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val source = sourcesViewModel.selectedSource ?: Source(source_type = SourceRepository.SOURCE_TYPE_RSS)
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceEditScreen(
+                                source = source,
+                                onSourceUpdated = { updatedSource ->
+                                    sourcesViewModel.selectedSource = updatedSource
+                                    sourcesViewModel.loadSources(context)
+                                    navController.popBackStack()
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(Screen.SourceEmailEdit.route) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val source = sourcesViewModel.selectedSource ?: Source(source_type = SourceRepository.SOURCE_TYPE_EMAIL)
+                            _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceEmailEditScreen(
+                                source = source,
+                                onSourceUpdated = { updatedSource ->
+                                    sourcesViewModel.selectedSource = updatedSource
+                                    sourcesViewModel.loadSources(context)
+                                    navController.popBackStack()
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                         composable(Screen.SourceUrlEditPreview.route) {
                             _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.SourceUrlEditPreviewScreen(
                                 onSourceAdded = { addedSource ->
                                     sourcesViewModel.selectedSource = addedSource
+                                    sourcesViewModel.loadSources(context)
                                     navController.popBackStack()
                                 },
                                 onBack = { navController.popBackStack() }
