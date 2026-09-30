@@ -58,12 +58,13 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
  - import is fast, since it uses SQLite, so it is easy to reuse in other projects ('linki' app was found to be slow since it performs HTML import export)
  - some apps might be better, but are not open source (eg. obsidian is proprietary)
 
-# Features
- - Baked in database
- - Additional database with data are available and ready (feeds, youtube, top domains)
- - RSS reader
+# Detailed features information
+ - Everything is an SQLite database. So you can reuse your data in other projects efficiently. Databases can be exported / imported
+ - RSS reading through RSS source type.
+ - IMAP server support through e-mail source type
  - Bookmark managing
  - Tagging, entry voting
+ - Regular expression filtering through entry rules
 
 # Scenarios to use as RSS reader
  - create an empty database and insert RSS feeds as 'sources'
