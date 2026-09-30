@@ -61,7 +61,7 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
 # Detailed features information
  - Everything is an SQLite database. So you can reuse your data in other projects efficiently. Databases can be exported / imported.
  - RSS reading through RSS source type.
- - IMAP server support through e-mail source type
+ - read-only IMAP server support through e-mail source type
  - Bookmark managing. "Read later" queue
  - Tagging, entry voting. Automatic tagging through auto_tag defined for sources
  - Regular expression filtering through entry rules
