@@ -8,6 +8,7 @@ It is designed for tech enthusiasts, privacy advocates, and anyone annoyed by se
  - No cloud, no server. Fast local search with no waiting for server responses
  - Privacy-friendly: no network requests required for searching
  - Convenience links, services. Static auto RSS feeds discovery
+ - does not use AI
 
 # Links
 
