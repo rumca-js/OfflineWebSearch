@@ -76,6 +76,10 @@ Note: Split archives (e.g., .zip.001, .zip.002) are not supported.
 # Scenario to use as YouTube consumption machine
  - configure [YouTube](https://rumca-js.github.io/data/youtube.db.zip) database and allow system to fetch all sources to see newer videos froma rSS channels
 
+# Supported solutions, and why some are not supported
+ - supported are things that implement a shared standard
+ - not supported are gatekeepers. So we support e-mail servers that use IMAP. We do not support OAuth Google. We support RSS, we do not support X channels.
+
 # Screenshots
 
 [Screenshots](https://github.com/rumca-js/OfflineWebSearch/tree/main/screenshot)
