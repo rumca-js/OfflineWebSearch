@@ -51,12 +51,14 @@ data class AppConfiguration(
     // main things
     val databases: Map<String, DatabaseState> = emptyMap(),
     val activeDatabaseUrl: String? = null, // relates to DatabaseState.url
-    val supportedDatabasesExtensions: List<String> = listOf(".db",
+    val supportedDatabasesExtensions: List<String> = listOf(
+        ".db",
         ".json",
         ".zip",      // contains json files
         ".sources",
         ".entries",
-        ".db.zip"),  // contains db archived
+        ".db.zip"    // contains db archived
+    ),
     val isInitialized: Boolean = false
 ) {
     fun isSupportedFileName(fileName: String): Boolean {

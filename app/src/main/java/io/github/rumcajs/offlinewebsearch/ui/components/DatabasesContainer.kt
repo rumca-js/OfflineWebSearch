@@ -27,11 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_FILE
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_NAME
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
+import io.github.rumcajs.offlinewebsearch.data.converters.FileToDatabase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,12 +94,9 @@ fun DatabasesContainer(
         urlInput: String,
         editingUrl: String?
     ) {
-        val isZip = urlInput.endsWith(".zip", ignoreCase = true)
-        val isConvertibleFile = FileToDatabase.isSupported(url)
+        val isSupported = config.isSupportedFileName(urlInput)
 
-        val state = DatabaseState.fromUrl(urlInput)
-
-        if (!isZip && !isConvertibleFile)
+        if (!isSupported) {
             verificationError = "Database not supported"
             return
         }

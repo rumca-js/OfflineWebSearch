@@ -237,4 +237,103 @@ class FileToDatabaseTest {
             dummyFile.delete()
         }
     }
+
+    @Test
+    fun testParseZipAndImportZipToDatabase() {
+        val entriesJson = """
+            [
+                {
+                    "id": 100,
+                    "link": "https://example.com/zip-article",
+                    "title": "Zip Article"
+                }
+            ]
+        """.trimIndent()
+
+        val sourcesJson = """
+            [
+                {
+                    "id": 200,
+                    "url": "https://example.com/zip-feed.rss",
+                    "title": "Zip Feed",
+                    "source_type": "rss"
+                }
+            ]
+        """.trimIndent()
+
+        val zipBytes = buildZip(
+            "entries.json" to entriesJson,
+            "sources.json" to sourcesJson,
+            "readme.txt" to "ignore this"
+        )
+
+        val tempZipFile = File(context.cacheDir, "test_archive.zip")
+        try {
+            tempZipFile.writeBytes(zipBytes)
+
+            FileToDatabase.importZipToDatabase(tempZipFile, dbFile)
+
+            val entryCount = runBlocking { EntryRepository.countEntries(context, dbState) }
+            assertTrue(entryCount >= 1)
+
+            val sources = runBlocking { SourceRepository.getAllSourcesWithOperationalData(context, dbState) }
+            assertTrue(sources.any { it.source.url == "https://example.com/zip-feed.rss" })
+        } finally {
+            tempZipFile.delete()
+        }
+    }
+
+    @Test
+    fun testParseZipStreamWithErrors() {
+        val zipBytes = buildZip(
+            "corrupt.json" to "{ not valid json",
+            "readme.txt" to "ignored"
+        )
+
+        val errors = mutableListOf<String>()
+        java.util.zip.ZipInputStream(zipBytes.inputStream()).use { zis ->
+            FileToDatabase.parseZip(zis, dbFile, errors)
+        }
+
+        assertTrue("Expected error for corrupt JSON entry", errors.isNotEmpty())
+        assertTrue(errors.any { it.contains("corrupt.json") })
+    }
+
+    @Test
+    fun testImportZipToDatabaseSuspend() = runBlocking {
+        val entriesJson = """
+            [
+                {
+                    "id": 300,
+                    "link": "https://example.com/suspend-article",
+                    "title": "Suspend Article"
+                }
+            ]
+        """.trimIndent()
+
+        val zipBytes = buildZip("entries.json" to entriesJson)
+        val tempZipFile = File(context.cacheDir, "test_suspend.zip")
+        try {
+            tempZipFile.writeBytes(zipBytes)
+
+            FileToDatabase.importZipToDatabase(context, tempZipFile, dbState)
+
+            val entryCount = EntryRepository.countEntries(context, dbState)
+            assertTrue(entryCount >= 1)
+        } finally {
+            tempZipFile.delete()
+        }
+    }
+
+    private fun buildZip(vararg nameToContent: Pair<String, String>): ByteArray {
+        val baos = java.io.ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(baos).use { zos ->
+            for ((name, content) in nameToContent) {
+                zos.putNextEntry(java.util.zip.ZipEntry(name))
+                zos.write(content.toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+            }
+        }
+        return baos.toByteArray()
+    }
 }

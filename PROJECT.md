@@ -17,8 +17,10 @@ A database can be backed by SQLite or JSON files.
  The application supports the following file types:
  - .db - SQLite database file.
  - .json - JSON file containing entries.
- - .zip - Archive containing JSON files.
- - .db.zip - Archive containing an SQLite database file.
+ - .entries - JSON file containing entries.
+ - .sources - JSON file containing sources.
+ - .opml - OPML files (treated as sources)
+ - .zip - Archive. May contain files of various types: opml, sources, entries. Process each one while import. If zip file contains .db extension file, it should just be used as a database
 
 Users can provide databases from:
  - Local filesystem.

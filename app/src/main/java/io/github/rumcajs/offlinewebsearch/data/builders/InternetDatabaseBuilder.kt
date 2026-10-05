@@ -2,10 +2,12 @@ package io.github.rumcajs.offlinewebsearch.data.builders
 
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
+import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
 import io.github.rumcajs.offlinewebsearch.data.converters.FileToDatabase
 import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
+import io.github.rumcajs.offlinewebsearch.webtoolkit.UrlLocation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -38,13 +40,14 @@ class InternetDatabaseBuilder(
             throw IOException("Network communication is disabled in settings.")
         }
 
-	val fileName = UrlLocation.getFileName(url)
-	val isSupported = AppConfiguration.isSupportedFileName(fileName);
+        val config = AppConfigManager.config.value
+        val fileName = UrlLocation(url).getFileName()
+        val isSupported = config.isSupportedFileName(fileName)
 
         isZip = url.endsWith(".zip", ignoreCase = true)
         isConvertibleFile = FileToDatabase.isSupported(url)
 
-        if (!isConvertibleFile && !isZip) {
+        if (!isSupported) {
             throw IllegalArgumentException("Database not supported")
         }
 

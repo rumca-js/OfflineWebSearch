@@ -8,13 +8,14 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import java.io.File
 import java.io.InputStream
+import java.util.zip.ZipInputStream
 
 /**
  * Dispatches file imports to the appropriate converter ([EntryJsonToDatabase], [SourceJsonToDatabase],
  * or [OpmlToDatabase]) based on the file extension and JSON content.
  *
  * Supported extensions:
- *  - `.json` -> [EntryJsonToDatabase] or [SourceJsonToDatabase] (detected by content or filename)
+ *  - `.entries`, `.sources`, `.json` -> [EntryJsonToDatabase] or [SourceJsonToDatabase] (detected by content or filename)
  *  - `.opml` -> [OpmlToDatabase]
  */
 object FileToDatabase {
@@ -25,7 +26,7 @@ object FileToDatabase {
     }
 
     /**
-     * Determines whether the given [fileNameOrUrl] has a supported file extension (.json or .opml).
+     * Determines whether the given [fileNameOrUrl] has a supported file extension (.json, .opml, .entries, .sources).
      *
      * @param fileNameOrUrl File path, name, or URL string to check.
      * @return true if the file extension is supported, false otherwise.
@@ -81,33 +82,44 @@ object FileToDatabase {
     }
 
     /**
-     * Parses and imports records from [file] into the SQLite database at [dbFile]
-     * by checking the file extension and content.
+     * Resolves the appropriate [FileToDatabaseInterface] converter for the given [fileNameOrUrl]
+     * and optional [content] (used to disambiguate `.json` files into entries vs sources).
      *
-     * @param file   Input file (.json or .opml).
+     * @param fileNameOrUrl Name, path, or URL of the input file.
+     * @param content       Optional raw text content (for JSON structure inspection).
+     * @return The matching [FileToDatabaseInterface] converter.
+     * @throws IllegalArgumentException if the file extension is unsupported.
+     */
+    fun resolveConverter(fileNameOrUrl: String, content: String? = null): FileToDatabaseInterface<*, *> {
+        val name = fileNameOrUrl.lowercase()
+        return when {
+            name.endsWith(".entries") -> EntryJsonToDatabase
+            name.endsWith(".sources") -> SourceJsonToDatabase
+            name.endsWith(".json") -> {
+                if (content != null && isSourceJson(content, fileNameOrUrl)) {
+                    SourceJsonToDatabase
+                } else if (content == null && fileNameOrUrl.lowercase().contains("source")) {
+                    SourceJsonToDatabase
+                } else {
+                    EntryJsonToDatabase
+                }
+            }
+            name.endsWith(".opml") -> OpmlToDatabase
+            else -> throw IllegalArgumentException("Unsupported file extension for: $fileNameOrUrl")
+        }
+    }
+
+    /**
+     * Parses and imports records from [file] into the SQLite database at [dbFile]
+     * by resolving the converter based on file extension and content.
+     *
+     * @param file   Input file (.json, .opml, .entries, .sources).
      * @param dbFile SQLite database file to write into.
      * @throws IllegalArgumentException if the file extension is unsupported.
      */
     fun importToDatabase(file: File, dbFile: File) {
-        val name = file.name.lowercase()
-        when {
-            name.endsWith(".entries") -> {
-                EntryJsonToDatabase.importToDatabase(file, dbFile)
-            }
-            name.endsWith(".sources") -> {
-                SourceJsonToDatabase.importToDatabase(file, dbFile)
-            }
-            name.endsWith(".json") -> {
-                val text = file.readText(Charsets.UTF_8)
-                if (isSourceJson(text, file.name)) {
-                    SourceJsonToDatabase.importToDatabase(file, dbFile)
-                } else {
-                    EntryJsonToDatabase.importToDatabase(file, dbFile)
-                }
-            }
-            name.endsWith(".opml") -> OpmlToDatabase.importToDatabase(file, dbFile)
-            else -> throw IllegalArgumentException("Unsupported file extension for: ${file.name}")
-        }
+        val content = if (file.name.lowercase().endsWith(".json")) file.readText(Charsets.UTF_8) else null
+        resolveConverter(file.name, content).importToDatabase(file, dbFile)
     }
 
     /**
@@ -115,30 +127,14 @@ object FileToDatabase {
      * into the open [db] SQLite database.
      *
      * @param inputStream   Readable input stream.
-     * @param fileNameOrUrl Name or URL used to determine the file type (.json or .opml).
+     * @param fileNameOrUrl Name or URL used to determine the file type.
      * @param db            Open writable SQLite database.
      * @throws IllegalArgumentException if the file extension is unsupported.
      */
     fun importToDatabase(inputStream: InputStream, fileNameOrUrl: String, db: SQLiteDatabase) {
-        val name = fileNameOrUrl.lowercase()
-        when {
-            name.endsWith(".entries") -> {
-                EntryJsonToDatabase.importToDatabase(text.byteInputStream(), db)
-            }
-            name.endsWith(".sources") -> {
-                SourceJsonToDatabase.importToDatabase(text.byteInputStream(), db)
-            }
-            name.endsWith(".json") -> {
-                val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
-                if (isSourceJson(text, fileNameOrUrl)) {
-                    SourceJsonToDatabase.importToDatabase(text.byteInputStream(), db)
-                } else {
-                    EntryJsonToDatabase.importToDatabase(text.byteInputStream(), db)
-                }
-            }
-            name.endsWith(".opml") -> OpmlToDatabase.importToDatabase(inputStream, db)
-            else -> throw IllegalArgumentException("Unsupported file extension for: $fileNameOrUrl")
-        }
+        val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
+        val converter = resolveConverter(fileNameOrUrl, text)
+        converter.importToDatabase(text.byteInputStream(), db)
     }
 
     /**
@@ -146,71 +142,19 @@ object FileToDatabase {
      * into the SQLite database at [dbFile].
      *
      * @param bytes         Input byte array.
-     * @param fileNameOrUrl Name or URL used to determine the file type (.json or .opml).
+     * @param fileNameOrUrl Name or URL used to determine the file type.
      * @param dbFile        SQLite database file to write into.
      * @throws IllegalArgumentException if the file extension is unsupported.
      */
     fun importToDatabase(bytes: ByteArray, fileNameOrUrl: String, dbFile: File) {
-        val name = fileNameOrUrl.lowercase()
-        when {
-            name.endsWith(".entries") -> {
-                EntryJsonToDatabase.importToDatabase(tempJsonFile, db)
-            }
-            name.endsWith(".sources") -> {
-                SourceJsonToDatabase.importToDatabase(tempJsonFile, db)
-            }
-            name.endsWith(".json") -> {
-                val text = bytes.toString(Charsets.UTF_8)
-                val tempJsonFile = File.createTempFile("import_json_", ".json")
-                try {
-                    tempJsonFile.writeBytes(bytes)
-                    if (isSourceJson(text, fileNameOrUrl)) {
-                        SourceJsonToDatabase.importToDatabase(tempJsonFile, dbFile)
-                    } else {
-                        EntryJsonToDatabase.importToDatabase(tempJsonFile, dbFile)
-                    }
-                } finally {
-                    tempJsonFile.delete()
-                }
-            }
-            name.endsWith(".opml") -> {
-                val tempOpmlFile = File.createTempFile("import_opml_", ".opml")
-                try {
-                    tempOpmlFile.writeBytes(bytes)
-                    OpmlToDatabase.importToDatabase(tempOpmlFile, dbFile)
-                } finally {
-                    tempOpmlFile.delete()
-                }
-            }
-            else -> throw IllegalArgumentException("Unsupported file extension for: $fileNameOrUrl")
-        }
-    }
-
-    /**
-     * Parses and imports all files from inside a ZIP archive into [dbFile].
-     *
-     * @param zipFile  ZIP archive file.
-     * @param dbFile   SQLite database file to write into.
-     */
-    fun importZipToDatabase(zipFile: File, dbFile: File) {
-        parseZip(zipFile, dbFile);
-    }
-
-    fun parseZip(zipFile: File, dbFile: File, errors: MutableList<String> = mutableListOf()))
-    {
-        while (zipItem != null) {
-            if (!zipItem.isDirectory && isSupported(zipItem.name)) {
-                try {
-                    // Read without closing the ZipInputStream between entries.
-                    val bufferedReader = zipInputStream.bufferedReader(Charsets.UTF_8)
-                    val text = bufferedReader.readText()
-                    importToDatabase(text, zipitem.name, dbFile);
-                } catch (e: Exception) {
-                    errors.add("Failed to parse zip zipItem '${zipItem.name}': ${e.message}")
-                }
-            }
-            zipInputStream.closeEntry()
-            zipItem = zipInputStream.nextEntry
+        val text = bytes.toString(Charsets.UTF_8)
+        val converter = resolveConverter(fileNameOrUrl, text)
+        val tempFile = File.createTempFile("import_", ".tmp")
+        try {
+            tempFile.writeBytes(bytes)
+            converter.importToDatabase(tempFile, dbFile)
+        } finally {
+            tempFile.delete()
         }
     }
 
@@ -220,7 +164,7 @@ object FileToDatabase {
      *
      * @param context             Application context.
      * @param inputStream         Readable input stream.
-     * @param fileNameOrUrl       Name or URL used to determine the file type (.json or .opml).
+     * @param fileNameOrUrl       Name or URL used to determine the file type.
      * @param activeDatabaseState Target database state.
      */
     suspend fun importToDatabase(
@@ -229,24 +173,146 @@ object FileToDatabase {
         fileNameOrUrl: String,
         activeDatabaseState: DatabaseState?
     ) {
-        val name = fileNameOrUrl.lowercase()
-        when {
-            name.endsWith(".entries") -> {
-                EntryJsonToDatabase.importToDatabase(tempJsonFile, db)
-            }
-            name.endsWith(".sources") -> {
-                SourceJsonToDatabase.importToDatabase(tempJsonFile, db)
-            }
-            name.endsWith(".json") -> {
-                val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
-                if (isSourceJson(text, fileNameOrUrl)) {
-                    SourceJsonToDatabase.importToDatabase(context, text.byteInputStream(), activeDatabaseState)
-                } else {
-                    EntryJsonToDatabase.importToDatabase(context, text.byteInputStream(), activeDatabaseState)
+        val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
+        val converter = resolveConverter(fileNameOrUrl, text)
+        converter.importToDatabase(context, text.byteInputStream(), activeDatabaseState)
+    }
+
+    /**
+     * Parses and imports all files from inside a ZIP archive into [dbFile].
+     *
+     * @param zipFile ZIP archive file.
+     * @param dbFile  SQLite database file to write into.
+     */
+    fun importZipToDatabase(zipFile: File, dbFile: File) {
+        parseZip(zipFile, dbFile)
+    }
+
+    /**
+     * Parses and imports all supported files from inside [zipFile] into the database
+     * referenced by [activeDatabaseState].
+     *
+     * @param context             Application context.
+     * @param zipFile             ZIP archive file.
+     * @param activeDatabaseState Target [DatabaseState]; must be writable SQLite.
+     */
+    suspend fun importZipToDatabase(
+        context: Context,
+        zipFile: File,
+        activeDatabaseState: DatabaseState?
+    ) {
+        parseZip(context, zipFile, activeDatabaseState)
+    }
+
+    /**
+     * Parses and imports all supported files from inside [zipInputStream] into [dbFile].
+     *
+     * @param zipInputStream Open [ZipInputStream]; **not** closed by this function.
+     * @param dbFile         SQLite database file to write into.
+     * @param errors         Mutable list that receives any per-file error messages.
+     */
+    fun parseZip(
+        zipInputStream: ZipInputStream,
+        dbFile: File,
+        errors: MutableList<String> = mutableListOf()
+    ) {
+        var zipItem = zipInputStream.nextEntry
+        while (zipItem != null) {
+            if (!zipItem.isDirectory && isSupported(zipItem.name)) {
+                try {
+                    val bytes = zipInputStream.readBytes()
+                    val text = bytes.toString(Charsets.UTF_8)
+                    val converter = resolveConverter(zipItem.name, text)
+                    val tempFile = File.createTempFile("zip_entry_", ".tmp")
+                    try {
+                        tempFile.writeBytes(bytes)
+                        val result = converter.importToDatabase(tempFile, dbFile)
+                        when (result) {
+                            is EntryJsonImportResult -> errors.addAll(result.errors.map { "Error in '${zipItem.name}': $it" })
+                            is SourceJsonImportResult -> errors.addAll(result.errors.map { "Error in '${zipItem.name}': $it" })
+                            is OpmlImportResult -> errors.addAll(result.errors.map { "Error in '${zipItem.name}': $it" })
+                        }
+                    } finally {
+                        tempFile.delete()
+                    }
+                } catch (e: Exception) {
+                    errors.add("Failed to parse zip entry '${zipItem.name}': ${e.message}")
                 }
             }
-            name.endsWith(".opml") -> OpmlToDatabase.importToDatabase(context, inputStream, activeDatabaseState)
-            else -> throw IllegalArgumentException("Unsupported file extension for: $fileNameOrUrl")
+            zipInputStream.closeEntry()
+            zipItem = zipInputStream.nextEntry
+        }
+    }
+
+    /**
+     * Parses and imports all supported files inside [zipFile] into [dbFile].
+     *
+     * @param zipFile ZIP archive file.
+     * @param dbFile  SQLite database file to write into.
+     * @param errors  Mutable list that receives any per-file error messages.
+     */
+    fun parseZip(
+        zipFile: File,
+        dbFile: File,
+        errors: MutableList<String> = mutableListOf()
+    ) {
+        ZipInputStream(zipFile.inputStream().buffered()).use { parseZip(it, dbFile, errors) }
+    }
+
+    /**
+     * Parses and imports all supported files inside [zipInputStream] into the database
+     * referenced by [activeDatabaseState].
+     *
+     * @param context             Application context.
+     * @param zipInputStream      Open [ZipInputStream]; **not** closed by this function.
+     * @param activeDatabaseState Target [DatabaseState]; must be writable SQLite.
+     * @param errors              Mutable list that receives any per-file error messages.
+     */
+    suspend fun parseZip(
+        context: Context,
+        zipInputStream: ZipInputStream,
+        activeDatabaseState: DatabaseState?,
+        errors: MutableList<String> = mutableListOf()
+    ) {
+        var zipItem = zipInputStream.nextEntry
+        while (zipItem != null) {
+            if (!zipItem.isDirectory && isSupported(zipItem.name)) {
+                try {
+                    val bytes = zipInputStream.readBytes()
+                    val text = bytes.toString(Charsets.UTF_8)
+                    val converter = resolveConverter(zipItem.name, text)
+                    val result = converter.importToDatabase(context, text.byteInputStream(), activeDatabaseState)
+                    when (result) {
+                        is EntryJsonImportResult -> errors.addAll(result.errors.map { "Error in '${zipItem.name}': $it" })
+                        is SourceJsonImportResult -> errors.addAll(result.errors.map { "Error in '${zipItem.name}': $it" })
+                        is OpmlImportResult -> errors.addAll(result.errors.map { "Error in '${zipItem.name}': $it" })
+                    }
+                } catch (e: Exception) {
+                    errors.add("Failed to parse zip entry '${zipItem.name}': ${e.message}")
+                }
+            }
+            zipInputStream.closeEntry()
+            zipItem = zipInputStream.nextEntry
+        }
+    }
+
+    /**
+     * Parses and imports all supported files inside [zipFile] into the database
+     * referenced by [activeDatabaseState].
+     *
+     * @param context             Application context.
+     * @param zipFile             ZIP archive file.
+     * @param activeDatabaseState Target [DatabaseState]; must be writable SQLite.
+     * @param errors              Mutable list that receives any per-file error messages.
+     */
+    suspend fun parseZip(
+        context: Context,
+        zipFile: File,
+        activeDatabaseState: DatabaseState?,
+        errors: MutableList<String> = mutableListOf()
+    ) {
+        ZipInputStream(zipFile.inputStream().buffered()).use {
+            parseZip(context, it, activeDatabaseState, errors)
         }
     }
 }
