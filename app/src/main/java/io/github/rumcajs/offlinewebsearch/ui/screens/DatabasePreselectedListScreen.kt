@@ -20,10 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.DATABASES_LIST_JSON
 import io.github.rumcajs.offlinewebsearch.data.DatabasePreset
+import io.github.rumcajs.offlinewebsearch.data.DatabasePresetRepository
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
-import io.github.rumcajs.offlinewebsearch.webtoolkit.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,16 +62,10 @@ fun DatabasePreselectedListScreen(
         errorMessage = null
         try {
             val loadedPresets = withContext(Dispatchers.IO) {
-                val response = NetworkUtils.executeRequest(DATABASES_LIST_JSON)
-                val text = if (response.isValid) response.text else null
-                if (!text.isNullOrBlank()) {
-                    presetJsonConfig.decodeFromString<List<DatabasePreset>>(text)
-                        .filter { it.url.isNotBlank() && (it.url.startsWith("http://") || it.url.startsWith("https://")) }
-                } else {
-                    null
-                }
+                val presetMap = DatabasePresetRepository.loadPresets(context, forceNetwork = true)
+                presetMap.values.filter { it.url.isNotBlank() && (it.url.startsWith("http://") || it.url.startsWith("https://")) }
             }
-            if (loadedPresets != null) {
+            if (loadedPresets.isNotEmpty()) {
                 presets = loadedPresets
             } else {
                 errorMessage = "Failed to load preselected databases list. Check network connection."
@@ -213,12 +206,15 @@ fun DatabasePreselectedListScreen(
                             val displayName = preset.title?.takeIf { it.isNotBlank() } ?: dbState.displayName
                             val isConfigured = config.databases.containsKey(dbUrl)
                             val isActive = config.activeDatabaseUrl == dbUrl
+                            val currentDbState = config.databases[dbUrl]
+                            val isOutdated = currentDbState != null && DatabasePresetRepository.isOutdated(currentDbState.dateLastRefresh, preset.dateUpdated)
 
                             PreselectedDatabasePillItem(
                                 url = dbUrl,
                                 displayName = displayName,
                                 isConfigured = isConfigured,
                                 isActive = isActive,
+                                isOutdated = isOutdated,
                                 onClick = {
                                     onDatabaseSelected(dbUrl)
                                 }
@@ -240,6 +236,7 @@ private fun PreselectedDatabasePillItem(
     displayName: String,
     isConfigured: Boolean,
     isActive: Boolean,
+    isOutdated: Boolean = false,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(24.dp)
@@ -249,55 +246,71 @@ private fun PreselectedDatabasePillItem(
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     }
 
-    Surface(
-        shape = shape,
-        border = borderStroke,
-        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .clickable(onClick = onClick)
+    BadgedBox(
+        badge = {
+            if (isOutdated) {
+                Badge()
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
+        Surface(
+            shape = shape,
+            border = borderStroke,
+            color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .clip(shape)
+                .clickable(onClick = onClick)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
-                )
-                if (isActive) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
-                        text = "Active",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        text = displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
                     )
-                } else if (isConfigured) {
-                    Text(
-                        text = "Configured",
-                        color = MaterialTheme.colorScheme.secondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal
-                    )
+                    if (isActive) {
+                        Text(
+                            text = "Active",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else if (isOutdated) {
+                        Text(
+                            text = "Outdated",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else if (isConfigured) {
+                        Text(
+                            text = "Configured",
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = url,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

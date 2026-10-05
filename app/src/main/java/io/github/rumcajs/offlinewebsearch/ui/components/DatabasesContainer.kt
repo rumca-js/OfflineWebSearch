@@ -27,13 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_FILE
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_NAME
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
+import io.github.rumcajs.offlinewebsearch.data.DatabasePreset
+import io.github.rumcajs.offlinewebsearch.data.DatabasePresetRepository
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
-import io.github.rumcajs.offlinewebsearch.data.converters.FileToDatabase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,8 +43,13 @@ fun DatabasesContainer(
     onSetActive: (String?) -> Unit
 ) {
     val config by AppConfigManager.config.collectAsState()
+    val presets by DatabasePresetRepository.presets.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        DatabasePresetRepository.loadPresets(context)
+    }
 
     var showAddDialogMode by remember { mutableStateOf<String?>(null) } // "url", "asset"
     var editingUrl by remember { mutableStateOf<String?>(null) }
@@ -193,6 +198,7 @@ fun DatabasesContainer(
         DatabaseList(
             databases = config.databases,
             activeDatabaseUrl = config.activeDatabaseUrl,
+            presets = presets,
             onItemClick = { url, state ->
                 onNavigateToDatabaseDetail(url, state)
             },
@@ -324,6 +330,7 @@ private fun getFileName(context: Context, uri: Uri): String? {
 fun DatabaseList(
     databases: Map<String, DatabaseState>,
     activeDatabaseUrl: String? = null,
+    presets: Map<String, DatabasePreset> = emptyMap(),
     onItemClick: ((String?, DatabaseState) -> Unit)? = null,
     onSetActive: (String?) -> Unit,
     onDelete: (String, DatabaseState) -> Unit,
@@ -341,6 +348,7 @@ fun DatabaseList(
         isReadOnly = false
     )
     val isDefaultActive = activeDatabaseUrl == DEFAULT_DATABASE_URL
+    val isDefaultOutdated = DatabasePresetRepository.isDatabaseOutdated(defaultState, presets)
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -349,6 +357,7 @@ fun DatabaseList(
         DatabaseItem(
             state = defaultState,
             isActive = isDefaultActive,
+            isOutdated = isDefaultOutdated,
             onItemClick = if (onItemClick != null) {
                 { onItemClick(DEFAULT_DATABASE_URL, defaultState) }
             } else null,
@@ -361,9 +370,11 @@ fun DatabaseList(
         databases.filter { (url, _) -> url != DEFAULT_DATABASE_URL }
             .forEach { (url, state) ->
                 val isActive = activeDatabaseUrl == url
+                val isOutdated = DatabasePresetRepository.isDatabaseOutdated(state, presets)
                 DatabaseItem(
                     state = state,
                     isActive = isActive,
+                    isOutdated = isOutdated,
                     onItemClick = { onItemClick?.invoke(url, state) },
                     onSetActive = { onSetActive(url) },
                     onDelete = { onDelete(url, state) },
@@ -378,6 +389,7 @@ fun DatabaseList(
 fun DatabaseItem(
     state: DatabaseState,
     isActive: Boolean = false,
+    isOutdated: Boolean = false,
     onItemClick: (() -> Unit)? = null,
     onSetActive: () -> Unit,
     onDelete: (() -> Unit)? = null,
@@ -393,58 +405,67 @@ fun DatabaseItem(
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     }
 
-    Surface(
-        shape = shape,
-        border = borderStroke,
-        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .combinedClickable(
-                onClick = onSetActive,
-                onLongClick = { onItemClick?.invoke() }
-            )
+    BadgedBox(
+        badge = {
+            if (isOutdated) {
+                Badge()
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Surface(
+            shape = shape,
+            border = borderStroke,
+            color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
+                .clip(shape)
+                .combinedClickable(
+                    onClick = onSetActive,
+                    onLongClick = { onItemClick?.invoke() }
                 )
-                Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f)
                 ) {
-                    StatusBadge(state.status)
-                }
-
-                if (state.status == DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
                     Text(
-                        text = state.errorMessage,
-                        color = Color(0xFFC62828),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 2.dp)
+                        text = displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
-                }
-            }
+                    Row(
+                        modifier = Modifier.padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        StatusBadge(state.status)
+                    }
 
-            if (!isLocal) {
-                IconButton(onClick = onUpdate) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Update")
+                    if (state.status == DatabaseStatus.FAILED && !state.errorMessage.isNullOrBlank()) {
+                        Text(
+                            text = state.errorMessage,
+                            color = Color(0xFFC62828),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
-            }
-            if (onDelete != null) {
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+
+                if (!isLocal) {
+                    IconButton(onClick = onUpdate) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Update")
+                    }
+                }
+                if (onDelete != null) {
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    }
                 }
             }
         }

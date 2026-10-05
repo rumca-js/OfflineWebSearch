@@ -284,12 +284,14 @@ The screen displays, where available:
 - preselected list button navigates to DatabasePreselectedListScreen
 - Database settings should be in DatabaseScreen, not here
 - No advanced database operation should be accessible here
-- Database are in pill-like widget
-- If database is active, then it should have primary color frame. If android does not provide "primary" color for android app theme, then define it somewhere in app configuration
-- Each database should contain indicator: state, if active or not
-- Each database should contain buttons to: refresh (if it is from the internet), remove (should not contain badge, nor combo indicating it is active)
-- single tap on database makes it's active
-- long press transitions to DatabaseScreen
+- Provides list of databases:
+ -- Database are in pill-like widget
+ -- If database is active, then it should have primary color frame. If android does not provide "primary" color for android app theme, then define it somewhere in app configuration
+ -- Each database should contain indicator: state, if active or not
+ -- Displays dot indicator badge when the database is outdated (date_updated vs dateLastRefresh)
+ -- Each database should contain buttons to: refresh (if it is from the internet), remove (should not contain badge, nor combo indicating it is active)
+ -- single tap on database makes it's active
+ -- long press transitions to DatabaseScreen
 - Provides button to navigate to Logs.
 - Provides button to navigate to Entry rules.
 - Provides button to navigate to Advanced options.
@@ -319,7 +321,9 @@ The screen displays, where available:
 
 ## DatabasePreselectedListScreen
 - provides filter widget (user can provide text input to filter databases)
-- loads list of databases from github
+- loads list of databases from github (databases.json)
+  -- We have a copy of the file in assets
+  -- contains date_updated which informs when database file was last updated
 - shows databases in pill shaped rows
 - user can select database by a single tap. This action returns to OptionsScreen
 
