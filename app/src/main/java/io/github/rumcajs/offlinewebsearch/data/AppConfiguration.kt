@@ -57,6 +57,7 @@ data class AppConfiguration(
         ".zip",      // contains json files
         ".sources",
         ".entries",
+        ".opml",
         ".db.zip"    // contains db archived
     ),
     val isInitialized: Boolean = false
