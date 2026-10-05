@@ -11,12 +11,16 @@ import java.io.InputStream
 import java.util.zip.ZipInputStream
 
 /**
- * Dispatches file imports to the appropriate converter ([EntryJsonToDatabase], [SourceJsonToDatabase],
- * or [OpmlToDatabase]) based on the file extension and JSON content.
+ * Dispatches file imports to the appropriate converter based on the file extension and content.
  *
  * Supported extensions:
- *  - `.entries`, `.sources`, `.json` -> [EntryJsonToDatabase] or [SourceJsonToDatabase] (detected by content or filename)
- *  - `.opml` -> [OpmlToDatabase]
+ *  - `.entries` – JSON array / object → [EntryJsonToDatabase]; plain-text URL list → [EntryUrlListToDatabase]
+ *  - `.sources` – JSON array / object → [SourceJsonToDatabase]; plain-text URL list → [SourceUrlListToDatabase]
+ *  - `.json`    → [EntryJsonToDatabase] or [SourceJsonToDatabase] (detected by content or filename)
+ *  - `.opml`    → [OpmlToDatabase]
+ *
+ * Plain-text detection: a `.sources` or `.entries` file whose first non-blank, non-comment line does
+ * **not** start with `[` or `{` is treated as a plain-text URL list.
  */
 object FileToDatabase {
 
@@ -82,19 +86,45 @@ object FileToDatabase {
     }
 
     /**
+     * Returns `true` when [content] can be successfully parsed as JSON (array or object).
+     * Returns `false` if parsing throws, which means the content is plain text.
+     *
+     * @param content Raw text content of the file.
+     * @return `true` if the content is valid JSON, `false` if it is plain text.
+     */
+    fun isJsonContent(content: String): Boolean {
+        return try {
+            jsonConfig.parseToJsonElement(content)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
      * Resolves the appropriate [FileToDatabaseInterface] converter for the given [fileNameOrUrl]
-     * and optional [content] (used to disambiguate `.json` files into entries vs sources).
+     * and optional [content].
+     *
+     * For `.entries` and `.sources` files, [content] is parsed as JSON to choose the converter:
+     *  - Valid JSON → [EntryJsonToDatabase] / [SourceJsonToDatabase]
+     *  - Not valid JSON (plain text, one URL per line) → [EntryUrlListToDatabase] / [SourceUrlListToDatabase]
      *
      * @param fileNameOrUrl Name, path, or URL of the input file.
-     * @param content       Optional raw text content (for JSON structure inspection).
+     * @param content       Optional raw text content (used for format detection).
      * @return The matching [FileToDatabaseInterface] converter.
      * @throws IllegalArgumentException if the file extension is unsupported.
      */
     fun resolveConverter(fileNameOrUrl: String, content: String? = null): FileToDatabaseInterface<*, *> {
         val name = fileNameOrUrl.lowercase()
         return when {
-            name.endsWith(".entries") -> EntryJsonToDatabase
-            name.endsWith(".sources") -> SourceJsonToDatabase
+            name.endsWith(".entries") -> {
+                if (content != null && !isJsonContent(content)) EntryUrlListToDatabase
+                else EntryJsonToDatabase
+            }
+            name.endsWith(".sources") -> {
+                if (content != null && !isJsonContent(content)) SourceUrlListToDatabase
+                else SourceJsonToDatabase
+            }
             name.endsWith(".json") -> {
                 if (content != null && isSourceJson(content, fileNameOrUrl)) {
                     SourceJsonToDatabase
@@ -109,18 +139,26 @@ object FileToDatabase {
         }
     }
 
+
     /**
      * Parses and imports records from [file] into the SQLite database at [dbFile]
      * by resolving the converter based on file extension and content.
+     *
+     * Content is read for `.json`, `.entries`, and `.sources` files to detect whether the
+     * file is JSON or a plain-text URL list before selecting the right converter.
      *
      * @param file   Input file (.json, .opml, .entries, .sources).
      * @param dbFile SQLite database file to write into.
      * @throws IllegalArgumentException if the file extension is unsupported.
      */
     fun importToDatabase(file: File, dbFile: File) {
-        val content = if (file.name.lowercase().endsWith(".json")) file.readText(Charsets.UTF_8) else null
+        val name = file.name.lowercase()
+        val content = if (name.endsWith(".json") || name.endsWith(".entries") || name.endsWith(".sources")) {
+            file.readText(Charsets.UTF_8)
+        } else null
         resolveConverter(file.name, content).importToDatabase(file, dbFile)
     }
+
 
     /**
      * Parses and imports records from [inputStream] with the given [fileNameOrUrl]

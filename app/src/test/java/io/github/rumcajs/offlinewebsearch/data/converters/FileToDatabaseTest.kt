@@ -336,4 +336,146 @@ class FileToDatabaseTest {
         }
         return baos.toByteArray()
     }
+
+    // ── JSON content detection ───────────────────────────────────────────────
+
+    @Test
+    fun testIsJsonContent_emptyReturnsFalse() {
+        assertFalse(FileToDatabase.isJsonContent(""))
+        assertFalse(FileToDatabase.isJsonContent("   "))
+        assertFalse(FileToDatabase.isJsonContent("# comment only\n  "))
+    }
+
+    @Test
+    fun testIsJsonContent_jsonArrayReturnsTrue() {
+        assertTrue(FileToDatabase.isJsonContent("[{\"url\":\"https://x.com\"}]"))
+    }
+
+    @Test
+    fun testIsJsonContent_jsonObjectReturnsTrue() {
+        assertTrue(FileToDatabase.isJsonContent("{\"sources\":[]}"))
+    }
+
+    @Test
+    fun testIsJsonContent_urlLineReturnsFalse() {
+        assertFalse(FileToDatabase.isJsonContent("https://example.com/feed.rss"))
+        assertFalse(FileToDatabase.isJsonContent("# header\nhttps://example.com/feed.rss"))
+    }
+
+    // ── resolveConverter detects plain-text .sources / .entries ─────────────
+
+    @Test
+    fun testResolveConverter_sourcesPlainText() {
+        val text = "https://example.com/feed.rss\nhttps://another.com/atom.xml"
+        val converter = FileToDatabase.resolveConverter("feeds.sources", text)
+        assertTrue(converter is SourceUrlListToDatabase)
+    }
+
+    @Test
+    fun testResolveConverter_sourcesJson() {
+        val text = "[{\"url\":\"https://example.com\",\"source_type\":\"rss\"}]"
+        val converter = FileToDatabase.resolveConverter("feeds.sources", text)
+        assertTrue(converter is SourceJsonToDatabase)
+    }
+
+    @Test
+    fun testResolveConverter_entriesPlainText() {
+        val text = "https://example.com/article1\nhttps://example.com/article2"
+        val converter = FileToDatabase.resolveConverter("links.entries", text)
+        assertTrue(converter is EntryUrlListToDatabase)
+    }
+
+    @Test
+    fun testResolveConverter_entriesJson() {
+        val text = "[{\"link\":\"https://example.com/article1\",\"title\":\"A\"}]"
+        val converter = FileToDatabase.resolveConverter("links.entries", text)
+        assertTrue(converter is EntryJsonToDatabase)
+    }
+
+    // ── Plain-text .sources import ───────────────────────────────────────────
+
+    @Test
+    fun testImportPlainTextSourcesFile() {
+        val content = """
+            # My feeds
+            https://technews.example.com/rss
+            https://science.example.com/atom.xml
+        """.trimIndent()
+
+        val sourcesFile = File(context.cacheDir, "test_feeds.sources")
+        sourcesFile.writeText(content)
+        try {
+            FileToDatabase.importToDatabase(sourcesFile, dbFile)
+
+            val sources = runBlocking { SourceRepository.getAllSourcesWithOperationalData(context, dbState) }
+            assertTrue(sources.any { it.source.url == "https://technews.example.com/rss" })
+            assertTrue(sources.any { it.source.url == "https://science.example.com/atom.xml" })
+        } finally {
+            sourcesFile.delete()
+        }
+    }
+
+    @Test
+    fun testImportPlainTextSourcesByteArray() {
+        val content = "https://example.com/rss\nhttps://example.com/atom"
+        FileToDatabase.importToDatabase(content.toByteArray(Charsets.UTF_8), "my.sources", dbFile)
+
+        val sources = runBlocking { SourceRepository.getAllSourcesWithOperationalData(context, dbState) }
+        assertTrue(sources.any { it.source.url == "https://example.com/rss" })
+    }
+
+    // ── Plain-text .entries import ───────────────────────────────────────────
+
+    @Test
+    fun testImportPlainTextEntriesFile() {
+        val content = """
+            # Bookmarks
+            https://article1.example.com/post
+            https://article2.example.com/post
+        """.trimIndent()
+
+        val entriesFile = File(context.cacheDir, "test_links.entries")
+        entriesFile.writeText(content)
+        try {
+            FileToDatabase.importToDatabase(entriesFile, dbFile)
+
+            val count = runBlocking { EntryRepository.countEntries(context, dbState) }
+            assertTrue(count >= 2)
+        } finally {
+            entriesFile.delete()
+        }
+    }
+
+    @Test
+    fun testImportPlainTextEntriesByteArray() {
+        val content = "https://example.com/link1\nhttps://example.com/link2\nhttps://example.com/link3"
+        FileToDatabase.importToDatabase(content.toByteArray(Charsets.UTF_8), "my.entries", dbFile)
+
+        val count = runBlocking { EntryRepository.countEntries(context, dbState) }
+        assertTrue(count >= 3)
+    }
+
+    @Test
+    fun testImportPlainTextSourcesSkipsCommentsAndBlanks() {
+        val content = """
+            # this is a comment
+            
+            https://valid.example.com/feed.rss
+            
+            # another comment
+        """.trimIndent()
+
+        val sourcesFile = File(context.cacheDir, "test_skip.sources")
+        sourcesFile.writeText(content)
+        try {
+            FileToDatabase.importToDatabase(sourcesFile, dbFile)
+
+            val sources = runBlocking { SourceRepository.getAllSourcesWithOperationalData(context, dbState) }
+            assertEquals(1, sources.size)
+            assertEquals("https://valid.example.com/feed.rss", sources.first().source.url)
+        } finally {
+            sourcesFile.delete()
+        }
+    }
 }
+
