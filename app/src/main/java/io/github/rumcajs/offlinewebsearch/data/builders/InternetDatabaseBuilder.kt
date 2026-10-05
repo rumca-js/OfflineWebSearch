@@ -2,7 +2,6 @@ package io.github.rumcajs.offlinewebsearch.data.builders
 
 import android.content.Context
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
-import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
 import io.github.rumcajs.offlinewebsearch.data.converters.FileToDatabase
