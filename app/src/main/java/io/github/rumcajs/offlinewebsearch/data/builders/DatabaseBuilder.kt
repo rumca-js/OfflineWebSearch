@@ -28,7 +28,7 @@ interface DatabaseBuilder {
 
     /**
      * Handles the [DatabaseStatus.UNPACKING] state.
-     * Extracts database files from compressed archives (.zip / .db.zip).
+     * Extracts database files from compressed archives (.zip).
      */
     suspend fun onUnpacking()
 

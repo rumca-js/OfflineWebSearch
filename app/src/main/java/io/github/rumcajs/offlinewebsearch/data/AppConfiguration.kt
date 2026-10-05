@@ -54,6 +54,8 @@ data class AppConfiguration(
     val supportedDatabasesExtensions: List<String> = listOf(".db",
         ".json",
         ".zip",      // contains json files
+        ".sources",
+        ".entries",
         ".db.zip"),  // contains db archived
     val isInitialized: Boolean = false
 ) {

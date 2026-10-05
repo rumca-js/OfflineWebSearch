@@ -114,19 +114,19 @@ object EntryJsonToDatabase : FileToDatabaseInterface<Entry, EntryJsonImportResul
      */
     fun parseZip(zipInputStream: ZipInputStream, errors: MutableList<String> = mutableListOf()): List<Entry> {
         val results = mutableListOf<Entry>()
-        var entry = zipInputStream.nextEntry
-        while (entry != null) {
-            if (!entry.isDirectory && entry.name.endsWith(".json", ignoreCase = true)) {
+        var zipItem = zipInputStream.nextEntry
+        while (zipItem != null) {
+            if (!zipItem.isDirectory && zipItem.name.endsWith(".json", ignoreCase = true)) {
                 try {
                     // Read without closing the ZipInputStream between entries.
                     val text = zipInputStream.bufferedReader(Charsets.UTF_8).readText()
                     results.addAll(parse(text))
                 } catch (e: Exception) {
-                    errors.add("Failed to parse zip entry '${entry.name}': ${e.message}")
+                    errors.add("Failed to parse zip zipItem '${zipItem.name}': ${e.message}")
                 }
             }
             zipInputStream.closeEntry()
-            entry = zipInputStream.nextEntry
+            zipItem = zipInputStream.nextEntry
         }
         return results
     }

@@ -92,10 +92,13 @@ fun DatabasesContainer(
         urlInput: String,
         editingUrl: String?
     ) {
-        val isZip = urlInput.endsWith(".db.zip", ignoreCase = true) || urlInput.endsWith(".zip", ignoreCase = true)
+        val isZip = urlInput.endsWith(".zip", ignoreCase = true)
+        val isConvertibleFile = FileToDatabase.isSupported(url)
+
         val state = DatabaseState.fromUrl(urlInput)
-        if (state.extension != ".json" && state.extension != ".db" && !isZip) {
-            verificationError = "URL must end with .json, .db, .zip, or .db.zip"
+
+        if (!isZip && !isConvertibleFile)
+            verificationError = "Database not supported"
             return
         }
 

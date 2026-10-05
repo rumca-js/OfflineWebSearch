@@ -39,7 +39,7 @@ class LocalDatabaseBuilder(
     override suspend fun onInit() = withContext(Dispatchers.IO) {
         super.onInit()
 
-        isZipInput = url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)
+        isZipInput = url.endsWith(".zip", ignoreCase = true)
         isConvertibleInput = FileToDatabase.isSupported(url)
 
         // Read content bytes from URI or rawContent if provided

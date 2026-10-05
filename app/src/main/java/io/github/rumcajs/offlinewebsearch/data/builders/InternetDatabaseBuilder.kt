@@ -38,11 +38,14 @@ class InternetDatabaseBuilder(
             throw IOException("Network communication is disabled in settings.")
         }
 
-        isZip = url.endsWith(".db.zip", ignoreCase = true) || url.endsWith(".zip", ignoreCase = true)
+	val fileName = UrlLocation.getFileName(url)
+	val isSupported = AppConfiguration.isSupportedFileName(fileName);
+
+        isZip = url.endsWith(".zip", ignoreCase = true)
         isConvertibleFile = FileToDatabase.isSupported(url)
 
-        if (!isConvertibleFile && !isZip && !url.endsWith(".db", ignoreCase = true)) {
-            throw IllegalArgumentException("URL must end with .json, .opml, .db, .zip, or .db.zip")
+        if (!isConvertibleFile && !isZip) {
+            throw IllegalArgumentException("Database not supported")
         }
 
         tempWorkingFile = File.createTempFile("internet_db_", ".db", context.cacheDir)

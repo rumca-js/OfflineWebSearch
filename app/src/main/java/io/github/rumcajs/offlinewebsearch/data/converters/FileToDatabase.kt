@@ -32,7 +32,7 @@ object FileToDatabase {
      */
     fun isSupported(fileNameOrUrl: String): Boolean {
         val lower = fileNameOrUrl.lowercase()
-        return lower.endsWith(".json") || lower.endsWith(".opml")
+        return lower.endsWith(".json") || lower.endsWith(".opml") || lower.endsWith(".entries") || lower.endsWith(".sources")
     }
 
     /**
@@ -91,6 +91,12 @@ object FileToDatabase {
     fun importToDatabase(file: File, dbFile: File) {
         val name = file.name.lowercase()
         when {
+            name.endsWith(".entries") -> {
+                EntryJsonToDatabase.importToDatabase(file, dbFile)
+            }
+            name.endsWith(".sources") -> {
+                SourceJsonToDatabase.importToDatabase(file, dbFile)
+            }
             name.endsWith(".json") -> {
                 val text = file.readText(Charsets.UTF_8)
                 if (isSourceJson(text, file.name)) {
@@ -114,9 +120,15 @@ object FileToDatabase {
      * @throws IllegalArgumentException if the file extension is unsupported.
      */
     fun importToDatabase(inputStream: InputStream, fileNameOrUrl: String, db: SQLiteDatabase) {
-        val lower = fileNameOrUrl.lowercase()
+        val name = fileNameOrUrl.lowercase()
         when {
-            lower.endsWith(".json") -> {
+            name.endsWith(".entries") -> {
+                EntryJsonToDatabase.importToDatabase(text.byteInputStream(), db)
+            }
+            name.endsWith(".sources") -> {
+                SourceJsonToDatabase.importToDatabase(text.byteInputStream(), db)
+            }
+            name.endsWith(".json") -> {
                 val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
                 if (isSourceJson(text, fileNameOrUrl)) {
                     SourceJsonToDatabase.importToDatabase(text.byteInputStream(), db)
@@ -124,7 +136,7 @@ object FileToDatabase {
                     EntryJsonToDatabase.importToDatabase(text.byteInputStream(), db)
                 }
             }
-            lower.endsWith(".opml") -> OpmlToDatabase.importToDatabase(inputStream, db)
+            name.endsWith(".opml") -> OpmlToDatabase.importToDatabase(inputStream, db)
             else -> throw IllegalArgumentException("Unsupported file extension for: $fileNameOrUrl")
         }
     }
@@ -139,9 +151,15 @@ object FileToDatabase {
      * @throws IllegalArgumentException if the file extension is unsupported.
      */
     fun importToDatabase(bytes: ByteArray, fileNameOrUrl: String, dbFile: File) {
-        val lower = fileNameOrUrl.lowercase()
+        val name = fileNameOrUrl.lowercase()
         when {
-            lower.endsWith(".json") -> {
+            name.endsWith(".entries") -> {
+                EntryJsonToDatabase.importToDatabase(tempJsonFile, db)
+            }
+            name.endsWith(".sources") -> {
+                SourceJsonToDatabase.importToDatabase(tempJsonFile, db)
+            }
+            name.endsWith(".json") -> {
                 val text = bytes.toString(Charsets.UTF_8)
                 val tempJsonFile = File.createTempFile("import_json_", ".json")
                 try {
@@ -155,7 +173,7 @@ object FileToDatabase {
                     tempJsonFile.delete()
                 }
             }
-            lower.endsWith(".opml") -> {
+            name.endsWith(".opml") -> {
                 val tempOpmlFile = File.createTempFile("import_opml_", ".opml")
                 try {
                     tempOpmlFile.writeBytes(bytes)
@@ -169,13 +187,31 @@ object FileToDatabase {
     }
 
     /**
-     * Parses and imports all JSON entries from inside a ZIP archive into [dbFile].
+     * Parses and imports all files from inside a ZIP archive into [dbFile].
      *
      * @param zipFile  ZIP archive file.
      * @param dbFile   SQLite database file to write into.
      */
     fun importZipToDatabase(zipFile: File, dbFile: File) {
-        EntryJsonToDatabase.importZipToDatabase(zipFile, dbFile)
+        parseZip(zipFile, dbFile);
+    }
+
+    fun parseZip(zipFile: File, dbFile: File, errors: MutableList<String> = mutableListOf()))
+    {
+        while (zipItem != null) {
+            if (!zipItem.isDirectory && isSupported(zipItem.name)) {
+                try {
+                    // Read without closing the ZipInputStream between entries.
+                    val bufferedReader = zipInputStream.bufferedReader(Charsets.UTF_8)
+                    val text = bufferedReader.readText()
+                    importToDatabase(text, zipitem.name, dbFile);
+                } catch (e: Exception) {
+                    errors.add("Failed to parse zip zipItem '${zipItem.name}': ${e.message}")
+                }
+            }
+            zipInputStream.closeEntry()
+            zipItem = zipInputStream.nextEntry
+        }
     }
 
     /**
@@ -193,9 +229,15 @@ object FileToDatabase {
         fileNameOrUrl: String,
         activeDatabaseState: DatabaseState?
     ) {
-        val lower = fileNameOrUrl.lowercase()
+        val name = fileNameOrUrl.lowercase()
         when {
-            lower.endsWith(".json") -> {
+            name.endsWith(".entries") -> {
+                EntryJsonToDatabase.importToDatabase(tempJsonFile, db)
+            }
+            name.endsWith(".sources") -> {
+                SourceJsonToDatabase.importToDatabase(tempJsonFile, db)
+            }
+            name.endsWith(".json") -> {
                 val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
                 if (isSourceJson(text, fileNameOrUrl)) {
                     SourceJsonToDatabase.importToDatabase(context, text.byteInputStream(), activeDatabaseState)
@@ -203,7 +245,7 @@ object FileToDatabase {
                     EntryJsonToDatabase.importToDatabase(context, text.byteInputStream(), activeDatabaseState)
                 }
             }
-            lower.endsWith(".opml") -> OpmlToDatabase.importToDatabase(context, inputStream, activeDatabaseState)
+            name.endsWith(".opml") -> OpmlToDatabase.importToDatabase(context, inputStream, activeDatabaseState)
             else -> throw IllegalArgumentException("Unsupported file extension for: $fileNameOrUrl")
         }
     }
