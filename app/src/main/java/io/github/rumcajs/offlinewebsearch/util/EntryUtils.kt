@@ -78,6 +78,47 @@ object EntryUtils {
         return sourceId.toString()
     }
 
+    /**
+     * Returns the source favicon to display for an entry if available.
+     *
+     * Looks up the source in `sourcedatamodel` using [entry.source_id] or [entry.source_url]
+     * and returns its [Source.favicon] if non-blank.
+     */
+    suspend fun getSourceFavicon(
+        entry: Entry,
+        context: android.content.Context? = null,
+        activeDatabaseState: io.github.rumcajs.offlinewebsearch.data.DatabaseState? = null
+    ): String? {
+        if (context == null || activeDatabaseState == null) return null
+        val sourceId = entry.source_id
+        if (sourceId != null) {
+            val source = SourceRepository.getSourceById(context, activeDatabaseState, sourceId)
+            val favicon = source?.favicon?.takeIf { it.isNotBlank() }
+            if (favicon != null) return favicon
+        }
+        val sourceUrl = entry.source_url?.takeIf { it.isNotBlank() }
+        if (sourceUrl != null) {
+            val source = SourceRepository.getSourceByUrl(context, activeDatabaseState, sourceUrl)
+            val favicon = source?.favicon?.takeIf { it.isNotBlank() }
+            if (favicon != null) return favicon
+        }
+        return null
+    }
+
+    /**
+     * Resolves the effective thumbnail URL or predefined icon name for an entry.
+     * Priority:
+     * 1. [entry.thumbnail] if non-blank.
+     * 2. [Source.favicon] resolved from the entry's source.
+     */
+    suspend fun getEffectiveThumbnail(
+        entry: Entry,
+        context: android.content.Context? = null,
+        activeDatabaseState: io.github.rumcajs.offlinewebsearch.data.DatabaseState? = null
+    ): String? {
+        entry.thumbnail?.takeIf { it.isNotBlank() }?.let { return it }
+        return getSourceFavicon(entry, context, activeDatabaseState)
+    }
 
     fun getFormattedRating(entry: Entry): String {
         return (entry.page_rating ?: 0).toString()

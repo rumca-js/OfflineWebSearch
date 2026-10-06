@@ -156,13 +156,22 @@ fun EntryDetailScreen(
                 }
             }
 
+            val displayThumbnail by produceState<String?>(
+                initialValue = entry.thumbnail?.takeIf { it.isNotBlank() },
+                key1 = entry,
+                key2 = config.activeDatabaseState
+            ) {
+                value = io.github.rumcajs.offlinewebsearch.util.EntryUtils.getEffectiveThumbnail(entry, context, config.activeDatabaseState)
+            }
+
             val hasVideoPreview = config.dbconfig.videoPreview && !isRestricted && entry.link?.let { YouTubeVideoHandler(it).isHandledBy() } == true
-            val hasThumbnail = config.dbconfig.showIcons && !entry.thumbnail.isNullOrBlank()
+            val hasThumbnail = config.dbconfig.showIcons && !displayThumbnail.isNullOrBlank()
             if (hasVideoPreview || hasThumbnail) {
                 EntryThumbnailPreview(
                     entry = entry,
                     isRestricted = isRestricted,
                     videoPreview = config.dbconfig.videoPreview,
+                    sourceFavicon = displayThumbnail,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),

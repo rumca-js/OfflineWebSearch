@@ -90,4 +90,18 @@ class EntryUtilsTest {
         val manual200Entry = Entry(title = "Manual 200", date_dead_since = null, manual_status_code = 200)
         assertEquals(false, EntryUtils.isDead(manual200Entry))
     }
+
+    @Test
+    fun testGetEffectiveThumbnailReturnsThumbnailDirectlyWhenPresent() = kotlinx.coroutines.runBlocking {
+        val entry = Entry(title = "With Thumb", thumbnail = "https://example.com/thumb.jpg")
+        val effective = EntryUtils.getEffectiveThumbnail(entry, null, null)
+        assertEquals("https://example.com/thumb.jpg", effective)
+    }
+
+    @Test
+    fun testGetEffectiveThumbnailReturnsNullWhenThumbnailAndContextAbsent() = kotlinx.coroutines.runBlocking {
+        val entry = Entry(title = "No Thumb", thumbnail = "")
+        val effective = EntryUtils.getEffectiveThumbnail(entry, null, null)
+        assertEquals(null, effective)
+    }
 }

@@ -3,9 +3,13 @@ package io.github.rumcajs.offlinewebsearch.ui.components
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -86,20 +90,44 @@ fun DetailThumbnail(
             )
         }
     } else if (!thumbnailUrl.isNullOrBlank()) {
-        RemoteImage(
-            url = thumbnailUrl,
-            modifier = modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .pointerInput(link, isRestricted) {
-                    detectTapGestures(
-                        onTap = { onTap() },
-                        onLongPress = { onLongPress() }
-                    )
-                },
-            contentScale = ContentScale.Crop,
-            isRestricted = isRestricted
-        )
+        val predefinedVector = if (!isRestricted) sourceIconImageVector(thumbnailUrl) else null
+        if (predefinedVector != null) {
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .pointerInput(link, isRestricted) {
+                        detectTapGestures(
+                            onTap = { onTap() },
+                            onLongPress = { onLongPress() }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = predefinedVector,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        } else {
+            RemoteImage(
+                url = thumbnailUrl,
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .pointerInput(link, isRestricted) {
+                        detectTapGestures(
+                            onTap = { onTap() },
+                            onLongPress = { onLongPress() }
+                        )
+                    },
+                contentScale = ContentScale.Crop,
+                isRestricted = isRestricted
+            )
+        }
     }
 }
 

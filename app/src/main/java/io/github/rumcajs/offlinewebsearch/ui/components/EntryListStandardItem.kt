@@ -44,6 +44,14 @@ fun EntryListStandardItem(
         value = EntryUtils.getDisplayAuthor(entry, context, config.activeDatabaseState)
     }
 
+    val displayThumbnail by produceState<String?>(
+        initialValue = entry.thumbnail?.takeIf { it.isNotBlank() },
+        key1 = entry,
+        key2 = config.activeDatabaseState
+    ) {
+        value = EntryUtils.getEffectiveThumbnail(entry, context, config.activeDatabaseState)
+    }
+
     EntryItemCard(
         entry = entry,
         onClick = onClick,
@@ -62,7 +70,8 @@ fun EntryListStandardItem(
                     EntryLeadingIcon(
                         entry = entry,
                         showIcons = config.dbconfig.showIcons,
-                        userAge = config.userAge
+                        userAge = config.userAge,
+                        sourceFavicon = displayThumbnail
                     )
                     Text(
                         text = EntryUtils.getDisplayTitle(entry, config.userAge),

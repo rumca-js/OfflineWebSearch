@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -153,43 +152,7 @@ fun EntryBadges(
     }
 }
 
-/**
- * Renders small thumbnail image or fallback link icon on the left side of entry items.
- *
- * @param entry The entry providing the thumbnail or link.
- * @param showIcons Whether icon display is enabled in settings.
- * @param userAge The user age setting for content filtering.
- * @param modifier Optional modifier.
- */
-@Composable
-fun EntryLeadingIcon(
-    entry: Entry,
-    showIcons: Boolean,
-    userAge: Int,
-    modifier: Modifier = Modifier
-) {
-    if (!showIcons) return
 
-    if (!entry.thumbnail.isNullOrBlank()) {
-        RemoteImage(
-            url = entry.thumbnail,
-            modifier = modifier
-                .size(48.dp)
-                .padding(end = 8.dp),
-            showErrorText = false,
-            isRestricted = EntryUtils.isRestricted(entry, userAge)
-        )
-    } else if (entry.link != null) {
-        Icon(
-            imageVector = Icons.Default.Link,
-            contentDescription = null,
-            modifier = modifier
-                .size(48.dp)
-                .padding(end = 8.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-    }
-}
 
 /**
  * Displays published date and author in a space-between row.

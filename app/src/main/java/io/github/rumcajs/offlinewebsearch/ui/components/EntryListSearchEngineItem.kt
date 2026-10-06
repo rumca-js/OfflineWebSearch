@@ -6,8 +6,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,9 +31,18 @@ fun EntryListSearchEngineItem(
     onClick: (Entry) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val config by AppConfigManager.config.collectAsState()
     val isDead = EntryUtils.isDead(entry)
     val isRestricted = EntryUtils.isRestricted(entry, config.userAge)
+
+    val displayThumbnail by produceState<String?>(
+        initialValue = entry.thumbnail?.takeIf { it.isNotBlank() },
+        key1 = entry,
+        key2 = config.activeDatabaseState
+    ) {
+        value = EntryUtils.getEffectiveThumbnail(entry, context, config.activeDatabaseState)
+    }
 
     EntryItemCard(
         entry = entry,
@@ -51,7 +62,8 @@ fun EntryListSearchEngineItem(
                     EntryLeadingIcon(
                         entry = entry,
                         showIcons = config.dbconfig.showIcons,
-                        userAge = config.userAge
+                        userAge = config.userAge,
+                        sourceFavicon = displayThumbnail
                     )
                     Text(
                         text = EntryUtils.getDisplayTitle(entry, config.userAge),

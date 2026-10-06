@@ -9,7 +9,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,22 +44,24 @@ fun EntryListGalleryItem(
         value = EntryUtils.getDisplayAuthor(entry, context, config.activeDatabaseState)
     }
 
+    val displayThumbnail by produceState<String?>(
+        initialValue = entry.thumbnail?.takeIf { it.isNotBlank() },
+        key1 = entry,
+        key2 = config.activeDatabaseState
+    ) {
+        value = EntryUtils.getEffectiveThumbnail(entry, context, config.activeDatabaseState)
+    }
+
     EntryItemCard(
         entry = entry,
         onClick = onClick,
         modifier = modifier
     ) {
-        if (config.dbconfig.showIcons && !entry.thumbnail.isNullOrBlank()) {
-            RemoteImage(
-                url = entry.thumbnail,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentScale = ContentScale.Crop,
-                showErrorText = false,
-                isRestricted = isRestricted
-            )
-        }
+        EntryGalleryThumbnail(
+            thumbnailUrl = displayThumbnail,
+            isRestricted = isRestricted,
+            showIcons = config.dbconfig.showIcons
+        )
 
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
