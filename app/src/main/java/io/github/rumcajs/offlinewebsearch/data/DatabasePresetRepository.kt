@@ -10,9 +10,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
+/** How long a successful network fetch is considered fresh (1 hour). */
+private const val PRESETS_CACHE_TTL_MS: Long = 3_600_000L
+
 /**
  * Repository responsible for loading and caching preselected database presets
- * from bundled assets (databases.json) and remote DATABASES_LIST_JSON.
+ * from bundled assets (databases.json) and remote [DATABASES_LIST_JSON].
+ *
+ * The remote list is refreshed at most once per [PRESETS_CACHE_TTL_MS] (1 hour).
+ * Callers can bypass the TTL by passing `forceNetwork = true` to [loadPresets].
  *
  * Provides comparison methods between a remote preset's `date_updated` and a local
  * database's `dateLastRefresh` to indicate when a database is outdated.
@@ -24,38 +30,81 @@ object DatabasePresetRepository {
         isLenient = true
     }
 
+    // -------------------------------------------------------------------------
+    // In-memory cache
+    // -------------------------------------------------------------------------
+
+    /** Cached preset list. Empty until the first successful load. */
+    private var cachedPresets: List<DatabasePreset> = emptyList()
+
+    /**
+     * Wall-clock timestamp (ms) of the last successful **network** fetch,
+     * or `null` if no network fetch has been performed in this process lifetime.
+     *
+     * Asset-based data does not set this field so that a network refresh is
+     * always attempted on the first online opportunity.
+     */
+    private var fetchedAtMs: Long? = null
+
     private val _presets = MutableStateFlow<Map<String, DatabasePreset>>(emptyMap())
 
     /**
      * Flow emitting the currently cached map of database presets keyed by URL.
+     * Updated after every successful asset or network load.
      */
     val presets: StateFlow<Map<String, DatabasePreset>> = _presets.asStateFlow()
 
+    // -------------------------------------------------------------------------
+    // Staleness helpers
+    // -------------------------------------------------------------------------
+
     /**
-     * Loads presets from assets/databases.json if not yet populated,
-     * and refreshes from remote DATABASES_LIST_JSON when network is available.
+     * Returns `true` when no successful network fetch has been performed yet, or when
+     * the last fetch happened more than [PRESETS_CACHE_TTL_MS] milliseconds ago.
+     */
+    private fun isStale(): Boolean {
+        val ts = fetchedAtMs ?: return true
+        return System.currentTimeMillis() - ts > PRESETS_CACHE_TTL_MS
+    }
+
+    // -------------------------------------------------------------------------
+    // Loading
+    // -------------------------------------------------------------------------
+
+    /**
+     * Loads presets and returns them as a URL-keyed map.
+     *
+     * Loading strategy:
+     * 1. Asset baseline — read once when the cache is empty so the list is
+     *    immediately available offline without waiting for a network round-trip.
+     * 2. Network refresh — attempted when [isStale] is `true` or when
+     *    [forceNetwork] is `true`.  Skipped if network is disabled in config.
      *
      * @param context Application context for reading assets.
-     * @param forceNetwork If true, attempts to fetch remote JSON even if cached.
-     * @return Map of URL to DatabasePreset.
+     * @param forceNetwork When `true`, bypasses the 1-hour TTL and always tries the network.
+     * @return Map of URL → [DatabasePreset] reflecting the current cache contents.
      */
     suspend fun loadPresets(context: Context, forceNetwork: Boolean = false): Map<String, DatabasePreset> = withContext(Dispatchers.IO) {
-        if (_presets.value.isEmpty() || forceNetwork) {
-            // Baseline: load bundled assets first so presets are immediately available offline
+        // Step 1: asset baseline.
+        if (cachedPresets.isEmpty()) {
             val assetPresets = loadFromAssets(context)
-            if (assetPresets.isNotEmpty() && _presets.value.isEmpty()) {
-                _presets.value = assetPresets.associateBy { it.url }
-            }
-
-            // Check if network communication is enabled
-            val networkDisabled = AppConfigManager.config.value.networkConfig.disabled
-            if (!networkDisabled) {
-                val remotePresets = loadFromNetwork()
-                if (!remotePresets.isNullOrEmpty()) {
-                    _presets.value = remotePresets.associateBy { it.url }
-                }
+            if (assetPresets.isNotEmpty()) {
+                cachedPresets = assetPresets
+                syncFlow()
             }
         }
+
+        // Step 2: network refresh when stale or explicitly requested.
+        val networkDisabled = AppConfigManager.config.value.networkConfig.disabled
+        if (!networkDisabled && (forceNetwork || isStale())) {
+            val remotePresets = loadFromNetwork()
+            if (!remotePresets.isNullOrEmpty()) {
+                cachedPresets = remotePresets
+                fetchedAtMs = System.currentTimeMillis()
+                syncFlow()
+            }
+        }
+
         _presets.value
     }
 
@@ -63,7 +112,7 @@ object DatabasePresetRepository {
      * Reads presets from bundled assets/databases.json.
      *
      * @param context Application context.
-     * @return List of DatabasePreset parsed from assets.
+     * @return List of [DatabasePreset] parsed from assets.
      */
     fun loadFromAssets(context: Context): List<DatabasePreset> {
         return try {
@@ -76,9 +125,9 @@ object DatabasePresetRepository {
     }
 
     /**
-     * Fetches presets from remote DATABASES_LIST_JSON URL.
+     * Fetches presets from the remote [DATABASES_LIST_JSON] URL.
      *
-     * @return List of DatabasePreset parsed from network response, or null on failure.
+     * @return List of [DatabasePreset] parsed from the network response, or `null` on failure.
      */
     suspend fun loadFromNetwork(): List<DatabasePreset>? = withContext(Dispatchers.IO) {
         try {
@@ -95,13 +144,17 @@ object DatabasePresetRepository {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Outdated-database helpers
+    // -------------------------------------------------------------------------
+
     /**
      * Determines whether a local database is outdated by comparing its [dateLastRefresh]
      * against the preset's [DatabasePreset.dateUpdated].
      *
      * @param dateLastRefresh ISO-8601 UTC timestamp of the most recent local refresh.
      * @param dateUpdated ISO-8601 UTC timestamp of the remote database update.
-     * @return true if dateUpdated is present and dateLastRefresh is null or earlier than dateUpdated.
+     * @return `true` if [dateUpdated] is present and [dateLastRefresh] is `null` or earlier.
      */
     fun isOutdated(dateLastRefresh: String?, dateUpdated: String?): Boolean {
         if (dateUpdated.isNullOrBlank()) return false
@@ -118,12 +171,12 @@ object DatabasePresetRepository {
     }
 
     /**
-     * Checks if a database is outdated given its URL and dateLastRefresh, using the provided presets map.
+     * Checks if a database is outdated given its URL and [dateLastRefresh].
      *
-     * @param url URL of the database.
-     * @param dateLastRefresh ISO-8601 UTC timestamp of local refresh.
-     * @param presetsMap Preset lookup map (keyed by URL).
-     * @return true if database corresponds to a preset and is outdated.
+     * @param url URL of the database to look up in [presetsMap].
+     * @param dateLastRefresh ISO-8601 UTC timestamp of the local refresh.
+     * @param presetsMap Preset lookup map (keyed by URL); defaults to the live cache.
+     * @return `true` if the database corresponds to a preset and is outdated.
      */
     fun isDatabaseOutdated(
         url: String,
@@ -138,13 +191,22 @@ object DatabasePresetRepository {
      * Checks if a [DatabaseState] is outdated based on the provided or cached presets.
      *
      * @param state The database state to check.
-     * @param presetsMap Preset lookup map (keyed by URL).
-     * @return true if database is outdated.
+     * @param presetsMap Preset lookup map (keyed by URL); defaults to the live cache.
+     * @return `true` if the database is outdated.
      */
     fun isDatabaseOutdated(
         state: DatabaseState,
         presetsMap: Map<String, DatabasePreset> = _presets.value
     ): Boolean {
         return isDatabaseOutdated(state.url, state.dateLastRefresh, presetsMap)
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal helpers
+    // -------------------------------------------------------------------------
+
+    /** Mirrors [cachedPresets] into [_presets] so UI flow consumers receive updates. */
+    private fun syncFlow() {
+        _presets.value = cachedPresets.associateBy { it.url }
     }
 }
