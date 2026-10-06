@@ -1,18 +1,30 @@
 package io.github.rumcajs.offlinewebsearch.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceIcons
 
 /**
  * Reusable form pane for editing/adding a Source.
  * Shared between SourceEditScreen and SourceUrlEditPreviewScreen.
+ *
+ * @param favicon         Current favicon value stored in [Source.favicon].
+ * @param onFaviconChange Callback invoked when the favicon value changes.
  */
 @Composable
 fun SourceFormPane(
@@ -28,10 +40,25 @@ fun SourceFormPane(
     onAutoTagChange: (String) -> Unit = {},
     language: String = "",
     onLanguageChange: (String) -> Unit = {},
+    favicon: String = "",
+    onFaviconChange: (String) -> Unit = {},
     isEditable: Boolean,
     urlError: String? = null,
     modifier: Modifier = Modifier
 ) {
+    var showIconPicker by remember { mutableStateOf(false) }
+
+    if (showIconPicker) {
+        SourceIconPickerDialog(
+            selectedValue = favicon,
+            onIconSelected = { chosen ->
+                onFaviconChange(chosen)
+                showIconPicker = false
+            },
+            onDismiss = { showIconPicker = false }
+        )
+    }
+
     Column(modifier = modifier) {
         if (!isEditable) {
             Surface(
@@ -113,6 +140,19 @@ fun SourceFormPane(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // ── Favicon / predefined icon ────────────────────────────────────────
+        // The picker is shown only when favicon is blank (no remote URL set).
+        // If the user has a remote URL in favicon they typed it themselves; we
+        // leave it alone and do not show the predefined picker over it.
+        FaviconPickerRow(
+            favicon = favicon,
+            isEditable = isEditable,
+            onPickIconClick = { showIconPicker = true },
+            onClearClick = { onFaviconChange("") }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -130,3 +170,4 @@ fun SourceFormPane(
         }
     }
 }
+

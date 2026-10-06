@@ -142,7 +142,15 @@ fun SourceListItem(
                     modifier = Modifier.size(56.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (source.favicon.isNotBlank()) {
+                    val predefinedVector = if (source.favicon.isNotBlank()) sourceIconImageVector(source.favicon) else null
+                    if (predefinedVector != null) {
+                        Icon(
+                            imageVector = predefinedVector,
+                            contentDescription = "Icon for ${source.title}",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    } else if (source.favicon.isNotBlank()) {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(source.favicon)

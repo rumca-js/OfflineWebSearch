@@ -45,6 +45,7 @@ fun SourceEditScreen(
     var ageText by remember { mutableStateOf((source.age ?: 0).toString()) }
     var autoTag by remember { mutableStateOf(source.auto_tag) }
     var language by remember { mutableStateOf(source.language) }
+    var favicon by remember { mutableStateOf(source.favicon) }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var urlError by remember { mutableStateOf<String?>(null) }
@@ -69,7 +70,8 @@ fun SourceEditScreen(
                 age = finalAge,
                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
                 language = language.trim(),
-                source_type = source.source_type ?: SourceRepository.SOURCE_TYPE_RSS
+                source_type = source.source_type ?: SourceRepository.SOURCE_TYPE_RSS,
+                favicon = favicon
             )
             errorMessage = if (!success) err else null
             success
@@ -84,7 +86,8 @@ fun SourceEditScreen(
                 age = finalAge,
                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
                 language = language.trim(),
-                source_type = source.source_type
+                source_type = source.source_type,
+                favicon = favicon
             )
             errorMessage = if (!success) err else null
             success
@@ -120,7 +123,8 @@ fun SourceEditScreen(
                                                 enabled = enabled,
                                                 age = finalAge,
                                                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
-                                                language = language.trim()
+                                                language = language.trim(),
+                                                favicon = favicon
                                             )
                                         )
                                     } else {
@@ -162,6 +166,8 @@ fun SourceEditScreen(
                 onAutoTagChange = { autoTag = it },
                 language = language,
                 onLanguageChange = { language = it },
+                favicon = favicon,
+                onFaviconChange = { favicon = it },
                 isEditable = isEditable,
                 urlError = urlError
             )
@@ -202,7 +208,10 @@ fun SourceEditScreen(
                                         title = title,
                                         url = url,
                                         enabled = enabled,
-                                        age = finalAge
+                                        age = finalAge,
+                                        auto_tag = TagUtils.normalizeAutoTag(autoTag),
+                                        language = language.trim(),
+                                        favicon = favicon
                                     )
                                 )
                             } else {

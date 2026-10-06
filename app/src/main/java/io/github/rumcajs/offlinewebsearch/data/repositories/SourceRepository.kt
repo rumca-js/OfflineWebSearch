@@ -595,7 +595,8 @@ object SourceRepository : RepositoryInterface {
         fetch_period: Long = 3600L,
         language: String = "",
         credentials_id: Long? = null,
-        source_type: String? = null
+        source_type: String? = null,
+        favicon: String = ""
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -617,7 +618,7 @@ object SourceRepository : RepositoryInterface {
                 put("remove_after_days", 0)
                 put("language", language)
                 put("age", if (age >= 0) age else 0)
-                put("favicon", "")
+                put("favicon", favicon)
                 put("fetch_period", if (fetch_period > 0) fetch_period else 3600L)
                 put("auto_tag", auto_tag.take(1000))
                 put("entries_backgroundcolor_alpha", 1.0)
@@ -658,7 +659,8 @@ object SourceRepository : RepositoryInterface {
         fetch_period: Long? = null,
         language: String? = null,
         credentials_id: Long? = null,
-        source_type: String? = null
+        source_type: String? = null,
+        favicon: String? = null
     ): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
         if (activeDatabaseState == null || !activeDatabaseState.isSQLite || activeDatabaseState.isReadOnly) {
             return@withContext Pair(false, "Database is not writable")
@@ -692,6 +694,9 @@ object SourceRepository : RepositoryInterface {
                     put("credentials_id", credentials_id)
                 } else {
                     putNull("credentials_id")
+                }
+                if (favicon != null) {
+                    put("favicon", favicon)
                 }
             }
             val rows = db.update(getTableName(), values, "id = ?", arrayOf(id.toString()))

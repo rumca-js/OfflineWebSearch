@@ -135,7 +135,8 @@ fun SourceUrlEditPreviewScreen(
             enabled = enabled,
             age = finalAge,
             auto_tag = autoTag.trim().lowercase(),
-            language = language.trim()
+            language = language.trim(),
+            favicon = favicon
         )
         errorMessage = if (!success) err else null
         return success
@@ -218,6 +219,8 @@ fun SourceUrlEditPreviewScreen(
                 onAutoTagChange = { autoTag = it },
                 language = language,
                 onLanguageChange = { language = it },
+                favicon = favicon,
+                onFaviconChange = { favicon = it },
                 isEditable = isEditable,
                 urlError = urlError
             )

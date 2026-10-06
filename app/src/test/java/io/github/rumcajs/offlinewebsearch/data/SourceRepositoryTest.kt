@@ -1468,6 +1468,57 @@ class SourceRepositoryTest {
         assertEquals(username, savedCred!!.username)
         assertEquals(password, savedCred.password)
     }
+
+    @Test
+    fun `insertSource with favicon stores favicon value correctly`() = runBlocking {
+        val url = "https://icon-source.example.com/rss"
+        val (ok, err) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Icon Source",
+            url = url,
+            enabled = true,
+            favicon = "rss_feed"
+        )
+        assertTrue("Insert source error: $err", ok)
+
+        val saved = SourceRepository.getSourceByUrl(context, dbState, url)
+        assertNotNull(saved)
+        assertEquals("rss_feed", saved!!.favicon)
+    }
+
+    @Test
+    fun `updateSourceProperties with favicon updates favicon correctly`() = runBlocking {
+        val url = "https://update-favicon.example.com/rss"
+        val (okInsert, _) = SourceRepository.insertSource(
+            context = context,
+            activeDatabaseState = dbState,
+            title = "Update Favicon Source",
+            url = url,
+            enabled = true,
+            favicon = ""
+        )
+        assertTrue(okInsert)
+
+        val saved = SourceRepository.getSourceByUrl(context, dbState, url)
+        assertNotNull(saved)
+        assertEquals("", saved!!.favicon)
+
+        val (okUpdate, errUpdate) = SourceRepository.updateSourceProperties(
+            context = context,
+            activeDatabaseState = dbState,
+            id = saved.id!!,
+            title = "Updated Title",
+            url = url,
+            enabled = true,
+            favicon = "newspaper"
+        )
+        assertTrue("Update error: $errUpdate", okUpdate)
+
+        val updated = SourceRepository.getSourceById(context, dbState, saved.id!!)
+        assertNotNull(updated)
+        assertEquals("newspaper", updated!!.favicon)
+    }
 }
 
 

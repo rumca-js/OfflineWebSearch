@@ -33,12 +33,20 @@ fun RemoteImage(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
+        val predefinedVector = if (url != null && !isRestricted) sourceIconImageVector(url) else null
         if (url == null || isRestricted) {
             Icon(
                 imageVector = Icons.Default.ImageNotSupported,
                 contentDescription = if (isRestricted) "Restricted Content" else "No Image",
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.outline
+            )
+        } else if (predefinedVector != null) {
+            Icon(
+                imageVector = predefinedVector,
+                contentDescription = null,
+                modifier = Modifier.size(36.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
         } else {
             AsyncImage(

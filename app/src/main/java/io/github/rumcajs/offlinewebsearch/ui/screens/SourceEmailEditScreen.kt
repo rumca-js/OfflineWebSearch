@@ -24,6 +24,8 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Credentials
 import io.github.rumcajs.offlinewebsearch.data.repositories.CredentialsRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
+import io.github.rumcajs.offlinewebsearch.ui.components.FaviconPickerRow
+import io.github.rumcajs.offlinewebsearch.ui.components.SourceIconPickerDialog
 import io.github.rumcajs.offlinewebsearch.util.TagUtils
 import kotlinx.coroutines.launch
 
@@ -34,7 +36,7 @@ import kotlinx.coroutines.launch
  * - IMAP server URL / hostname (e.g. `imap.example.com`, `imaps://mail.example.com:993`)
  * - Credentials username
  * - Credentials password
- * - Optional title, enabled status, age, auto-tag, and language.
+ * - Optional title, enabled status, age, auto-tag, language, and predefined icon.
  *
  * When saved:
  * 1. Persists credentials into the `credentials` table via [CredentialsRepository].
@@ -68,7 +70,9 @@ fun SourceEmailEditScreen(
     var ageText by remember { mutableStateOf((source.age ?: 0).toString()) }
     var autoTag by remember { mutableStateOf(source.auto_tag) }
     var language by remember { mutableStateOf(source.language) }
+    var favicon by remember { mutableStateOf(source.favicon.ifBlank { "email" }) }
 
+    var showIconPicker by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var isLoadingCredentials by remember { mutableStateOf(false) }
@@ -76,6 +80,17 @@ fun SourceEmailEditScreen(
     var urlError by remember { mutableStateOf<String?>(null) }
     var usernameError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+
+    if (showIconPicker) {
+        SourceIconPickerDialog(
+            selectedValue = favicon,
+            onIconSelected = { chosen ->
+                favicon = chosen
+                showIconPicker = false
+            },
+            onDismiss = { showIconPicker = false }
+        )
+    }
 
     // Load existing credentials when editing an email source
     LaunchedEffect(source.id, source.credentials_id) {
@@ -165,7 +180,8 @@ fun SourceEmailEditScreen(
                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
                 language = language.trim(),
                 credentials_id = credId,
-                source_type = SourceRepository.SOURCE_TYPE_EMAIL
+                source_type = SourceRepository.SOURCE_TYPE_EMAIL,
+                favicon = favicon
             )
             if (!srcSuccess) {
                 // Clean up inserted credential on failure
@@ -222,7 +238,8 @@ fun SourceEmailEditScreen(
                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
                 language = language.trim(),
                 credentials_id = credId,
-                source_type = SourceRepository.SOURCE_TYPE_EMAIL
+                source_type = SourceRepository.SOURCE_TYPE_EMAIL,
+                favicon = favicon
             )
             errorMessage = if (!srcSuccess) srcErr else null
             srcSuccess
@@ -263,7 +280,8 @@ fun SourceEmailEditScreen(
                                                 age = finalAge,
                                                 auto_tag = TagUtils.normalizeAutoTag(autoTag),
                                                 language = language.trim(),
-                                                source_type = SourceRepository.SOURCE_TYPE_EMAIL
+                                                source_type = SourceRepository.SOURCE_TYPE_EMAIL,
+                                                favicon = favicon
                                             )
                                         onSourceUpdated(createdSource)
                                     } else {
@@ -421,6 +439,14 @@ fun SourceEmailEditScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // Favicon / predefined icon
+            FaviconPickerRow(
+                favicon = favicon,
+                isEditable = isEditable,
+                onPickIconClick = { showIconPicker = true },
+                onClearClick = { favicon = "" }
+            )
+
             if (isEditable) {
                 errorMessage?.let { msg ->
                     Surface(
@@ -461,7 +487,8 @@ fun SourceEmailEditScreen(
                                         age = finalAge,
                                         auto_tag = TagUtils.normalizeAutoTag(autoTag),
                                         language = language.trim(),
-                                        source_type = SourceRepository.SOURCE_TYPE_EMAIL
+                                        source_type = SourceRepository.SOURCE_TYPE_EMAIL,
+                                        favicon = favicon
                                     )
                                 onSourceUpdated(createdSource)
                             } else {
