@@ -133,7 +133,7 @@ Screens:
 
 ### EntryListItem - row in EntryListScreen
 There are several list styles:
- - Gallery (emphasis on thumbnail, should look like YouTube or TikTok)
+ - Gallery (emphasis on thumbnail, should look like YouTube or TikTok). If entry.thumbnail is not set, or empty, and source.favicon is not, then favicon should be displayed as small icon, just as for Standard display
  - Standard (similar to gallery, but thumbnail is smaller, and on the left, should remind Feed readers
  - Search engine (emphasis on title, and showing actual link. Should look like search engine results)
 

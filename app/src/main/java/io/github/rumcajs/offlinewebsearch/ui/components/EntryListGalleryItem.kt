@@ -21,6 +21,11 @@ import io.github.rumcajs.offlinewebsearch.util.EntryUtils
  * Renders an entry in Gallery view style with prominent thumbnail banner at the top,
  * similar to YouTube or TikTok cards.
  *
+ * When [entry.thumbnail] is set it is shown as a full-width banner at the top.
+ * When [entry.thumbnail] is absent the banner area is omitted entirely.
+ * When [source.favicon] is available and there is no entry thumbnail, the favicon
+ * is shown as a small leading icon to the left of the title, matching the Standard style.
+ *
  * @param entry The database entry to display.
  * @param onClick Callback when the entry is tapped.
  * @param modifier Optional modifier for styling.
@@ -44,12 +49,16 @@ fun EntryListGalleryItem(
         value = EntryUtils.getDisplayAuthor(entry, context, config.activeDatabaseState)
     }
 
-    val displayThumbnail by produceState<String?>(
-        initialValue = entry.thumbnail?.takeIf { it.isNotBlank() },
+    /** Non-null only when the entry itself carries a thumbnail – drives the top banner. */
+    val entryThumbnail = entry.thumbnail?.takeIf { it.isNotBlank() }
+
+    /** Source favicon resolved asynchronously – shown as a small leading icon when there is no entry thumbnail. */
+    val sourceFavicon by produceState<String?>(
+        initialValue = null,
         key1 = entry,
         key2 = config.activeDatabaseState
     ) {
-        value = EntryUtils.getEffectiveThumbnail(entry, context, config.activeDatabaseState)
+        value = EntryUtils.getSourceFavicon(entry, context, config.activeDatabaseState)
     }
 
     EntryItemCard(
@@ -57,11 +66,14 @@ fun EntryListGalleryItem(
         onClick = onClick,
         modifier = modifier
     ) {
-        EntryGalleryThumbnail(
-            thumbnailUrl = displayThumbnail,
-            isRestricted = isRestricted,
-            showIcons = config.dbconfig.showIcons
-        )
+        // Top banner: only shown when the entry has its own thumbnail.
+        if (entryThumbnail != null) {
+            EntryGalleryThumbnail(
+                thumbnailUrl = entryThumbnail,
+                isRestricted = isRestricted,
+                showIcons = config.dbconfig.showIcons
+            )
+        }
 
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -69,12 +81,25 @@ fun EntryListGalleryItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = EntryUtils.getDisplayTitle(entry, config.userAge),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Leading favicon icon: only shown when there is no entry thumbnail.
+                    if (entryThumbnail == null) {
+                        EntryLeadingIcon(
+                            entry = entry,
+                            showIcons = config.dbconfig.showIcons,
+                            userAge = config.userAge,
+                            sourceFavicon = sourceFavicon
+                        )
+                    }
+                    Text(
+                        text = EntryUtils.getDisplayTitle(entry, config.userAge),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
                 EntryBadges(
                     entry = entry,
                     isDead = isDead,
