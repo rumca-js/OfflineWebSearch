@@ -1,14 +1,26 @@
 package io.github.rumcajs.offlinewebsearch.data.repositories
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import io.github.rumcajs.offlinewebsearch.MainActivity
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Data class representing a log entry in the `applogging` table.
@@ -48,9 +60,18 @@ object AppLoggingRepository : RepositoryInterface {
     override fun getTableName(): String = "applogging"
 
     /** Log level constants matching the Python model defaults. */
-    const val LEVEL_INFO = 0
-    const val LEVEL_WARNING = 1
-    const val LEVEL_ERROR = 2
+    const val LEVEL_DEBUG = 10
+    const val LEVEL_INFO = 20
+    const val LEVEL_WARNING = 30
+    const val LEVEL_ERROR = 40
+    const val LEVEL_CRITICAL = 50
+    const val LEVEL_NOTIFICATION = 60
+
+    /** Notification channel constants. */
+    const val NOTIFICATION_CHANNEL_ID = "app_notifications"
+    const val NOTIFICATION_CHANNEL_NAME = "App Notifications"
+
+    private val notificationIdCounter = AtomicInteger(1000)
 
     /**
      * Maximum number of log records retained in the database table to prevent unbounded growth.
@@ -58,6 +79,95 @@ object AppLoggingRepository : RepositoryInterface {
     private const val MAX_LOG_ENTRIES = 500
 
     private fun getCurrentIsoTimestamp(): String = DateUtils.getCurrentIsoTimestamp()
+
+    /**
+     * Creates the notification channel on Android O (API 26) and above.
+     *
+     * @param context Application context.
+     */
+    fun createNotificationChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                NOTIFICATION_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Notifications from Offline Web Search"
+            }
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            manager?.createNotificationChannel(channel)
+        }
+    }
+
+    /**
+     * Pushes a system notification to the Android notification drawer.
+     *
+     * @param context Application context.
+     * @param infoText Summary / title text of the notification.
+     * @param detailText Optional detailed body text.
+     * @param notificationId Optional explicit notification ID; auto-generated if null.
+     * @return The notification ID if posted, or null if posting failed / permission missing.
+     */
+    fun pushNotification(
+        context: Context,
+        infoText: String,
+        detailText: String? = null,
+        notificationId: Int? = null
+    ): Int? {
+        return try {
+            createNotificationChannel(context)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    return null
+                }
+            }
+
+            val id = notificationId ?: notificationIdCounter.incrementAndGet()
+
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val icon = if (context.applicationInfo.icon != 0) {
+                context.applicationInfo.icon
+            } else {
+                io.github.rumcajs.offlinewebsearch.R.mipmap.ic_launcher
+            }
+
+            val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(icon)
+                .setContentTitle(infoText)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+            if (!detailText.isNullOrBlank()) {
+                builder.setContentText(detailText)
+                builder.setStyle(NotificationCompat.BigTextStyle().bigText(detailText))
+            }
+
+            val notificationManager = NotificationManagerCompat.from(context)
+            notificationManager.notify(id, builder.build())
+            id
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun debug(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        infoText: String,
+        detailText: String? = null
+    ): Pair<Boolean, String?> = insertLog(context, activeDatabaseState, infoText, detailText, LEVEL_DEBUG)
 
     /**
      * Records an informational log entry (level = [LEVEL_INFO]).
@@ -103,6 +213,25 @@ object AppLoggingRepository : RepositoryInterface {
         infoText: String,
         detailText: String? = null
     ): Pair<Boolean, String?> = insertLog(context, activeDatabaseState, infoText, detailText, LEVEL_ERROR)
+
+    /**
+     * Records a notification log entry (level = [LEVEL_NOTIFICATION]) and pushes a system notification.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState Current database state.
+     * @param infoText Summary message (used as notification title).
+     * @param detailText Optional detail / body message (used as notification body).
+     * @return Pair where first is true on success, and second contains an optional error message on failure.
+     */
+    suspend fun notify(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        infoText: String,
+        detailText: String? = null
+    ): Pair<Boolean, String?> {
+        pushNotification(context, infoText, detailText)
+        return insertLog(context, activeDatabaseState, infoText, detailText, LEVEL_NOTIFICATION)
+    }
 
     /**
      * Ensures that the `applogging` table exists in the given database.

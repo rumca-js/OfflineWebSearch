@@ -50,109 +50,6 @@ object EntryVisitHistoryRepository : RepositoryInterface {
     }
 
     /**
-     * Loads all records from `entryvisithistory` ordered by date_last_visit descending.
-     */
-    suspend fun loadVisitHistory(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): List<EntryVisitHistory> = withContext(Dispatchers.IO) {
-        val history = mutableListOf<EntryVisitHistory>()
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
-            return@withContext history
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext history
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val sqlText = "SELECT id, visits, date_last_visit, entry_id FROM ${getTableName()} ORDER BY date_last_visit DESC, id DESC"
-            val cursor = db.rawQuery(sqlText, null)
-            cursor.use {
-                while (it.moveToNext()) {
-                    val id = if (it.isNull(it.getColumnIndexOrThrow("id"))) null else it.getLong(it.getColumnIndexOrThrow("id"))
-                    val visits = if (it.isNull(it.getColumnIndexOrThrow("visits"))) null else it.getInt(it.getColumnIndexOrThrow("visits"))
-                    val dateLastVisit = it.getString(it.getColumnIndexOrThrow("date_last_visit"))
-                    val entryId = if (it.isNull(it.getColumnIndexOrThrow("entry_id"))) null else it.getLong(it.getColumnIndexOrThrow("entry_id"))
-
-                    history.add(
-                        EntryVisitHistory(
-                            id = id,
-                            visits = visits,
-                            date_last_visit = dateLastVisit,
-                            entry_id = entryId
-                        )
-                    )
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Exception when loading visit history in $functionName", e.message)
-            e.printStackTrace()
-        }
-
-        history
-    }
-
-    /**
-     * Loads visit history records joined with their corresponding [Entry] from `linkdatamodel`.
-     * Useful for displaying recently browsed entries.
-     */
-    suspend fun loadVisitedEntries(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): List<Pair<EntryVisitHistory, Entry>> = withContext(Dispatchers.IO) {
-        val result = mutableListOf<Pair<EntryVisitHistory, Entry>>()
-        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) {
-            return@withContext result
-        }
-
-        val file = File(context.filesDir, activeDatabaseState.localFileName)
-        if (!file.exists()) return@withContext result
-
-        try {
-            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            ensureTableExists(db)
-            val sqlText = """
-                SELECT v.id AS v_id, v.visits AS v_visits, v.date_last_visit AS v_date_last_visit, v.entry_id AS v_entry_id,
-                       ${EntrySqliteRepository.ENTRY_SELECT_COLUMNS}
-                FROM ${getTableName()} v
-                INNER JOIN linkdatamodel l ON v.entry_id = l.id
-                ORDER BY v.date_last_visit DESC, v.id DESC
-            """.trimIndent()
-
-            val cursor = db.rawQuery(sqlText, null)
-            cursor.use { c ->
-                while (c.moveToNext()) {
-                    val vId = if (c.isNull(c.getColumnIndexOrThrow("v_id"))) null else c.getLong(c.getColumnIndexOrThrow("v_id"))
-                    val vVisits = if (c.isNull(c.getColumnIndexOrThrow("v_visits"))) null else c.getInt(c.getColumnIndexOrThrow("v_visits"))
-                    val vDateLastVisit = c.getString(c.getColumnIndexOrThrow("v_date_last_visit"))
-                    val vEntryId = if (c.isNull(c.getColumnIndexOrThrow("v_entry_id"))) null else c.getLong(c.getColumnIndexOrThrow("v_entry_id"))
-
-                    val visit = EntryVisitHistory(
-                        id = vId,
-                        visits = vVisits,
-                        date_last_visit = vDateLastVisit,
-                        entry_id = vEntryId
-                    )
-
-                    val entry = EntrySqliteRepository.cursorToEntry(c)
-                    result.add(Pair(visit, entry))
-                }
-            }
-            db.close()
-        } catch (e: Exception) {
-            val functionName = object {}.javaClass.enclosingMethod?.name
-            AppLoggingRepository.error(context, activeDatabaseState, "Exception when loading visited entries in $functionName", e.message)
-            e.printStackTrace()
-        }
-
-        result
-    }
-
-    /**
      * Records or updates a visit for [entryId] in the `entryvisithistory` table.
      * Increments the visits count and updates date_last_visit.
      */
@@ -232,15 +129,6 @@ object EntryVisitHistoryRepository : RepositoryInterface {
     }
 
     /**
-     * Deletes a visit history record by ID (alias for [deleteById]).
-     */
-    suspend fun deleteVisit(
-        context: Context,
-        activeDatabaseState: DatabaseState?,
-        id: Long
-    ): Pair<Boolean, String?> = deleteById(context, activeDatabaseState, id)
-
-    /**
      * Clears all records from the `entryvisithistory` table.
      */
     override suspend fun clear(
@@ -267,13 +155,5 @@ object EntryVisitHistoryRepository : RepositoryInterface {
             Pair(false, e.message ?: "Unknown SQL error")
         }
     }
-
-    /**
-     * Clears all records from the `entryvisithistory` table (alias for [clear]).
-     */
-    suspend fun clearVisitHistory(
-        context: Context,
-        activeDatabaseState: DatabaseState?
-    ): Pair<Boolean, String?> = clear(context, activeDatabaseState)
 }
 

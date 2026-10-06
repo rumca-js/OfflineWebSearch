@@ -1,5 +1,7 @@
 package io.github.rumcajs.offlinewebsearch.data
 
+import android.app.Notification
+import android.app.NotificationManager
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
@@ -12,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.File
 
@@ -124,14 +127,14 @@ class AppLoggingRepositoryTest {
     }
 
     @Test
-    fun `info stores level INFO = 0`() = runBlocking {
+    fun `info stores level INFO = 20`() = runBlocking {
         AppLoggingRepository.info(context, dbState, "Info level test")
 
         val logs = queryAllLogs()
         val inserted = logs.firstOrNull { it.info_text == "Info level test" }
         assertNotNull(inserted)
         assertEquals(AppLoggingRepository.LEVEL_INFO, inserted!!.level)
-        assertEquals(0, inserted.level)
+        assertEquals(20, inserted.level)
     }
 
     @Test
@@ -250,14 +253,14 @@ class AppLoggingRepositoryTest {
     }
 
     @Test
-    fun `error stores level ERROR = 2`() = runBlocking {
+    fun `error stores level ERROR = 40`() = runBlocking {
         AppLoggingRepository.error(context, dbState, "Error level test")
 
         val logs = queryAllLogs()
         val inserted = logs.firstOrNull { it.info_text == "Error level test" }
         assertNotNull(inserted)
         assertEquals(AppLoggingRepository.LEVEL_ERROR, inserted!!.level)
-        assertEquals(2, inserted.level)
+        assertEquals(40, inserted.level)
     }
 
     @Test
@@ -317,5 +320,95 @@ class AppLoggingRepositoryTest {
         assertNotEquals(infoLog!!.level, errorLog!!.level)
         assertEquals(AppLoggingRepository.LEVEL_INFO, infoLog.level)
         assertEquals(AppLoggingRepository.LEVEL_ERROR, errorLog.level)
+    }
+
+    // ── notify & notification tests ───────────────────────────────────────────
+
+    @Test
+    fun `notify stores level NOTIFICATION = 60`() = runBlocking {
+        AppLoggingRepository.notify(context, dbState, "Notification test")
+
+        val logs = queryAllLogs()
+        val inserted = logs.firstOrNull { it.info_text == "Notification test" }
+        assertNotNull(inserted)
+        assertEquals(AppLoggingRepository.LEVEL_NOTIFICATION, inserted!!.level)
+        assertEquals(60, inserted.level)
+    }
+
+    @Test
+    fun `notify persists info_text and detail_text in database`() = runBlocking {
+        val (ok, error) = AppLoggingRepository.notify(context, dbState, "Notify Title", "Notify detail body")
+        assertTrue(ok)
+        assertNull(error)
+
+        val logs = queryAllLogs()
+        val inserted = logs.firstOrNull { it.info_text == "Notify Title" }
+        assertNotNull(inserted)
+        assertEquals("Notify detail body", inserted!!.detail_text)
+        assertEquals(AppLoggingRepository.LEVEL_NOTIFICATION, inserted.level)
+    }
+
+    @Test
+    fun `notify pushes a system notification with title and text`() = runBlocking {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNm = shadowOf(notificationManager)
+        shadowNm.allNotifications.clear()
+
+        AppLoggingRepository.notify(context, dbState, "Alert headline", "Alert description")
+
+        val notifications = shadowNm.allNotifications
+        assertEquals(1, notifications.size)
+        val notification = notifications.first()
+        val title = notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val text = notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        assertEquals("Alert headline", title)
+        assertEquals("Alert description", text)
+    }
+
+    @Test
+    fun `notify creates the app notification channel`() = runBlocking {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        AppLoggingRepository.notify(context, dbState, "Channel check")
+
+        val channel = notificationManager.getNotificationChannel(AppLoggingRepository.NOTIFICATION_CHANNEL_ID)
+        assertNotNull("Expected notification channel to be created", channel)
+        assertEquals(AppLoggingRepository.NOTIFICATION_CHANNEL_NAME, channel.name)
+    }
+
+    @Test
+    fun `notify pushes notification even when activeDatabaseState is null`() = runBlocking {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNm = shadowOf(notificationManager)
+        shadowNm.allNotifications.clear()
+
+        val (ok, error) = AppLoggingRepository.notify(context, null, "Null DB notification", "Still notified")
+        assertFalse(ok)
+        assertNotNull(error)
+
+        val notifications = shadowNm.allNotifications
+        assertEquals(1, notifications.size)
+        val notification = notifications.first()
+        val title = notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val text = notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        assertEquals("Null DB notification", title)
+        assertEquals("Still notified", text)
+    }
+
+    @Test
+    fun `pushNotification pushes notification directly`() {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNm = shadowOf(notificationManager)
+        shadowNm.allNotifications.clear()
+
+        val id = AppLoggingRepository.pushNotification(context, "Direct title", "Direct detail", notificationId = 12345)
+        assertEquals(12345, id)
+
+        val notifications = shadowNm.allNotifications
+        assertEquals(1, notifications.size)
+        val notification = notifications.first()
+        val title = notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val text = notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        assertEquals("Direct title", title)
+        assertEquals("Direct detail", text)
     }
 }

@@ -128,13 +128,18 @@ private fun LogEntryCard(
     onClick: () -> Unit
 ) {
     val levelColor = when (log.level) {
+        AppLoggingRepository.LEVEL_CRITICAL,
         AppLoggingRepository.LEVEL_ERROR -> MaterialTheme.colorScheme.errorContainer
         AppLoggingRepository.LEVEL_WARNING -> MaterialTheme.colorScheme.tertiaryContainer
+        AppLoggingRepository.LEVEL_NOTIFICATION -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val levelLabel = when (log.level) {
+        AppLoggingRepository.LEVEL_CRITICAL -> "CRITICAL"
         AppLoggingRepository.LEVEL_ERROR -> "ERROR"
         AppLoggingRepository.LEVEL_WARNING -> "WARN"
+        AppLoggingRepository.LEVEL_NOTIFICATION -> "NOTIFY"
+        AppLoggingRepository.LEVEL_DEBUG -> "DEBUG"
         else -> "INFO"
     }
 
@@ -198,14 +203,19 @@ private fun LogDetailDialog(
     onDismiss: () -> Unit
 ) {
     val levelLabel = when (log.level) {
+        AppLoggingRepository.LEVEL_CRITICAL -> "CRITICAL"
         AppLoggingRepository.LEVEL_ERROR -> "ERROR"
         AppLoggingRepository.LEVEL_WARNING -> "WARN"
+        AppLoggingRepository.LEVEL_NOTIFICATION -> "NOTIFY"
+        AppLoggingRepository.LEVEL_DEBUG -> "DEBUG"
         else -> "INFO"
     }
 
     val levelColor = when (log.level) {
+        AppLoggingRepository.LEVEL_CRITICAL,
         AppLoggingRepository.LEVEL_ERROR -> MaterialTheme.colorScheme.error
         AppLoggingRepository.LEVEL_WARNING -> MaterialTheme.colorScheme.tertiary
+        AppLoggingRepository.LEVEL_NOTIFICATION -> MaterialTheme.colorScheme.secondary
         else -> MaterialTheme.colorScheme.primary
     }
 
