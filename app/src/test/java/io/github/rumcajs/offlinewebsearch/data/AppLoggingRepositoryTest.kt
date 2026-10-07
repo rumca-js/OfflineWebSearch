@@ -1,5 +1,7 @@
 package io.github.rumcajs.offlinewebsearch.data
 
+import android.Manifest
+import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
@@ -35,6 +37,8 @@ class AppLoggingRepositoryTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         val (state, file) = RepositoryTestHelper.setup(context)
         dbState = state
         dbFile = file
