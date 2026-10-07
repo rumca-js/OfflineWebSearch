@@ -282,6 +282,27 @@ class EntriesViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Marks all unread entries in the active database as read (page_rating_visits set to 1)
+     * and refreshes the current page of results.
+     *
+     * @param context Application context.
+     * @param onDone Optional callback invoked with the number of rows updated.
+     */
+    fun markAllRead(context: Context, onDone: ((Int) -> Unit)? = null) {
+        viewModelScope.launch {
+            val config = AppConfigManager.config.first()
+            val activeState = config.activeDatabaseState
+            if (activeState != null && !activeState.isReadOnly) {
+                val count = EntryRepository.markAllRead(context, activeState)
+                refreshCurrentPage(context)
+                onDone?.invoke(count)
+            } else {
+                onDone?.invoke(0)
+            }
+        }
+    }
+
     fun nextPage(context: Context) {
         if (currentPage + 1 < totalPages) {
             currentPage++

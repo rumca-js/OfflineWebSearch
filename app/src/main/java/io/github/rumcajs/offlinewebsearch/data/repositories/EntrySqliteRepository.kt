@@ -536,6 +536,49 @@ object EntrySqliteRepository : EntryRepository() {
     }
 
     /**
+     * Marks all unvisited entries (where `page_rating_visits` is 0 or null) as read by setting `page_rating_visits` to 1.
+     *
+     * @param context Application context used for locating database files and logging.
+     * @param activeDatabaseState Current database state.
+     * @return Number of rows updated, or 0 on error/read-only.
+     */
+    suspend fun markAllRead(
+        context: Context,
+        activeDatabaseState: DatabaseState?
+    ): Int = withContext(Dispatchers.IO) {
+        val state = resolveEffectiveState(context, activeDatabaseState)
+        if (state.isReadOnly) return@withContext 0
+
+        val file = File(context.filesDir, state.localFileName)
+        if (!file.exists()) return@withContext 0
+
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val updatedRows = markAllRead(db)
+            db.close()
+            updatedRows
+        } catch (e: Exception) {
+            val functionName = object {}.javaClass.enclosingMethod?.name
+            AppLoggingRepository.error(context, state, "Error marking all entries read in $functionName", e.message)
+            e.printStackTrace()
+            0
+        }
+    }
+
+    /**
+     * Marks all unvisited entries (where `page_rating_visits` is 0 or null) as read by setting `page_rating_visits` to 1.
+     *
+     * @param db Open writable [SQLiteDatabase] instance.
+     * @return Number of updated rows.
+     */
+    fun markAllRead(db: SQLiteDatabase): Int {
+        val values = ContentValues().apply {
+            put("page_rating_visits", 1)
+        }
+        return db.update(getTableName(), values, "COALESCE(page_rating_visits, 0) = 0", null)
+    }
+
+    /**
      * Deletes an entry and all related records (tags, socialdata, visits, transitions, readlater) by [id].
      * @return Pair(true, null) on success, Pair(false, errorMessage) on failure.
      */

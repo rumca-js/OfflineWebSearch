@@ -631,4 +631,50 @@ class EntryRepositoryTest {
         assertEquals(0, EntryTransitionHistoryRepository.count(context, dbState))
         assertEquals(0, ReadLaterRepository.count(context, dbState))
     }
+
+    // ── markAllRead: marks all unread entries as read ──────────────────────────
+
+    @Test
+    fun `markAllRead updates unread entries with page_rating_visits 0 to 1`() = runBlocking {
+        val entry1 = Entry(id = 9001L, link = "https://example.com/1", title = "Unread 1", page_rating_visits = 0)
+        val entry2 = Entry(id = 9002L, link = "https://example.com/2", title = "Unread 2", page_rating_visits = 0)
+        val entry3 = Entry(id = 9003L, link = "https://example.com/3", title = "Already Read", page_rating_visits = 5)
+        EntrySqliteRepository.populateEntries(dbFile, listOf(entry1, entry2, entry3))
+
+        val updatedCount = EntrySqliteRepository.markAllRead(context, dbState)
+        assertEquals(2, updatedCount)
+
+        val read1 = queryEntry(9001L)
+        val read2 = queryEntry(9002L)
+        val read3 = queryEntry(9003L)
+
+        assertEquals(1, read1?.page_rating_visits)
+        assertEquals(1, read2?.page_rating_visits)
+        assertEquals(5, read3?.page_rating_visits)
+    }
+
+    @Test
+    fun `markAllRead returns 0 when all entries are already read`() = runBlocking {
+        val entry = Entry(id = 9004L, link = "https://example.com/4", title = "Read", page_rating_visits = 2)
+        EntrySqliteRepository.populateEntries(dbFile, listOf(entry))
+
+        val updatedCount = EntrySqliteRepository.markAllRead(context, dbState)
+        assertEquals(0, updatedCount)
+    }
+
+    @Test
+    fun `markAllRead on SQLiteDatabase instance directly updates unread rows`() {
+        val entry1 = Entry(id = 9005L, link = "https://example.com/5", title = "Unread", page_rating_visits = 0)
+        val entry2 = Entry(id = 9006L, link = "https://example.com/6", title = "Read", page_rating_visits = 1)
+        EntrySqliteRepository.populateEntries(dbFile, listOf(entry1, entry2))
+
+        val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+        val updatedCount = db.use { EntrySqliteRepository.markAllRead(it) }
+        assertEquals(1, updatedCount)
+
+        val read1 = queryEntry(9005L)
+        val read2 = queryEntry(9006L)
+        assertEquals(1, read1?.page_rating_visits)
+        assertEquals(1, read2?.page_rating_visits)
+    }
 }

@@ -9,6 +9,7 @@
  - The application does not require an internet connection to search local databases.
  - Internet access is required when fetching databases, sources, or web pages.
  - This instruction should contain brief statements.
+ - Do not run unit tests before making changes. You can run them after changes have been done
 
 A database is a searchable collection of entries.
 A database can be backed by SQLite or JSON files.
@@ -108,7 +109,7 @@ Screens:
 ## EntriesListScreen
  - Entries screen is scrollable (search widget, entry results, pagination controls are in one scrollable container)
  - Provides search widget with full width text input
- - Provides floating buttons: to add new entry, to navigate to top
+ - Provides floating buttons: to add new entry, to mark all entries as read, to navigate to top
  - Search widget is followed with "Search" button and a button to select "filters" for search results.
  Filters are read from SQLite table, but if it nos available by default by Date published filter should be used. Always some filter need to be applied
    -- "Visited" filter - entry results should visited entries

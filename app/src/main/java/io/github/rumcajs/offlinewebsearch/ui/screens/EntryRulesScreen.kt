@@ -10,8 +10,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,6 +59,7 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
     var selectedRule by remember { mutableStateOf<EntryRule?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingRule by remember { mutableStateOf<EntryRule?>(null) }
+    var showHelp by remember { mutableStateOf(false) }
 
     fun loadRules() {
         scope.launch {
@@ -135,6 +138,12 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
         )
     }
 
+    if (showHelp) {
+        EntryRulesHelpDialog(
+            onDismiss = { showHelp = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -145,6 +154,12 @@ fun EntryRulesScreen(onBack: () -> Unit = {}) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showHelp = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.HelpOutline,
+                            contentDescription = "Help"
+                        )
+                    }
                     if (isWritable) {
                         IconButton(onClick = { showAddDialog = true }) {
                             Icon(Icons.Filled.Add, contentDescription = "Add Entry Rule")
@@ -367,6 +382,7 @@ private fun RuleFormDialog(
     var block by remember { mutableStateOf(initialRule?.block ?: false) }
     var trust by remember { mutableStateOf(initialRule?.trust ?: false) }
     var enabled by remember { mutableStateOf(initialRule?.enabled ?: true) }
+    var showUrlHelp by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
 
@@ -388,11 +404,82 @@ private fun RuleFormDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                if (showUrlHelp) {
+                    AlertDialog(
+                        onDismissRequest = { showUrlHelp = false },
+                        title = { Text("Trigger URL — Help") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    "Enter one or more URL patterns that will trigger this rule.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    "Multiple patterns — separate with a comma (,):",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    ".*youtube.com.*,.*youtu.be.*",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    "Each pattern is a Java regular expression matched against the full entry URL.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    "Common patterns:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    ".*example\\.com.* — any URL on example.com\n" +
+                                    "https://news\\.example\\.com/.* — specific subdomain\n" +
+                                    ".*(reddit|lemmy)\\.com.* — multiple sites",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    "Tip: Use .* to match any characters, and \\. to match a literal dot.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showUrlHelp = false }) { Text("Got it") }
+                        }
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Trigger Rule URLs",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { showUrlHelp = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.Info,
+                            contentDescription = "URL pattern help",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = triggerRuleUrl,
                     onValueChange = { triggerRuleUrl = it },
-                    label = { Text("Trigger Rule URL") },
-                    placeholder = { Text("e.g. https://example.com/*") },
+                    label = { Text("Trigger Rule URLs") },
+                    placeholder = { Text("e.g. .*example\\.com.*,.*youtu\\.be.*") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -609,4 +696,89 @@ private fun RuleDetailRow(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+/**
+ * Dialog providing guidance and practical examples for configuring Entry Rules.
+ *
+ * Details how rules can be used to filter or block content (such as YouTube Shorts),
+ * URL regex pattern matching, and rule configuration options.
+ *
+ * @param onDismiss Callback invoked when the user dismisses the dialog.
+ */
+@Composable
+private fun EntryRulesHelpDialog(onDismiss: () -> Unit) {
+    val scrollState = rememberScrollState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Entry Rules — Help") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Entry rules allow you to automatically filter, block, or categorize search results and entries based on URL patterns.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Text(
+                    text = "Blocking Content (e.g. YouTube Shorts):",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Rules can be used to block unwanted entries from search results, such as YouTube Shorts or specific domains.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Example — Block YouTube Shorts:",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "• Rule Name: Block Shorts\n" +
+                        "• Trigger URL: .*youtube\\.com/shorts/.*\n" +
+                        "• Block matching entries: Checked (enabled)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    text = "URL Pattern Matching:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "• Patterns use regular expressions matched against entry URLs.\n" +
+                        "• Multiple patterns can be separated with commas (,).\n" +
+                        "• Example: .*youtube\\.com.*,.*youtu\\.be.*\n" +
+                        "• Use .* to match any characters and \\. to match a dot.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Text(
+                    text = "Rule Options:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "• Block: Excludes matching entries from search results.\n" +
+                        "• Auto Tag: Automatically attaches tags to matching entries.\n" +
+                        "• Priority: Affects rule evaluation ordering (higher numbers evaluate first).\n" +
+                        "• Trust: Marks matching entries as trusted.\n" +
+                        "• Enabled Switch: Quickly turn rules on or off without deleting them.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Got it")
+            }
+        }
+    )
 }

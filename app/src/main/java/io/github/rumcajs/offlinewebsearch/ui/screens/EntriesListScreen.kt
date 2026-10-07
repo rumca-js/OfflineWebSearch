@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -158,6 +159,21 @@ fun EntriesListScreen(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (isEditable) {
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.markAllRead(context)
+                    },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DoneAll,
+                        contentDescription = "Mark all read"
+                    )
+                }
+            }
+
             if (showAddEntry) {
                 FloatingActionButton(
                     onClick = onNavigateToAddEntry!!,

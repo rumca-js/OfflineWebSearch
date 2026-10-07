@@ -184,6 +184,18 @@ abstract class EntryRepository : RepositoryInterface {
         ): Boolean = EntrySqliteRepository.incrementVisitSql(context, activeDatabaseState, id, link)
 
         /**
+         * Marks all unvisited entries (where page_rating_visits is 0 or null) as read by setting page_rating_visits to 1.
+         *
+         * @param context Application context.
+         * @param activeDatabaseState Current database state.
+         * @return Number of rows updated.
+         */
+        suspend fun markAllRead(
+            context: Context,
+            activeDatabaseState: DatabaseState?
+        ): Int = EntrySqliteRepository.markAllRead(context, activeDatabaseState)
+
+        /**
          * Deletes an entry (and its associated tags, history, social data) from the SQLite database.
          * Entry is identified by its primary key [id] (or [link] if [id] is null).
          * @return true if at least one row was deleted, false otherwise.
