@@ -7,6 +7,7 @@ import java.lang.StringBuilder
 import java.security.MessageDigest
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import io.github.rumcajs.offlinewebsearch.util.HtmlUtils
 
 class RssPage(val link: String, val contents: String) : Page {
     private var feedTitle: String? = null
@@ -104,7 +105,7 @@ class RssPage(val link: String, val contents: String) : Page {
                             currentText = StringBuilder()
                         }
 
-                        XmlPullParser.TEXT -> {
+                        XmlPullParser.TEXT, XmlPullParser.CDSECT -> {
                             currentText.append(parser.text ?: "")
                         }
 
@@ -116,7 +117,7 @@ class RssPage(val link: String, val contents: String) : Page {
                                 when (tag) {
                                     "title" -> {
                                         if (entryTitle == null) {
-                                            entryTitle = text.ifEmpty { null }
+                                            entryTitle = HtmlUtils.cleanTitle(text)
                                         }
                                     }
                                     "link" -> {
@@ -126,7 +127,7 @@ class RssPage(val link: String, val contents: String) : Page {
                                     }
                                     "description", "summary", "content", "content:encoded" -> {
                                         if (entryDescription == null) {
-                                            entryDescription = text.ifEmpty { null }
+                                            entryDescription = HtmlUtils.cleanDescription(text)
                                         }
                                     }
                                     "url" -> {
@@ -155,12 +156,12 @@ class RssPage(val link: String, val contents: String) : Page {
                                 when (tag) {
                                     "title" -> {
                                         if (feedTitle == null) {
-                                            feedTitle = text.ifEmpty { null }
+                                            feedTitle = HtmlUtils.cleanTitle(text)
                                         }
                                     }
                                     "description", "subtitle" -> {
                                         if (feedDescription == null) {
-                                            feedDescription = text.ifEmpty { null }
+                                            feedDescription = HtmlUtils.cleanDescription(text)
                                         }
                                     }
                                     "language" -> {

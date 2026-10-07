@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.webtoolkit
 
 import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import io.github.rumcajs.offlinewebsearch.util.HtmlUtils
 import java.security.MessageDigest
 import java.util.Date
 
@@ -59,13 +60,7 @@ class HtmlPage(val url: String, val contents: String) : Page {
     }
 
     private fun unescapeHtml(text: String): String {
-        return text
-            .replace("&amp;", "&")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("&#39;", "'")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
+        return HtmlUtils.unescapeHtml(text)
     }
 
     /**

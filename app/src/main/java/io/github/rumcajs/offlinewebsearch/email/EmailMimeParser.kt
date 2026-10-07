@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch.email
 
 import android.util.Base64
 import io.github.rumcajs.offlinewebsearch.util.DateUtils
+import io.github.rumcajs.offlinewebsearch.util.HtmlUtils
 import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import java.util.Date
@@ -350,21 +351,10 @@ object EmailMimeParser {
     }
 
     /**
-     * Strips HTML tags and unescapes basic HTML entities.
+     * Strips HTML tags and unescapes HTML entities.
      */
     private fun stripHtml(html: String): String {
-        return html
-            .replace(Regex("<style[\\s\\S]*?</style>", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("<script[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
-            .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n\n")
-            .replace(Regex("<[^>]+>"), "")
-            .replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .trim()
+        return HtmlUtils.stripHtml(html)
     }
 
     /**

@@ -226,4 +226,52 @@ class RssPageTest {
         val rssPage = RssPage("https://example.com/feed.xml", xml)
         assertTrue(rssPage.getThumbnails().isEmpty())
     }
+
+    @Test
+    fun testTitleAndDescriptionWithHtmlEntitiesAndTags() {
+        val xml = """
+            <rss version="2.0">
+              <channel>
+                <title>&quot;Channel Title&quot; &amp; More</title>
+                <description>&lt;b&gt;Channel Description&lt;/b&gt; with &quot;quotes&quot;</description>
+                <item>
+                  <title><![CDATA[&quot;Breaking News&quot; &amp; Latest &lsquo;Updates&rsquo;]]></title>
+                  <link>https://example.com/news</link>
+                  <description><![CDATA[<p>First paragraph with &quot;quotes&quot; and <a href="https://example.com">link</a>.</p><p>Second paragraph &amp; more.</p>]]></description>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/feed.xml", xml)
+        assertEquals("\"Channel Title\" & More", rssPage.getTitle())
+        assertEquals("Channel Description with \"quotes\"", rssPage.getDescription())
+
+        val entries = rssPage.getEntries()
+        assertEquals(1, entries.size)
+        assertEquals("\"Breaking News\" & Latest ‘Updates’", entries[0].title)
+        assertEquals("First paragraph with \"quotes\" and link.\n\nSecond paragraph & more.", entries[0].description)
+    }
+
+    @Test
+    fun testDoubleEscapedEntitiesInTitleAndDescription() {
+        val xml = """
+            <rss version="2.0">
+              <channel>
+                <title>Feed</title>
+                <item>
+                  <title>&amp;quot;Double Escaped Title&amp;quot;</title>
+                  <link>https://example.com/double</link>
+                  <description>Summary with &amp;quot;nested quotes&amp;quot; &amp;amp; &amp;copy; 2024</description>
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+
+        val rssPage = RssPage("https://example.com/feed.xml", xml)
+        val entries = rssPage.getEntries()
+        assertEquals(1, entries.size)
+        assertEquals("\"Double Escaped Title\"", entries[0].title)
+        assertEquals("Summary with \"nested quotes\" & © 2024", entries[0].description)
+    }
 }
