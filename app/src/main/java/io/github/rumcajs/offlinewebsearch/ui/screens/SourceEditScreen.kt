@@ -61,6 +61,11 @@ fun SourceEditScreen(
         val parsedAge = ageText.toIntOrNull() ?: 0
         val finalAge = if (parsedAge >= 0) parsedAge else 0
         return if (isAddMode) {
+            val existing = SourceRepository.getSourceByUrl(context, activeDbState, url)
+            if (existing != null) {
+                urlError = "A source with this URL already exists"
+                return false
+            }
             val (success, err) = SourceRepository.insertSource(
                 context = context,
                 activeDatabaseState = activeDbState,

@@ -392,6 +392,38 @@ object EntrySqliteRepository : EntryRepository() {
     }
 
     /**
+     * Finds an entry in `linkdatamodel` with the given [link], or returns null if not found.
+     *
+     * @param context Application context.
+     * @param activeDatabaseState The active database state.
+     * @param link The URL to look up.
+     * @return The matching [Entry], or null if none exists or on error.
+     */
+    suspend fun getEntryByLink(
+        context: Context,
+        activeDatabaseState: DatabaseState?,
+        link: String
+    ): Entry? = withContext(Dispatchers.IO) {
+        if (link.isBlank()) return@withContext null
+        if (activeDatabaseState == null || !activeDatabaseState.isSQLite) return@withContext null
+        val file = File(context.filesDir, activeDatabaseState.localFileName)
+        if (!file.exists()) return@withContext null
+        try {
+            val db = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            db.use {
+                val cursor = it.rawQuery(
+                    "SELECT * FROM ${getTableName()} WHERE link = ? LIMIT 1",
+                    arrayOf(link)
+                )
+                cursor.use { c -> if (c.moveToFirst()) cursorToEntry(c) else null }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
      * Updates an existing entry's title and description in the database.
      * Entry is identified by its primary key [id] (or [originalLink] if [id] is null).
      */

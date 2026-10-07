@@ -194,6 +194,16 @@ abstract class EntryRepository : RepositoryInterface {
             id: Long?,
             link: String?
         ): Boolean = EntrySqliteRepository.deleteEntry(context, activeDatabaseState, id, link)
+
+        /**
+         * Finds an entry in `linkdatamodel` with [link] as its URL, or returns null.
+         * Used to detect duplicates before inserting a new entry.
+         */
+        suspend fun getEntryByLink(
+            context: Context,
+            activeDatabaseState: DatabaseState?,
+            link: String
+        ): Entry? = EntrySqliteRepository.getEntryByLink(context, activeDatabaseState, link)
     }
 }
 

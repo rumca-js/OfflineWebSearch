@@ -124,6 +124,12 @@ fun SourceUrlEditPreviewScreen(
         }
         urlError = null
 
+        val existing = SourceRepository.getSourceByUrl(context, activeDbState, url)
+        if (existing != null) {
+            urlError = "A source with this URL already exists"
+            return false
+        }
+
         val parsedAge = ageText.toIntOrNull() ?: 0
         val finalAge = if (parsedAge >= 0) parsedAge else 0
 

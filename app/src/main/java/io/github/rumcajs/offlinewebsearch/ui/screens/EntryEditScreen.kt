@@ -61,6 +61,11 @@ fun EntryEditScreen(
             errorMessage = "No active database selected"
             false
         } else if (isAddMode) {
+            val existing = EntryRepository.getEntryByLink(context, activeDbState, link)
+            if (existing != null) {
+                linkError = "An entry with this link already exists"
+                return false
+            }
             val now = DateUtils.getCurrentTimestamp() // TODO - not ISO?
             val (success, rowId, err) = EntryRepository.add(
                 context = context,

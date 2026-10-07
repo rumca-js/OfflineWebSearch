@@ -146,6 +146,11 @@ fun SourceEmailEditScreen(
         }
 
         return if (isAddMode) {
+            val existing = SourceRepository.getSourceByUrl(context, activeDbState, trimmedUrl)
+            if (existing != null) {
+                urlError = "A source with this URL already exists"
+                return false
+            }
             // 1. Insert credentials
             val hostPart = trimmedUrl.substringAfter("://").substringBefore("/").substringBefore(":")
             val baseCredName = "email_${trimmedUsername}@${hostPart.ifBlank { "server" }}"
