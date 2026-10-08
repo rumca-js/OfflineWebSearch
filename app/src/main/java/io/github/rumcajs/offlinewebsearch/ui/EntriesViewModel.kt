@@ -34,6 +34,16 @@ class EntriesViewModel : ViewModel() {
     var activeFilter by mutableStateOf(EntrySearchFilter.None)
         private set
 
+    /**
+     * Whether the "Mark all read" floating action button is currently visible.
+     *
+     * Becomes false when the user clicks "Mark all read".
+     * Restored to true whenever the entry list result changes (new search, filter change,
+     * page navigation, database reload, etc.).
+     */
+    var isMarkAllReadVisible by mutableStateOf(true)
+        private set
+
     /** Lazy list state preserved across navigation. */
     val listState = androidx.compose.foundation.lazy.LazyListState()
 
@@ -49,6 +59,7 @@ class EntriesViewModel : ViewModel() {
     fun setFilter(context: Context? = null, filter: EntrySearchFilter) {
         activeFilter = if (activeFilter == filter) EntrySearchFilter.None else filter
         currentPage = 0
+        isMarkAllReadVisible = true
         if (context != null) {
             viewModelScope.launch {
                 val config = AppConfigManager.config.first()
@@ -114,6 +125,7 @@ class EntriesViewModel : ViewModel() {
                 var wasRunning = false
                 SourceRefreshWorker.progress.collect { progress ->
                     if (wasRunning && !progress.isRunning && progress.done > 0) {
+                        isMarkAllReadVisible = true
                         refreshCurrentPage(context)
                     }
                     wasRunning = progress.isRunning
@@ -137,6 +149,7 @@ class EntriesViewModel : ViewModel() {
                     currentLinksPerPage = activeLinksPerPage
                     pageSize = activeLinksPerPage
                     currentPage = 0
+                    isMarkAllReadVisible = true
                     val activeState = config.activeDatabaseState
                     if (activeState != null && activeState.isSQLite) {
                         val historyList = SearchHistoryRepository.getSearchHistory(context, activeState)
@@ -156,6 +169,7 @@ class EntriesViewModel : ViewModel() {
         showSuggestions = false
         activeSearchQuery = searchQuery
         currentPage = 0
+        isMarkAllReadVisible = true
         if (searchQuery.isNotBlank()) {
             val history = searchHistory.toMutableList()
             history.remove(searchQuery)
@@ -193,6 +207,7 @@ class EntriesViewModel : ViewModel() {
         showSuggestions = false
         activeFilter = EntrySearchFilter.None
         currentPage = 0
+        isMarkAllReadVisible = true
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -200,8 +215,11 @@ class EntriesViewModel : ViewModel() {
     // ──────────────────────────────────────────────────────────────────────────
 
     /** Re-fetches the current page (e.g. after an add or edit). */
-    fun refreshPage(context: Context) {
-        refreshCurrentPage(context)
+    fun refreshPage(context: Context? = null) {
+        isMarkAllReadVisible = true
+        if (context != null) {
+            refreshCurrentPage(context)
+        }
     }
 
     /**
@@ -276,6 +294,7 @@ class EntriesViewModel : ViewModel() {
                 link = entry.link
             )
             if (success) {
+                isMarkAllReadVisible = true
                 refreshCurrentPage(context)
             }
             onResult(success)
@@ -284,36 +303,47 @@ class EntriesViewModel : ViewModel() {
 
     /**
      * Marks all unread entries in the active database as read (page_rating_visits set to 1)
-     * and refreshes the current page of results.
+     * and refreshes the current page of results. Hides the "Mark all read" button.
      *
      * @param context Application context.
      * @param onDone Optional callback invoked with the number of rows updated.
      */
-    fun markAllRead(context: Context, onDone: ((Int) -> Unit)? = null) {
-        viewModelScope.launch {
-            val config = AppConfigManager.config.first()
-            val activeState = config.activeDatabaseState
-            if (activeState != null && !activeState.isReadOnly) {
-                val count = EntryRepository.markAllRead(context, activeState)
+    fun markAllRead(context: Context? = null, onDone: ((Int) -> Unit)? = null) {
+        isMarkAllReadVisible = false
+        if (context != null) {
+            viewModelScope.launch {
+                val config = AppConfigManager.config.first()
+                val activeState = config.activeDatabaseState
+                if (activeState != null && !activeState.isReadOnly) {
+                    val count = EntryRepository.markAllRead(context, activeState)
+                    refreshCurrentPage(context)
+                    onDone?.invoke(count)
+                } else {
+                    onDone?.invoke(0)
+                }
+            }
+        } else {
+            onDone?.invoke(0)
+        }
+    }
+
+    fun nextPage(context: Context? = null) {
+        if (currentPage + 1 < totalPages) {
+            currentPage++
+            isMarkAllReadVisible = true
+            if (context != null) {
                 refreshCurrentPage(context)
-                onDone?.invoke(count)
-            } else {
-                onDone?.invoke(0)
             }
         }
     }
 
-    fun nextPage(context: Context) {
-        if (currentPage + 1 < totalPages) {
-            currentPage++
-            refreshCurrentPage(context)
-        }
-    }
-
-    fun previousPage(context: Context) {
+    fun previousPage(context: Context? = null) {
         if (currentPage > 0) {
             currentPage--
-            refreshCurrentPage(context)
+            isMarkAllReadVisible = true
+            if (context != null) {
+                refreshCurrentPage(context)
+            }
         }
     }
 

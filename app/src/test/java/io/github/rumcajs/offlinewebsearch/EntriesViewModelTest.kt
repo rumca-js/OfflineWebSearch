@@ -140,4 +140,44 @@ class EntriesViewModelTest {
         val twoHoursAgo = sdf.format(java.util.Date(System.currentTimeMillis() - 2 * 3600 * 1000L))
         assertTrue(repo.isFetchOutdated(twoHoursAgo))
     }
+
+    @Test
+    fun testMarkAllReadVisibilityChanges() {
+        val viewModel = EntriesViewModel()
+
+        // Initial state: visible
+        assertTrue(viewModel.isMarkAllReadVisible)
+
+        // Mark all read -> hidden
+        viewModel.markAllRead()
+        assertFalse(viewModel.isMarkAllReadVisible)
+
+        // Perform search -> visible again
+        viewModel.performSearch()
+        assertTrue(viewModel.isMarkAllReadVisible)
+
+        // Mark all read -> hidden
+        viewModel.markAllRead()
+        assertFalse(viewModel.isMarkAllReadVisible)
+
+        // Filter change -> visible again
+        viewModel.setFilter(filter = io.github.rumcajs.offlinewebsearch.ui.EntrySearchFilter.Visited)
+        assertTrue(viewModel.isMarkAllReadVisible)
+
+        // Mark all read -> hidden
+        viewModel.markAllRead()
+        assertFalse(viewModel.isMarkAllReadVisible)
+
+        // Reset to defaults -> visible again
+        viewModel.resetToDefaults()
+        assertTrue(viewModel.isMarkAllReadVisible)
+
+        // Mark all read -> hidden
+        viewModel.markAllRead()
+        assertFalse(viewModel.isMarkAllReadVisible)
+
+        // Refresh page -> visible again
+        viewModel.refreshPage()
+        assertTrue(viewModel.isMarkAllReadVisible)
+    }
 }

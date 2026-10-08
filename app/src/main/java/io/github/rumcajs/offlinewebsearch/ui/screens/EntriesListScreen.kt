@@ -159,7 +159,7 @@ fun EntriesListScreen(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (isEditable) {
+            if (isEditable && viewModel.isMarkAllReadVisible) {
                 FloatingActionButton(
                     onClick = {
                         viewModel.markAllRead(context)
