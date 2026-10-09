@@ -226,7 +226,7 @@ The screen displays, where available:
 ## SourcesListScreen
  - Provides floating buttons on right bottom:
     - add - prompts user to select source type (SOURCE_TYPE_RSS or SOURCE_TYPE_EMAIL)
-    - fetch - visible when any sources is outdated and can be refreshed
+    - fetch - visible when any sources is outdated or has consecutive errors and can be refreshed. Prompts user if sources with errors should be refetched
     - navigate to top - available when user scrolls
  - Selecting source opens SourceDetailScreen.
  - Provides search widget, similar to EntryListScreen, it should be scrollable together with the results

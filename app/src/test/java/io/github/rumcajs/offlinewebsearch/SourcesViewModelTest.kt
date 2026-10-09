@@ -65,4 +65,14 @@ class SourcesViewModelTest {
         assertEquals(SourceOrder.ByUrl, viewModel.sourceOrder)
         assertEquals("by_url", viewModel.activeFilterKey)
     }
+
+    @Test
+    fun testRefreshActiveState() {
+        val viewModel = SourcesViewModel()
+
+        // Initial state: not refreshing, no outdated, no errors
+        assertFalse(viewModel.isRefreshActive)
+        assertFalse(viewModel.hasOutdatedSources)
+        assertFalse(viewModel.hasSourceErrors)
+    }
 }

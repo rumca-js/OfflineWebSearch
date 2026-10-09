@@ -59,6 +59,7 @@ fun SourcesListScreen(
     var sourceToDelete by remember { mutableStateOf<Source?>(null) }
     var deleteEntriesWithSource by remember { mutableStateOf(false) }
     var showAddSourceTypeDialog by remember { mutableStateOf(false) }
+    var showRefetchErrorsDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadDataIfNeeded(context)
@@ -295,6 +296,52 @@ fun SourcesListScreen(
                 )
             }
 
+            if (showRefetchErrorsDialog) {
+                AlertDialog(
+                    onDismissRequest = { showRefetchErrorsDialog = false },
+                    title = { Text("Refresh Sources") },
+                    text = {
+                        Text(
+                            text = if (viewModel.hasOutdatedSources) {
+                                "Some sources encountered errors previously. Do you want to refetch sources with errors as well?"
+                            } else {
+                                "Some sources encountered errors previously. Do you want to refetch them now?"
+                            }
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showRefetchErrorsDialog = false
+                                viewModel.refreshAll(context, refetchErrors = true) { msg ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        ) {
+                            Text(if (viewModel.hasOutdatedSources) "Refetch All" else "Refetch")
+                        }
+                    },
+                    dismissButton = {
+                        if (viewModel.hasOutdatedSources) {
+                            TextButton(
+                                onClick = {
+                                    showRefetchErrorsDialog = false
+                                    viewModel.refreshAll(context, refetchErrors = false) { msg ->
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            ) {
+                                Text("Only Outdated")
+                            }
+                        } else {
+                            TextButton(onClick = { showRefetchErrorsDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    }
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -302,19 +349,24 @@ fun SourcesListScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (viewModel.hasOutdatedSources && !viewModel.isRefreshingAll) {
+                val showRefreshButton = (viewModel.hasOutdatedSources || viewModel.hasSourceErrors) && !viewModel.isRefreshingAll
+                if (showRefreshButton) {
                     FloatingActionButton(
                         onClick = {
                             if (!viewModel.isRefreshingAll) {
-                                viewModel.refreshAll(context) { msg ->
-                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                if (viewModel.hasSourceErrors) {
+                                    showRefetchErrorsDialog = true
+                                } else {
+                                    viewModel.refreshAll(context, refetchErrors = false) { msg ->
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Fetch all sources")
+                        Icon(Icons.Default.Refresh, contentDescription = "Fetch sources")
                     }
                 }
 

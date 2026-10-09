@@ -42,6 +42,11 @@ class SourcesViewModel : ViewModel() {
         private set
     var hasOutdatedSources by mutableStateOf(false)
         private set
+    var hasSourceErrors by mutableStateOf(false)
+        private set
+
+    val isRefreshActive: Boolean
+        get() = (hasOutdatedSources || hasSourceErrors) && !isRefreshingAll
 
     var selectedSource by mutableStateOf<Source?>(null)
 
@@ -102,10 +107,13 @@ class SourcesViewModel : ViewModel() {
                 orderBy = sourceOrder,
                 searchQuery = activeSearchQuery
             )
-            hasOutdatedSources = if (!SourceRefreshWorker.progress.value.isRunning) {
-                SourceRepository.hasOutdatedSources(context, activeDbState)
+            val isRunning = SourceRefreshWorker.progress.value.isRunning
+            if (!isRunning) {
+                hasOutdatedSources = SourceRepository.hasOutdatedSources(context, activeDbState)
+                hasSourceErrors = SourceRepository.hasSourceErrors(context, activeDbState)
             } else {
-                false
+                hasOutdatedSources = false
+                hasSourceErrors = false
             }
             isLoading = false
         }
@@ -134,7 +142,11 @@ class SourcesViewModel : ViewModel() {
         }
     }
 
-    fun refreshAll(context: Context, onMessage: ((String) -> Unit)? = null) {
+    fun refreshAll(
+        context: Context,
+        refetchErrors: Boolean = false,
+        onMessage: ((String) -> Unit)? = null
+    ) {
         viewModelScope.launch {
             val config = AppConfigManager.config.first()
             val activeDbState = config.activeDatabaseState
@@ -150,7 +162,11 @@ class SourcesViewModel : ViewModel() {
                 onMessage?.invoke("No sources to fetch")
                 return@launch
             }
-            SourceRefreshWorker.enqueueOutdatedSources(context, activeDbState)
+            SourceRefreshWorker.enqueueOutdatedSources(
+                context = context,
+                dbState = activeDbState,
+                refetchErrors = refetchErrors
+            )
         }
     }
 
