@@ -6,45 +6,35 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
+import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.SOURCE_FILTER_OPTIONS
 import io.github.rumcajs.offlinewebsearch.ui.SourcesViewModel
 import io.github.rumcajs.offlinewebsearch.ui.components.SearchContainer
-import io.github.rumcajs.offlinewebsearch.ui.components.SourceListItem
+import io.github.rumcajs.offlinewebsearch.ui.components.SourcesContainer
 import kotlinx.coroutines.launch
-
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.ui.text.font.FontWeight
-import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 
 /**
  * Screen displaying the list of RSS/feed sources from `sourcedatamodel`.
  *
  * Supports pull-to-refresh to reload the source list from the active database.
- *
- * The search widget is the first item inside a [LazyColumn] so that it scrolls
- * together with the source list — consistent with [EntriesListScreen].
- *
- * The widget uses the shared [SearchContainer] component:
- *  - Full-width text field
- *  - "Search" button that applies the current query
- *  - Filter icon button opening a dropdown with "By Url", "By Title", and "By Fetch Time"
+ * Uses [SourcesContainer] to render the scrollable list of sources, search widget,
+ * and background refresh progress indicator.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,13 +62,6 @@ fun SourcesListScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadDataIfNeeded(context)
-    }
-
-    fun getSourcesEmptyText(): String {
-        if (isEditable) {
-            return "No sources available in current database. Feeds and RSS sources can be added via the add button."
-        }
-        return "Database is read-only. Cannot edit sources"
     }
 
     if (sourceToDelete != null) {
@@ -149,22 +132,26 @@ fun SourcesListScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = viewModel.isLoading,
-            onRefresh = { viewModel.loadSources(context) },
+        Box(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 88.dp)
-            ) {
-                if (isEditable) {
-                    item(key = "search_widget") {
+            SourcesContainer(
+                isLoading = viewModel.isLoading,
+                sources = viewModel.filteredSources,
+                activeSearchQuery = viewModel.activeSearchQuery,
+                isEditable = isEditable,
+                activeDbState = activeDbState,
+                config = config,
+                isRefreshingAll = viewModel.isRefreshingAll,
+                listState = listState,
+                onRefresh = { viewModel.loadSources(context) },
+                onNavigateToSource = onNavigateToSource,
+                onNavigateToEditSource = onNavigateToEditSource,
+                onDeleteClick = { sourceToDelete = it },
+                searchWidget = if (isEditable) {
+                    {
                         SearchContainer(
                             searchQuery = viewModel.searchQuery,
                             onSearchQueryChange = {
@@ -200,79 +187,9 @@ fun SourcesListScreen(
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
-                } else {
-                    item(key = "readonly_banner") {
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "Database is read-only. Editing is disabled.",
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                    }
-                }
-
-                when {
-                    viewModel.isLoading && viewModel.filteredSources.isEmpty() -> {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 64.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                    }
-                    viewModel.filteredSources.isEmpty() && viewModel.activeSearchQuery.isNotBlank() -> {
-                        item {
-                            Text(
-                                text = "No matching sources found.",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 64.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    viewModel.filteredSources.isEmpty() -> {
-                        item {
-                            Text(
-                                text = getSourcesEmptyText(),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 64.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    else -> {
-                        items(viewModel.filteredSources, key = { it.source.id ?: it.source.url }) { item ->
-                            SourceListItem(
-                                source = item.source,
-                                operationalData = item.operationalData,
-                                activeDbState = activeDbState,
-                                isEditable = isEditable,
-                                onClick = { onNavigateToSource(item.source) },
-                                onEditClick = { onNavigateToEditSource(item.source) },
-                                onDeleteClick = { sourceToDelete = item.source },
-                                config = config,
-                                isRefreshing = viewModel.isRefreshingAll
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-                }
-            }
+                } else null,
+                modifier = Modifier.fillMaxSize()
+            )
 
             val showAddSource = isEditable && (onNavigateToAddSource != null || onNavigateToAddRssSource != null || onNavigateToAddEmailSource != null)
             val showScrollToTop by remember {

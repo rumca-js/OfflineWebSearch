@@ -124,7 +124,7 @@ Screens:
  - page navigation elements (prev, next button) are in scrollable area, after search results
  - after page navigation add new result button should be present
  - Selecting an entry opens EntryDetailScreen.
- - Entry results use pull to refresh, fetches data again
+ - Supports pull to refresh to reload and search entry results from the active database
  - Entry results shall be refreshed when necessary
     -- when "Read Later" filter is applied, and "Read Later" table changes
     -- when sources are successfully refreshed
@@ -235,7 +235,8 @@ The screen displays, where available:
  - Probably it would have to be a different search widget implementation from EntryListScreen. These can share same base class though
  - Source fetch means that body of page is fetched, should be RSS, entries are read from it, and inserted into linkdatamodel table.
  - If possible fetch/refresh button should spin if sources are being refreshed
- - just as EntryListScreen, pull to refresh sources
+ - Supports pull to refresh to reload sources from the active database
+ - Displays a linear progress indicator showing sources update/refresh progress when SourceRefreshWorker is running
  - search widget should, just as EntryListScreen support LIKE syntax
 
 ### SourceListItem - row in SourcesListScreen

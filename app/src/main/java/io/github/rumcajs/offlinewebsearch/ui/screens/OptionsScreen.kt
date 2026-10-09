@@ -15,7 +15,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
 import io.github.rumcajs.offlinewebsearch.ui.components.DatabasesContainer
-import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 
 /**
  * Screen for configuring application settings, database management, and troubleshooting.
@@ -45,8 +44,7 @@ fun OptionsScreen(
     onNavigateToLinkChecker: () -> Unit = {},
     onSetActive: (String?) -> Unit
 ) {
-    val config by io.github.rumcajs.offlinewebsearch.data.AppConfigManager.config.collectAsState()
-    val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
+    val config by AppConfigManager.config.collectAsState()
     val scrollState = rememberScrollState()
 
     Column(
@@ -92,22 +90,6 @@ fun OptionsScreen(
             Text(
                 text = "Disable Network Communication",
                 fontSize = 16.sp
-            )
-        }
-
-        // ── Source refresh progress bar ───────────────────────────────────────
-        if (sourceRefreshProgress.isRunning) {
-            Spacer(modifier = Modifier.height(16.dp))
-            val label = sourceRefreshProgress.currentItem?.let { " ($it)" } ?: ""
-            Text(
-                text = "Refreshing sources: ${sourceRefreshProgress.done} / ${sourceRefreshProgress.total}$label",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = { sourceRefreshProgress.fraction },
-                modifier = Modifier.fillMaxWidth()
             )
         }
 
@@ -176,4 +158,3 @@ fun OptionsScreen(
         }
     }
 }
-
