@@ -34,6 +34,7 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.Entry
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import io.github.rumcajs.offlinewebsearch.ui.components.StartupWizardDialog
+import io.github.rumcajs.offlinewebsearch.workers.DatabaseUpdateWorker
 import io.github.rumcajs.offlinewebsearch.workers.SourceRefreshWorker
 import kotlinx.coroutines.launch
 
@@ -106,6 +107,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                     Screen.Options,
                 )
                 val sourceRefreshProgress by SourceRefreshWorker.progress.collectAsState()
+                val databaseUpdateProgress by DatabaseUpdateWorker.progress.collectAsState()
                 var hasOutdatedSources by remember { mutableStateOf(false) }
                 var hasSourceErrors by remember { mutableStateOf(false) }
 
@@ -129,6 +131,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 NavigationBarItem(
                                     icon = {
                                         if (screen == Screen.Sources && sourceRefreshProgress.isRunning) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else if (screen == Screen.Options && databaseUpdateProgress.isRunning) {
                                             CircularProgressIndicator(
                                                 modifier = Modifier.size(24.dp),
                                                 strokeWidth = 2.dp

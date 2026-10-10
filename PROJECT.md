@@ -80,7 +80,7 @@ Possible database states include:
 App contains bottom selection of main views (buttons):
  - Browse
  - Sources - should be spinning if sources are being fetched/checked, displays badge if sources require refresh
- - Options
+ - Options - should be spinning if databases are being downloaded/updated
 
 Screens:
  - EntriesListScreen - Provides the search interface. Shows search results.
