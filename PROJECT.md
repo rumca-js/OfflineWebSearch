@@ -52,6 +52,8 @@ Users can provide databases from:
  - The user is notified before a local database is replaced.
  - The application maintains the state of every configured database.
  - Only one database is active at a time.
+ - The active database is identified by its local file name, not by remote URL.
+ - Multiple databases can share the same remote URL.
 
 # DatabaseState
 
