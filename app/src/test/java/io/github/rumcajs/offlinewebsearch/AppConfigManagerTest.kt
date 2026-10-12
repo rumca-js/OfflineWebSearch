@@ -134,7 +134,6 @@ class AppConfigManagerTest {
         fun testSerialization() {
             val db1Url = "http://example.com/db1"
             val db1LocalFile = DatabaseState.deriveLocalFileName(db1Url)
-            @Suppress("DEPRECATION")
             val originalConfig = AppConfiguration(
                 // Corrected: databases is now Map<String, DatabaseState>
                 databases = mapOf(
@@ -142,7 +141,6 @@ class AppConfigManagerTest {
                     "http://example.com/db2" to DatabaseState.fromUrl("http://example.com/db2")
                 ),
                 activeDatabase = db1LocalFile,
-                activeDatabaseUrl = db1Url,
                 userAge = 25,
                 defaultDbConfig = DatabaseConfiguration(
                     directLinks = true,
@@ -175,9 +173,8 @@ class AppConfigManagerTest {
             assertEquals(EntryOrderBy.DATE_PUBLISHED, decodedConfig.dbconfig.orderBy)
             assertEquals(ViewStyle.STANDARD, decodedConfig.dbconfig.viewStyle)
 
-            // Assert that when active database is changed or cleared, dbconfig falls back to default
-            @Suppress("DEPRECATION")
-            val configWithNoActive = decodedConfig.copy(activeDatabase = null, activeDatabaseUrl = null)
+            // Assert that when active database is cleared, dbconfig falls back to default
+            val configWithNoActive = decodedConfig.copy(activeDatabase = null)
             assertEquals(true, configWithNoActive.dbconfig.directLinks)
             assertEquals(EntryOrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
             assertEquals(ViewStyle.GALLERY, configWithNoActive.dbconfig.viewStyle)

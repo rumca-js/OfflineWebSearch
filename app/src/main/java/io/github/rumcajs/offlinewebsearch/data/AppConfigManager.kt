@@ -57,21 +57,9 @@ object AppConfigManager {
         loadPersistedConfigSync(applicationContext)
         loadNetworkConfigSync(applicationContext)
 
-        // Ensure default SQLite database exists and migrate legacy configs.
+        // Ensure default SQLite database exists.
         configScope.launch {
             try {
-                // Migrate: if activeDatabase (new field) is not set, derive from legacy activeDatabaseUrl.
-                @Suppress("DEPRECATION")
-                val legacyUrl = config.value.activeDatabaseUrl
-                if (config.value.activeDatabase == null) {
-                    val derivedLocalFile = when {
-                        legacyUrl.isNullOrEmpty() -> DEFAULT_DATABASE_FILE
-                        else -> config.value.databases[legacyUrl]?.localFileName
-                            ?: DatabaseState.deriveLocalFileName(legacyUrl)
-                    }
-                    setActiveDatabaseByFile(derivedLocalFile)
-                }
-
                 ensureDefaultDatabase(applicationContext)
 
                 // Check for legacy JSON databases and convert them to SQLite (.db)

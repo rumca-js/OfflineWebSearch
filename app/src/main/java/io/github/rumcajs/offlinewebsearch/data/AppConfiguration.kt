@@ -58,14 +58,6 @@ data class AppConfiguration(
      */
     val activeDatabase: String? = null,
 
-    /**
-     * @deprecated Use [activeDatabase] (local file name) to identify the active database.
-     * Multiple databases can share the same remote URL, making URL an unreliable identifier.
-     * Kept for JSON backward-compatibility with persisted configs from older versions.
-     */
-    @Deprecated("Use activeDatabase (local file name) instead.")
-    val activeDatabaseUrl: String? = null,
-
     val supportedDatabasesExtensions: List<String> = listOf(
         ".db",
         ".json",
@@ -83,42 +75,25 @@ data class AppConfiguration(
 
     /**
      * Resolves the currently active [DatabaseState] by local file name ([activeDatabase]).
-     * Falls back to [activeDatabaseUrl] for backward-compatibility with persisted configs
-     * from older app versions that had not yet migrated to the new identifier.
      *
      * The default database ([DEFAULT_DATABASE_URL]) is always present in [databases] after
      * [io.github.rumcajs.offlinewebsearch.data.AppConfigManager.ensureDefaultDatabase] runs.
      */
     val activeDatabaseState: DatabaseState?
         get() {
-            val localFile = activeDatabase
-            if (localFile != null) {
-                // Primary path: find by local file name
-                val found = databases.values.firstOrNull { it.localFileName == localFile }
-                if (found != null) return found
-                // Local file is set but not yet in the map (e.g. default before first load)
-                if (localFile == DEFAULT_DATABASE_FILE) {
-                    return DatabaseState(
-                        url = DEFAULT_DATABASE_URL,
-                        localFileName = DEFAULT_DATABASE_FILE,
-                        displayNameField = DEFAULT_DATABASE_NAME,
-                        isReadOnly = false
-                    )
-                }
-                return null
+            val localFile = activeDatabase ?: DEFAULT_DATABASE_FILE
+            val found = databases.values.firstOrNull { it.localFileName == localFile }
+            if (found != null) return found
+            // Not yet in the map (e.g. default before first load)
+            if (localFile == DEFAULT_DATABASE_FILE) {
+                return DatabaseState(
+                    url = DEFAULT_DATABASE_URL,
+                    localFileName = DEFAULT_DATABASE_FILE,
+                    displayNameField = DEFAULT_DATABASE_NAME,
+                    isReadOnly = false
+                )
             }
-            // Legacy fallback: resolve via deprecated activeDatabaseUrl
-            @Suppress("DEPRECATION")
-            val legacyUrl = activeDatabaseUrl
-            return databases[legacyUrl ?: DEFAULT_DATABASE_URL]
-                ?: if (legacyUrl.isNullOrEmpty()) {
-                    DatabaseState(
-                        url = DEFAULT_DATABASE_URL,
-                        localFileName = DEFAULT_DATABASE_FILE,
-                        displayNameField = DEFAULT_DATABASE_NAME,
-                        isReadOnly = false
-                    )
-                } else null
+            return null
         }
 
     val activeDatabaseDisplayName: String
