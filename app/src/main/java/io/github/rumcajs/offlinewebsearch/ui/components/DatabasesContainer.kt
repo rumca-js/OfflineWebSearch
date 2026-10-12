@@ -40,7 +40,7 @@ import io.github.rumcajs.offlinewebsearch.data.DatabaseStatus
 fun DatabasesContainer(
     onNavigateToDatabaseDetail: (String?, DatabaseState) -> Unit = { _, _ -> },
     onNavigateToPreselectedList: () -> Unit = {},
-    onSetActive: (String?) -> Unit
+    onSetActive: (String) -> Unit
 ) {
     val config by AppConfigManager.config.collectAsState()
     val presets by DatabasePresetRepository.presets.collectAsState()
@@ -197,13 +197,13 @@ fun DatabasesContainer(
 
         DatabaseList(
             databases = config.databases,
-            activeDatabaseUrl = config.activeDatabaseUrl,
+            activeDatabase = config.activeDatabase,
             presets = presets,
             onItemClick = { url, state ->
                 onNavigateToDatabaseDetail(url, state)
             },
-            onSetActive = { url ->
-                onSetActive(url)
+            onSetActive = { localFileName ->
+                onSetActive(localFileName)
             },
             onDelete = { url, state ->
                 deletingDb = Pair(url, state)
@@ -329,10 +329,10 @@ private fun getFileName(context: Context, uri: Uri): String? {
 @Composable
 fun DatabaseList(
     databases: Map<String, DatabaseState>,
-    activeDatabaseUrl: String? = null,
+    activeDatabase: String? = null,
     presets: Map<String, DatabasePreset> = emptyMap(),
     onItemClick: ((String?, DatabaseState) -> Unit)? = null,
-    onSetActive: (String?) -> Unit,
+    onSetActive: (String) -> Unit,
     onDelete: (String, DatabaseState) -> Unit,
     onUpdate: (String, DatabaseState) -> Unit
 ) {
@@ -347,7 +347,7 @@ fun DatabaseList(
         progress = 1f,
         isReadOnly = false
     )
-    val isDefaultActive = activeDatabaseUrl == DEFAULT_DATABASE_URL
+    val isDefaultActive = activeDatabase == defaultState.localFileName
     val isDefaultOutdated = DatabasePresetRepository.isDatabaseOutdated(defaultState, presets)
 
     Column(
@@ -361,7 +361,7 @@ fun DatabaseList(
             onItemClick = if (onItemClick != null) {
                 { onItemClick(DEFAULT_DATABASE_URL, defaultState) }
             } else null,
-            onSetActive = { onSetActive(DEFAULT_DATABASE_URL) },
+            onSetActive = { onSetActive(defaultState.localFileName) },
             onDelete = null,
             onUpdate = { onUpdate(DEFAULT_DATABASE_URL, defaultState) }
         )
@@ -369,14 +369,14 @@ fun DatabaseList(
         // Exclude the default database entry from the regular list to avoid duplication.
         databases.filter { (url, _) -> url != DEFAULT_DATABASE_URL }
             .forEach { (url, state) ->
-                val isActive = activeDatabaseUrl == url
+                val isActive = activeDatabase == state.localFileName
                 val isOutdated = DatabasePresetRepository.isDatabaseOutdated(state, presets)
                 DatabaseItem(
                     state = state,
                     isActive = isActive,
                     isOutdated = isOutdated,
                     onItemClick = { onItemClick?.invoke(url, state) },
-                    onSetActive = { onSetActive(url) },
+                    onSetActive = { onSetActive(state.localFileName) },
                     onDelete = { onDelete(url, state) },
                     onUpdate = { onUpdate(url, state) }
                 )

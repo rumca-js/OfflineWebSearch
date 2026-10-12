@@ -28,7 +28,7 @@ import io.github.rumcajs.offlinewebsearch.ui.components.DatabasesContainer
  * @param onNavigateToCredentials Callback to navigate to Credentials screen.
  * @param onNavigateToAdvanced Callback to navigate to Advanced settings screen.
  * @param onNavigateToLinkChecker Callback to navigate to Link Checker screen.
- * @param onSetActive Callback to set an active database.
+ * @param onSetActive Callback invoked with the local file name of the database to activate.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +42,7 @@ fun OptionsScreen(
     onNavigateToCredentials: () -> Unit = {},
     onNavigateToAdvanced: () -> Unit = {},
     onNavigateToLinkChecker: () -> Unit = {},
-    onSetActive: (String?) -> Unit
+    onSetActive: (String) -> Unit
 ) {
     val config by AppConfigManager.config.collectAsState()
     val scrollState = rememberScrollState()

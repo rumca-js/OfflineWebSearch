@@ -120,7 +120,7 @@ object SourceRefreshWorker {
      */
     private fun isDatabaseWritable(dbState: DatabaseState): Boolean {
         val config = AppConfigManager.config.value
-        return !config.networkConfig.disabled && !dbState.isReadOnly && dbState.isSQLite && config.activeDatabaseUrl == dbState.url
+        return !config.networkConfig.disabled && !dbState.isReadOnly && dbState.isSQLite && config.activeDatabase == dbState.localFileName
     }
 
     /**
@@ -222,7 +222,7 @@ object SourceRefreshWorker {
             _progress.update { it.copy(currentItem = src.title) }
 
             val currentConfig = AppConfigManager.config.value
-            if (currentConfig.activeDatabaseUrl != dbState.url) {
+            if (currentConfig.activeDatabase != dbState.localFileName) {
                 continue
             }
 

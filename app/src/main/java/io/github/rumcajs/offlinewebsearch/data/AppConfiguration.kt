@@ -50,7 +50,22 @@ data class AppConfiguration(
 
     // main things
     val databases: Map<String, DatabaseState> = emptyMap(),
-    val activeDatabaseUrl: String? = null, // relates to DatabaseState.url
+
+    /**
+     * Identifies the active database by its local file name (e.g. "default.db", "db_12345.db").
+     * Local file names are unique per database instance in app storage, unlike remote URLs which
+     * can be shared by multiple database entries.
+     */
+    val activeDatabase: String? = null,
+
+    /**
+     * @deprecated Use [activeDatabase] (local file name) to identify the active database.
+     * Multiple databases can share the same remote URL, making URL an unreliable identifier.
+     * Kept for JSON backward-compatibility with persisted configs from older versions.
+     */
+    @Deprecated("Use activeDatabase (local file name) instead.")
+    val activeDatabaseUrl: String? = null,
+
     val supportedDatabasesExtensions: List<String> = listOf(
         ".db",
         ".json",
@@ -66,34 +81,65 @@ data class AppConfiguration(
         return supportedDatabasesExtensions.any { ext -> fileName.endsWith(ext, ignoreCase = true) }
     }
 
-    val dbconfig: DatabaseConfiguration
-        get() = activeDatabaseUrl?.let { dbConfigs[it] } ?: defaultDbConfig
-
     /**
-     * Gets the state (downloading, unpacking, ready, etc.) of the currently active database.
+     * Resolves the currently active [DatabaseState] by local file name ([activeDatabase]).
+     * Falls back to [activeDatabaseUrl] for backward-compatibility with persisted configs
+     * from older app versions that had not yet migrated to the new identifier.
+     *
      * The default database ([DEFAULT_DATABASE_URL]) is always present in [databases] after
      * [io.github.rumcajs.offlinewebsearch.data.AppConfigManager.ensureDefaultDatabase] runs.
      */
     val activeDatabaseState: DatabaseState?
-        get() = databases[activeDatabaseUrl ?: DEFAULT_DATABASE_URL]
-            ?: if (activeDatabaseUrl.isNullOrEmpty()) {
-                DatabaseState(
-                    url = DEFAULT_DATABASE_URL,
-                    localFileName = DEFAULT_DATABASE_FILE,
-                    displayNameField = DEFAULT_DATABASE_NAME,
-                    isReadOnly = false
-                )
-            } else null
+        get() {
+            val localFile = activeDatabase
+            if (localFile != null) {
+                // Primary path: find by local file name
+                val found = databases.values.firstOrNull { it.localFileName == localFile }
+                if (found != null) return found
+                // Local file is set but not yet in the map (e.g. default before first load)
+                if (localFile == DEFAULT_DATABASE_FILE) {
+                    return DatabaseState(
+                        url = DEFAULT_DATABASE_URL,
+                        localFileName = DEFAULT_DATABASE_FILE,
+                        displayNameField = DEFAULT_DATABASE_NAME,
+                        isReadOnly = false
+                    )
+                }
+                return null
+            }
+            // Legacy fallback: resolve via deprecated activeDatabaseUrl
+            @Suppress("DEPRECATION")
+            val legacyUrl = activeDatabaseUrl
+            return databases[legacyUrl ?: DEFAULT_DATABASE_URL]
+                ?: if (legacyUrl.isNullOrEmpty()) {
+                    DatabaseState(
+                        url = DEFAULT_DATABASE_URL,
+                        localFileName = DEFAULT_DATABASE_FILE,
+                        displayNameField = DEFAULT_DATABASE_NAME,
+                        isReadOnly = false
+                    )
+                } else null
+        }
 
     val activeDatabaseDisplayName: String
         get() = activeDatabaseState?.displayName ?: DEFAULT_DATABASE_NAME
 
+    /**
+     * Returns the [DatabaseConfiguration] for the currently active database,
+     * resolved via [activeDatabaseState]. Falls back to [defaultDbConfig].
+     */
+    val dbconfig: DatabaseConfiguration
+        get() {
+            val activeUrl = activeDatabaseState?.url
+            return activeUrl?.let { dbConfigs[it] } ?: defaultDbConfig
+        }
+
     fun updateActiveDbConfig(update: (DatabaseConfiguration) -> DatabaseConfiguration): AppConfiguration {
-        val activeDb = activeDatabaseUrl
-        return if (activeDb != null) {
-            val currentDbConfig = dbConfigs[activeDb] ?: DatabaseConfiguration()
+        val activeUrl = activeDatabaseState?.url
+        return if (activeUrl != null) {
+            val currentDbConfig = dbConfigs[activeUrl] ?: DatabaseConfiguration()
             val newDbConfig = update(currentDbConfig)
-            this.copy(dbConfigs = dbConfigs + (activeDb to newDbConfig))
+            this.copy(dbConfigs = dbConfigs + (activeUrl to newDbConfig))
         } else {
             val newDefault = update(defaultDbConfig)
             this.copy(defaultDbConfig = newDefault)

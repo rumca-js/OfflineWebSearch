@@ -136,10 +136,19 @@ abstract class AbstractDatabaseBuilder(
                 put(url, updatedConfig)
             }
 
+            // If the URL key changed (oldUrl != url), determine the old local file name
+            // to check whether the active database pointer needs to be updated.
+            val oldLocalFile = if (oldUrl != null && oldUrl != url) {
+                config.databases[oldUrl]?.localFileName ?: DatabaseState.deriveLocalFileName(oldUrl)
+            } else null
             config.copy(
                 databases = newDatabases,
                 dbConfigs = newDbConfigs,
-                activeDatabaseUrl = if (config.activeDatabaseUrl == oldUrl) url else config.activeDatabaseUrl
+                activeDatabase = if (oldLocalFile != null && config.activeDatabase == oldLocalFile) {
+                    targetLocalFileName
+                } else {
+                    config.activeDatabase
+                }
             )
         }
 

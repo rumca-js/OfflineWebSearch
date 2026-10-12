@@ -111,7 +111,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 var hasOutdatedSources by remember { mutableStateOf(false) }
                 var hasSourceErrors by remember { mutableStateOf(false) }
 
-                LaunchedEffect(config.activeDatabaseUrl, config.networkConfig.disabled, sourceRefreshProgress.isRunning) {
+                LaunchedEffect(config.activeDatabase, config.networkConfig.disabled, sourceRefreshProgress.isRunning) {
                     if (!sourceRefreshProgress.isRunning) {
                         hasOutdatedSources = SourceRepository.hasOutdatedSources(context, config.activeDatabaseState)
                         hasSourceErrors = SourceRepository.hasSourceErrors(context, config.activeDatabaseState)
@@ -331,14 +331,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
                             if (state != null) {
                                 val isDefault = url == _root_ide_package_.io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
                                 val dbConfig = if (isDefault) config.defaultDbConfig else config.dbConfigs[url] ?: config.defaultDbConfig
-                                val isActive = config.activeDatabaseUrl == url
+                                val isActive = config.activeDatabase == state.localFileName
                                 _root_ide_package_.io.github.rumcajs.offlinewebsearch.ui.screens.DatabaseScreen(
                                     url = url,
                                     state = state,
                                     dbConfig = dbConfig,
                                     isActive = isActive,
                                     onBack = { navController.popBackStack() },
-                                    onSetActive = { handleDatabaseChange(url, entriesViewModel, navController) }
+                                    onSetActive = { handleDatabaseChange(state.localFileName, entriesViewModel, navController) }
                                 )
                             }
                         }
@@ -374,8 +374,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
                                 onNavigateToLinkChecker = {
                                     navController.navigate(Screen.LinkChecker.route)
                                 },
-                                onSetActive = { url ->
-                                    handleDatabaseChange(url, entriesViewModel, navController)
+                                onSetActive = { localFileName ->
+                                    handleDatabaseChange(localFileName, entriesViewModel, navController)
                                 }
                             )
                         }
@@ -537,17 +537,16 @@ class MainActivity : androidx.activity.ComponentActivity() {
     /**
      * Handles changing (activating) the selected database and resets screens to defaults.
      *
-     * @param databaseUrl The URL/key of the database to activate.
-     *   Pass [io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL] ("") for the built-in default (Assets) database.
+     * @param localFileName The local file name of the database to activate (e.g. "default.db", "db_12345.db").
      * @param entriesViewModel The ViewModel to reset screen defaults on.
      * @param navController The NavController to reset backstack and routes back to defaults.
      */
     fun handleDatabaseChange(
-        databaseUrl: String?,
+        localFileName: String?,
         entriesViewModel: io.github.rumcajs.offlinewebsearch.ui.EntriesViewModel,
         navController: androidx.navigation.NavController? = null
     ) {
-        AppConfigManager.setActiveDatabase(databaseUrl)
+        AppConfigManager.setActiveDatabaseByFile(localFileName)
         entriesViewModel.resetToDefaults()
 
         // If the user changed the database from DatabaseDetail (or another sub-screen),

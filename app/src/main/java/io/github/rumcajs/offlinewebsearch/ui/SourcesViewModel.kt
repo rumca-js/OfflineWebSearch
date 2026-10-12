@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Sentinel used by [SourcesViewModel] so the very first config emission always triggers
- * an initial data load, even when [activeDatabaseUrl] starts as null (default database).
+ * an initial data load, even when [activeDatabase] starts as null (default database).
  */
 private const val SENTINEL_NO_DATABASE = "\$__no_database__"
 
@@ -62,7 +62,7 @@ class SourcesViewModel : ViewModel() {
 
     /**
      * Sentinel value used to ensure the very first config emission always triggers
-     * a data load — even when [activeDatabaseUrl] is null (default database).
+     * a data load — even when [activeDatabase] is null (default database).
      */
     private var currentActiveDatabase: String? = SENTINEL_NO_DATABASE
     private var isObserving = false
@@ -73,16 +73,15 @@ class SourcesViewModel : ViewModel() {
 
         // Observe config for database switching.
         // currentActiveDatabase starts at SENTINEL_NO_DATABASE so the first
-        // emission always triggers loadSources(), even when activeDatabaseUrl is null.
+        // emission always triggers loadSources(), even when activeDatabase is null.
         viewModelScope.launch {
             AppConfigManager.config.collect { config ->
-                if (config.activeDatabaseUrl != currentActiveDatabase) {
-                    currentActiveDatabase = config.activeDatabaseUrl
+                if (config.activeDatabase != currentActiveDatabase) {
+                    currentActiveDatabase = config.activeDatabase
                     loadSources(context)
                 }
             }
         }
-
         // Observe SourceRefreshWorker progress
         viewModelScope.launch {
             var wasRunning = false

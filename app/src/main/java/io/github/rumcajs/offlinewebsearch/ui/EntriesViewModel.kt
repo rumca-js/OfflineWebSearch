@@ -139,12 +139,12 @@ class EntriesViewModel : ViewModel() {
         viewModelScope.launch {
             AppConfigManager.config.collect { config ->
                 val activeLinksPerPage = config.dbconfig.effectiveLinksPerPage
-                val dbChanged = config.activeDatabaseUrl != currentActiveDatabase
+                val dbChanged = config.activeDatabase != currentActiveDatabase
                 val orderChanged = config.dbconfig.orderBy != currentOrderBy
                 val linksPerPageChanged = activeLinksPerPage != currentLinksPerPage
 
                 if (dbChanged || orderChanged || linksPerPageChanged) {
-                    currentActiveDatabase = config.activeDatabaseUrl
+                    currentActiveDatabase = config.activeDatabase
                     currentOrderBy = config.dbconfig.orderBy
                     currentLinksPerPage = activeLinksPerPage
                     pageSize = activeLinksPerPage

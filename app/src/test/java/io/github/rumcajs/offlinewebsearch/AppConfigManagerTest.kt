@@ -2,6 +2,7 @@ package io.github.rumcajs.offlinewebsearch
 
 import io.github.rumcajs.offlinewebsearch.data.AppConfigManager
 import io.github.rumcajs.offlinewebsearch.data.AppConfiguration
+import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_FILE
 import io.github.rumcajs.offlinewebsearch.data.DEFAULT_DATABASE_URL
 import io.github.rumcajs.offlinewebsearch.data.DatabaseConfiguration
 import io.github.rumcajs.offlinewebsearch.data.DatabaseState
@@ -114,11 +115,13 @@ class AppConfigManagerTest {
             AppConfigManager.addDatabase(url)
             AppConfigManager.setActiveDatabase(url)
             var config = AppConfigManager.config.first()
-            assertEquals(url, config.activeDatabaseUrl)
+            // After setActiveDatabase(url), activeDatabase should be the local file name derived from the URL
+            val expectedLocalFile = DatabaseState.deriveLocalFileName(url)
+            assertEquals(expectedLocalFile, config.activeDatabase)
 
             AppConfigManager.removeDatabase(url)
             config = AppConfigManager.config.first()
-            assertEquals(DEFAULT_DATABASE_URL, config.activeDatabaseUrl)
+            assertEquals(DEFAULT_DATABASE_FILE, config.activeDatabase)
             assertEquals("Default (Assets)", config.activeDatabaseDisplayName)
             val defaultState = config.activeDatabaseState
             assertNotNull(defaultState)
@@ -129,13 +132,17 @@ class AppConfigManagerTest {
 
         @Test
         fun testSerialization() {
+            val db1Url = "http://example.com/db1"
+            val db1LocalFile = DatabaseState.deriveLocalFileName(db1Url)
+            @Suppress("DEPRECATION")
             val originalConfig = AppConfiguration(
                 // Corrected: databases is now Map<String, DatabaseState>
                 databases = mapOf(
-                    "http://example.com/db1" to DatabaseState.fromUrl("http://example.com/db1"),
+                    db1Url to DatabaseState.fromUrl(db1Url),
                     "http://example.com/db2" to DatabaseState.fromUrl("http://example.com/db2")
                 ),
-                activeDatabaseUrl = "http://example.com/db1",
+                activeDatabase = db1LocalFile,
+                activeDatabaseUrl = db1Url,
                 userAge = 25,
                 defaultDbConfig = DatabaseConfiguration(
                     directLinks = true,
@@ -145,7 +152,7 @@ class AppConfigManagerTest {
                     viewStyle = ViewStyle.GALLERY
                 ),
                 dbConfigs = mapOf(
-                    "http://example.com/db1" to DatabaseConfiguration(
+                    db1Url to DatabaseConfiguration(
                         directLinks = false,
                         showIcons = false,
                         videoPreview = false,
@@ -158,7 +165,7 @@ class AppConfigManagerTest {
             val decodedConfig = Json.decodeFromString<AppConfiguration>(jsonString)
 
             assertEquals(originalConfig.databases, decodedConfig.databases)
-            assertEquals(originalConfig.activeDatabaseUrl, decodedConfig.activeDatabaseUrl)
+            assertEquals(originalConfig.activeDatabase, decodedConfig.activeDatabase)
             assertEquals(originalConfig.userAge, decodedConfig.userAge)
             assertEquals(originalConfig.defaultDbConfig.directLinks, decodedConfig.defaultDbConfig.directLinks)
             assertEquals(originalConfig.defaultDbConfig.showIcons, decodedConfig.defaultDbConfig.showIcons)
@@ -169,7 +176,8 @@ class AppConfigManagerTest {
             assertEquals(ViewStyle.STANDARD, decodedConfig.dbconfig.viewStyle)
 
             // Assert that when active database is changed or cleared, dbconfig falls back to default
-            val configWithNoActive = decodedConfig.copy(activeDatabaseUrl = null)
+            @Suppress("DEPRECATION")
+            val configWithNoActive = decodedConfig.copy(activeDatabase = null, activeDatabaseUrl = null)
             assertEquals(true, configWithNoActive.dbconfig.directLinks)
             assertEquals(EntryOrderBy.DATE_CREATED, configWithNoActive.dbconfig.orderBy)
             assertEquals(ViewStyle.GALLERY, configWithNoActive.dbconfig.viewStyle)

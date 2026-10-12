@@ -57,13 +57,19 @@ object AppConfigManager {
         loadPersistedConfigSync(applicationContext)
         loadNetworkConfigSync(applicationContext)
 
-        // Ensure default SQLite database exists and migrate legacy JSON databases.
-        // Also migrate old installs where activeDatabaseUrl was null (meaning default active)
-        // to the new explicit DEFAULT_DATABASE_URL convention.
+        // Ensure default SQLite database exists and migrate legacy configs.
         configScope.launch {
             try {
-                if (config.value.activeDatabaseUrl == null) {
-                    setActiveDatabase(DEFAULT_DATABASE_URL)
+                // Migrate: if activeDatabase (new field) is not set, derive from legacy activeDatabaseUrl.
+                @Suppress("DEPRECATION")
+                val legacyUrl = config.value.activeDatabaseUrl
+                if (config.value.activeDatabase == null) {
+                    val derivedLocalFile = when {
+                        legacyUrl.isNullOrEmpty() -> DEFAULT_DATABASE_FILE
+                        else -> config.value.databases[legacyUrl]?.localFileName
+                            ?: DatabaseState.deriveLocalFileName(legacyUrl)
+                    }
+                    setActiveDatabaseByFile(derivedLocalFile)
                 }
 
                 ensureDefaultDatabase(applicationContext)
@@ -116,7 +122,7 @@ object AppConfigManager {
      */
     fun setInitialized(initialized: Boolean = true) {
         updateConfig { it.copy(isInitialized = initialized) }
-        setActiveDatabase(DEFAULT_DATABASE_URL)
+        setActiveDatabaseByFile(DEFAULT_DATABASE_FILE)
     }
 
     /**
@@ -151,7 +157,7 @@ object AppConfigManager {
                 urls.forEach { url ->
                     DatabaseUpdateWorker.enqueueDatabase(context, url)
                 }
-                if (config.value.activeDatabaseUrl == DEFAULT_DATABASE_URL) {
+                if (config.value.activeDatabase == DEFAULT_DATABASE_FILE) {
                     setActiveDatabase(urls.first())
                 }
                 setInitialized(true)
@@ -330,12 +336,15 @@ object AppConfigManager {
 
     fun removeDatabase(url: String) {
         updateConfig {
+            val removedState = it.databases[url]
+            val removedLocalFile = removedState?.localFileName
             val newDatabases = it.databases - url
             val newDbConfigs = it.dbConfigs - url
+            val isActive = removedLocalFile != null && it.activeDatabase == removedLocalFile
             it.copy(
                 databases = newDatabases,
                 dbConfigs = newDbConfigs,
-                activeDatabaseUrl = if (it.activeDatabaseUrl == url) DEFAULT_DATABASE_URL else it.activeDatabaseUrl
+                activeDatabase = if (isActive) DEFAULT_DATABASE_FILE else it.activeDatabase
             )
         }
     }
@@ -353,9 +362,13 @@ object AppConfigManager {
 
     fun updateDatabase(oldUrl: String, newUrl: String) {
         updateConfig { config ->
+            val oldLocalFile = config.databases[oldUrl]?.localFileName
+            var newLocalFile: String? = null
             val newDatabases = config.databases.toMutableMap().apply {
                 remove(oldUrl)?.let { state ->
-                    put(newUrl, state.copy(url = newUrl, localFileName = DatabaseState.fromUrl(newUrl).localFileName))
+                    val derivedLocalFile = DatabaseState.fromUrl(newUrl).localFileName
+                    newLocalFile = derivedLocalFile
+                    put(newUrl, state.copy(url = newUrl, localFileName = derivedLocalFile))
                 }
             }
 
@@ -365,10 +378,11 @@ object AppConfigManager {
                 }
             }
 
+            val isActiveChanged = oldLocalFile != null && config.activeDatabase == oldLocalFile
             config.copy(
                 databases = newDatabases,
                 dbConfigs = newDbConfigs,
-                activeDatabaseUrl = if (config.activeDatabaseUrl == oldUrl) newUrl else config.activeDatabaseUrl
+                activeDatabase = if (isActiveChanged) newLocalFile else config.activeDatabase
             )
         }
     }
@@ -505,8 +519,33 @@ object AppConfigManager {
         builder.build()
     }
 
+    /**
+     * Sets the active database by its local file name.
+     * This is the preferred method — local file names are unique per database instance.
+     *
+     * @param localFileName The local file name (e.g. "default.db", "db_12345.db") of the database to activate.
+     */
+    fun setActiveDatabaseByFile(localFileName: String?) {
+        updateConfig { config ->
+            config.copy(activeDatabase = localFileName)
+        }
+    }
+
+    /**
+     * Sets the active database by its source URL key.
+     *
+     * Prefer [setActiveDatabaseByFile] where possible, as URLs are not guaranteed to be unique
+     * across database entries. This overload is kept for callers that only have a URL available
+     * (e.g. during initial setup from a remote list).
+     *
+     * @param url The URL key of the database to activate (from [AppConfiguration.databases]).
+     */
     fun setActiveDatabase(url: String?) {
-        updateConfig { it.copy(activeDatabaseUrl = url) }
+        updateConfig { config ->
+            val localFile = if (url == null || url == DEFAULT_DATABASE_URL) DEFAULT_DATABASE_FILE
+            else config.databases[url]?.localFileName ?: DatabaseState.deriveLocalFileName(url)
+            config.copy(activeDatabase = localFile)
+        }
     }
 
     /**

@@ -205,8 +205,8 @@ fun DatabasePreselectedListScreen(
                             val dbState = remember(dbUrl) { DatabaseState.fromUrl(dbUrl) }
                             val displayName = preset.title?.takeIf { it.isNotBlank() } ?: dbState.displayName
                             val isConfigured = config.databases.containsKey(dbUrl)
-                            val isActive = config.activeDatabaseUrl == dbUrl
                             val currentDbState = config.databases[dbUrl]
+                            val isActive = currentDbState?.localFileName?.let { config.activeDatabase == it } ?: false
                             val isOutdated = currentDbState != null && DatabasePresetRepository.isOutdated(currentDbState.dateLastRefresh, preset.dateUpdated)
 
                             PreselectedDatabasePillItem(
