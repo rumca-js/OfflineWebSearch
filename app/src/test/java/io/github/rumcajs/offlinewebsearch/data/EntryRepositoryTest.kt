@@ -12,7 +12,6 @@ import io.github.rumcajs.offlinewebsearch.data.repositories.EntryTransitionHisto
 import io.github.rumcajs.offlinewebsearch.data.repositories.EntryVisitHistoryRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.ReadLaterRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.SocialData
-import io.github.rumcajs.offlinewebsearch.data.repositories.SocialDataRepository
 import io.github.rumcajs.offlinewebsearch.data.repositories.Source
 import io.github.rumcajs.offlinewebsearch.data.repositories.SourceRepository
 import kotlinx.coroutines.runBlocking
@@ -676,5 +675,53 @@ class EntryRepositoryTest {
         val read2 = queryEntry(9006L)
         assertEquals(1, read1?.page_rating_visits)
         assertEquals(1, read2?.page_rating_visits)
+    }
+
+    // ── Search query with quotes: source_id and source_url ────────────────────
+
+    @Test
+    fun `getEntries and countEntries filter by source_id with quotes in SQLite`() = runBlocking {
+        val entry1 = Entry(id = 9101L, link = "https://example.com/src88", title = "Source 88 Entry", source_id = 88L)
+        val entry2 = Entry(id = 9102L, link = "https://example.com/src99", title = "Source 99 Entry", source_id = 99L)
+        EntrySqliteRepository.populateEntries(dbFile, listOf(entry1, entry2))
+
+        // Single-quoted LIKE/contains: source_id = '88'
+        val results1 = EntryRepository.getEntries(context, dbState, searchQuery = "source_id = '88'")
+        assertEquals(1, results1.size)
+        assertEquals("Source 88 Entry", results1[0].title)
+        assertEquals(1, EntryRepository.countEntries(context, dbState, searchQuery = "source_id = '88'"))
+
+        // Single-quoted without spaces: source_id='88'
+        val results2 = EntryRepository.getEntries(context, dbState, searchQuery = "source_id='88'")
+        assertEquals(1, results2.size)
+        assertEquals("Source 88 Entry", results2[0].title)
+        assertEquals(1, EntryRepository.countEntries(context, dbState, searchQuery = "source_id='88'"))
+
+        // Single-quoted exact match: source_id == '88'
+        val results3 = EntryRepository.getEntries(context, dbState, searchQuery = "source_id == '88'")
+        assertEquals(1, results3.size)
+        assertEquals("Source 88 Entry", results3[0].title)
+        assertEquals(1, EntryRepository.countEntries(context, dbState, searchQuery = "source_id == '88'"))
+
+        // Unquoted: source_id = 88
+        val results4 = EntryRepository.getEntries(context, dbState, searchQuery = "source_id = 88")
+        assertEquals(1, results4.size)
+        assertEquals("Source 88 Entry", results4[0].title)
+
+        // Non-matching source_id: source_id = '77'
+        val resultsEmpty = EntryRepository.getEntries(context, dbState, searchQuery = "source_id = '77'")
+        assertTrue(resultsEmpty.isEmpty())
+        assertEquals(0, EntryRepository.countEntries(context, dbState, searchQuery = "source_id = '77'"))
+    }
+
+    @Test
+    fun `getEntries filters by source_url with quotes in SQLite`() = runBlocking {
+        val entry1 = Entry(id = 9201L, link = "https://example.com/feed1/item", title = "Feed 1 Item", source_url = "https://example.com/feed1.xml")
+        val entry2 = Entry(id = 9202L, link = "https://example.com/feed2/item", title = "Feed 2 Item", source_url = "https://example.com/feed2.xml")
+        EntrySqliteRepository.populateEntries(dbFile, listOf(entry1, entry2))
+
+        val results = EntryRepository.getEntries(context, dbState, searchQuery = "source_url = 'https://example.com/feed1.xml'")
+        assertEquals(1, results.size)
+        assertEquals("Feed 1 Item", results[0].title)
     }
 }

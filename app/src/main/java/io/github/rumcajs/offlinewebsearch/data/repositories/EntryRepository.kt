@@ -37,7 +37,7 @@ data class Entry(
 
 /**
  * Base abstract repository for entry operations.
- * Subclasses: [EntryJsonRepository] for JSON/assets and [EntrySqliteRepository] for SQLite.
+ * Subclass: [EntrySqliteRepository] for SQLite.
  */
 abstract class EntryRepository : RepositoryInterface {
 
@@ -104,7 +104,7 @@ abstract class EntryRepository : RepositoryInterface {
 
         /**
          * Returns the total number of entries matching [searchQuery].
-         * Delegates to [EntrySqliteRepository] or [EntryJsonRepository] based on [activeDatabaseState].
+         * Delegates to [EntrySqliteRepository].
          */
         suspend fun countEntries(
             context: Context,
@@ -119,7 +119,7 @@ abstract class EntryRepository : RepositoryInterface {
 
         /**
          * Returns a single page of [pageSize] entries starting at [offset].
-         * Delegates to [EntrySqliteRepository] or [EntryJsonRepository] based on [activeDatabaseState].
+         * Delegates to [EntrySqliteRepository].
          */
         suspend fun getEntries(
             context: Context,
