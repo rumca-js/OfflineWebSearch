@@ -4,7 +4,7 @@
  - It shall not contain dependencies toward google, nor its services (if possible)
  - The application provides offline web search.
  - The primary function of the application is searching.
- - The application searches local SQLite databases and JSON files.
+ - The application searches local SQLite databases
  - Search results contain links to web pages.
  - The application does not require an internet connection to search local databases.
  - Internet access is required when fetching databases, sources, or web pages.
@@ -12,7 +12,6 @@
  - Do not run unit tests before making changes. You can run them after changes have been done
 
 A database is a searchable collection of entries.
-A database can be backed by SQLite or JSON files.
 
  # Supported Database Files
  The application supports the following file types:
@@ -33,6 +32,8 @@ Users can provide databases from:
  - The SQLite data model is defined by linkarchivetools.
  - The authoritative model definition is: https://github.com/rumca-js/linkarchivetools/blob/main/linkarchivetools/model/definitions.py
  - The Android application must remain compatible with the defined SQLite schema.
+
+Names vs table names
  - Entries - linkdatamodel
  - Sources - sourcedatamodel
  - Search Views - searchview
@@ -41,6 +42,7 @@ Users can provide databases from:
  - Entry Transitions History - entrytransitionhistory
  - Read Later - readlater
  - Credentials - credentials (used for email source type)
+ - SearchView, or Filters - searchview
 
 # Database handling
  - any internet database is downloaded to application storage, and used from there
@@ -124,7 +126,6 @@ Screens:
  - The list supports loading additional results.
  - Search results support page navigation (or dynamic loading of next / prev elements)
  - page navigation elements (prev, next button) are in scrollable area, after search results
- - after page navigation add new result button should be present
  - Selecting an entry opens EntryDetailScreen.
  - Supports pull to refresh to reload and search entry results from the active database
  - Entry results shall be refreshed when necessary
@@ -205,7 +206,6 @@ The screen displays, where available:
  - Allows adding a new entry or editing an existing entry.
  - Provides input fields for entry metadata (URL, title, description, tags, author, etc.).
  - Saves changes to the active database.
- - Only accessible when the active database is writable.
 
 ## EntryStatusScreen
  - Fetches the entry URL from the internet.
@@ -253,7 +253,6 @@ The screen displays, where available:
  - Provides a top bar with the following actions:
     -- Fetch / Update
     -- Edit.
-    -- Fetch.
     -- Remove.
  - The Fetch action downloads the source content from the internet.
  - The source content is expected to be RSS or a compatible feed.
@@ -265,7 +264,6 @@ The screen displays, where available:
  - Allows adding a new RSS source or editing an existing source.
  - Provides input fields for source title, URL, and enabled status via shared SourceFormPane component.
  - Saves changes to the sourcedatamodel table in the active database.
- - Only accessible when the active database is writable.
 
 ## SourceEmailEditScreen
  - Allows adding a new Email source or editing an existing Email source.
@@ -400,8 +398,5 @@ Used to enhance entry properties (updates title, status\_code, whatever can be u
  - Destructive operations must require user confirmation.
  - The application must preserve locally available databases when network operations fail.
  - The application must not modify a local database unless the user explicitly requests an update or refresh.
- - Read-only databases must not be modified.
- - Modification controls should be hidden for read-only databases where possible.
  - If a modification control cannot be hidden, it must be disabled.
- - The application must not attempt a write operation against a read-only database.
  - if network is disabled network related widgets, like buttons should be not visible
