@@ -35,3 +35,7 @@ build-debug:
 
 build-release:
 	./gradlew assembleRelease -Dorg.gradle.jvmargs="-Xmx1500m -XX:MaxMetaspaceSize=512m" -Dkotlin.daemon.jvmargs="-Xmx1500m" -Dkotlin.compiler.execution.strategy="in-process"
+
+# how to build development version
+# - start Android studio
+# - build -> generate apks and bundles -> generate apk

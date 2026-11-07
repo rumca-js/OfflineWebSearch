@@ -31,6 +31,8 @@ import java.io.IOException
 object AppConfigManager {
     private const val APP_CONFIG_FILE_NAME = "app_config.json"
     private const val NETWORK_CONFIG_FILE_NAME = "network_config.json"
+    private const val SHARED_PREFS_NAME = "app_critical_prefs"
+    private const val PREF_IS_INITIALIZED = "isInitialized"
     private var appContext: Context? = null
 
     // Reuse a single Scope for background disk I/O tasks
@@ -106,10 +108,15 @@ object AppConfigManager {
     /**
      * Updates the initialization state of the application.
      *
+     * Persists the flag to both the main config JSON file and to SharedPreferences
+     * as a safety net against config file loss or deserialization failures.
+     *
      * @param initialized True if initial setup/wizard has been completed, false otherwise.
      */
     fun setInitialized(initialized: Boolean = true) {
         updateConfig { it.copy(isInitialized = initialized) }
+        appContext?.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+            ?.edit()?.putBoolean(PREF_IS_INITIALIZED, initialized)?.commit()
         setActiveDatabaseByFile(DEFAULT_DATABASE_FILE)
     }
 
@@ -181,12 +188,27 @@ object AppConfigManager {
                             )
                         } else state
                     }
+                    // If the JSON config lost isInitialized (e.g. deserialization reset),
+                    // recover the flag from SharedPreferences which is more resilient.
+                    val resolvedInitialized = persistedConfig.isInitialized ||
+                        context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                            .getBoolean(PREF_IS_INITIALIZED, false)
                     _config.update { currentConfig ->
                         persistedConfig.copy(
                             databases = normalizedDatabases,
-                            networkConfig = currentConfig.networkConfig
+                            networkConfig = currentConfig.networkConfig,
+                            isInitialized = resolvedInitialized
                         )
                     }
+                }
+            } else {
+                // No config file on disk – check SharedPreferences for the initialization flag.
+                // This covers the case where the JSON file was deleted (e.g. app data partially
+                // cleared, or async write never completed) but SharedPreferences survived.
+                val prefsInitialized = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                    .getBoolean(PREF_IS_INITIALIZED, false)
+                if (prefsInitialized) {
+                    _config.update { it.copy(isInitialized = true) }
                 }
             }
         } catch (e: Exception) {
